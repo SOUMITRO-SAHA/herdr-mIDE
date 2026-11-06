@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- The Changes panel now follows the reference IDE's Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.
+- The Changes panel now follows the reference Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.
 - The separate root `assets/` icon tree is gone — `mods/mide-files/icons/` is the single home for every icon, since the mod has to be self-contained anyway. One place to edit, no copy step, and `make assets` is removed; `scripts/update-icons.sh` regenerates the file-type set in place.
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is generated from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph, and the generator prunes everything outside the list. `scripts/update-icons.sh` is the one regeneration entry point. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
+- Editor: saving always failed with "The file changed outside Herdr" — the mod never passed the snapshot the write API requires, so every save of an existing file was refused. Saves now carry the loaded baseline (external edits between load and save are still caught, with a `Reload (discard draft)` action on the failure note), oversized files refuse to save instead of silently truncating, and the ⌘S/`mide-editor.save` command actually fires now (the command arrived as a plain string and never matched).
 - Files panel: macOS `.DS_Store` files no longer appear in the tree (filtered in both the `sh` and PowerShell listings; other dotfiles still show).
 - Files panel: a file's *name prefix* no longer outranks its *type* in icon matching — `Dockerfile.rs` used to show the Docker glyph; the Rust type now wins, while `Dockerfile.prod` still reads as a Dockerfile.
 

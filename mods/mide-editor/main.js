@@ -33,12 +33,13 @@ const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);
 export default class MideEditor extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.code = null; this.codeStyle = null; this.file = null; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.retheming = false;
+    this.code = null; this.codeStyle = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.retheming = false;
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
         const command = await nextCommand();
-        if (command.name === "save") this.save(cx);
+        const name = typeof command === "string" ? command : command?.name;
+        if (name === "save") this.save(cx);
         cx.notify();
       }
     });
@@ -74,7 +75,7 @@ export default class MideEditor extends View {
   load(file, cx) {
     this.code?.release(); this.code = null;
     this.codeStyle = null;
-    this.file = file ?? null; this.dirty = false; this.error = null; this.note = null;
+    this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null;
     if (!file) return;
     cx.spawn(async cx => {
       try {
@@ -82,7 +83,10 @@ export default class MideEditor extends View {
         if (this.file !== file) return;
         if (text === null) { this.error = "This file is no longer available"; return; }
         if (text.includes("\0")) { this.error = "Binary file · nothing to edit"; return; }
-        const next = this.createCode(text.length > MAX ? text.slice(0, MAX) + "\n… (file truncated)" : text, file, theme());
+        // Baseline = what's on disk right now; save() passes it as the write's
+        // expected snapshot, so external edits between load and save are caught.
+        this.baseline = text; this.truncated = text.length > MAX;
+        const next = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file, theme());
         this.code = next.code; this.codeStyle = next.style;
       } catch { if (this.file === file) this.error = "Cannot open this file (binary, too large, or unreadable)"; }
       finally { cx.notify(); }
@@ -91,12 +95,15 @@ export default class MideEditor extends View {
 
   save(cx) {
     if (!this.code || !this.file || this.saving) return;
+    if (this.truncated) { this.note = "Too large to save here (>400 KB) — editing would drop the rest of the file"; cx.notify(); return; }
     this.saving = true; this.note = null;
-    const file = this.file, value = this.code.value();
+    const file = this.file, value = this.code.value(), expected = this.baseline;
     cx.spawn(async cx => {
       try {
-        await writeTextFile(file, value);
-        if (this.file === file) this.dirty = false;
+        // The host only writes when the disk still matches the snapshot we
+        // loaded; on success our draft becomes the new baseline.
+        await writeTextFile(file, value, expected);
+        if (this.file === file) { this.dirty = false; this.baseline = value; }
       } catch (e) { if (this.file === file) this.note = `Save failed: ${e}`; }
       finally { this.saving = false; cx.notify(); }
     });
@@ -121,7 +128,9 @@ export default class MideEditor extends View {
             ? Editor.new(this.code).flex_1().min_h(0)
             : div().flex_1().min_h(0).p(12).text_color(t.dim).child(this.error || "Loading file…"))
         : div().flex_1().min_h(0).p(12).text_color(t.dim).child("No file open. Click a file in Files to edit it here."))
-      .when(Boolean(this.note), el => el.child(div().px(12).py(4).text_size(11).text_color(t.ansi1).child(this.note)))
+      .when(Boolean(this.note), el => el.child(h_flex().px(12).py(4).gap(10).text_size(11).text_color(t.ansi1)
+        .child(div().flex_1().min_w(0).truncate().child(this.note))
+        .when(this.file && !this.saving, el => el.child(div().id("mide-editor-reload").flex_none().cursor_pointer().underline().child("Reload (discard draft)").on_click((_e, cx) => this.load(this.file, cx))))))
       .child(h_flex().h(28).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(11).text_color(t.dim)
         .child(div().flex_1().min_w(0).truncate().child(this.file ?? ""))
         .child(div().child("⌘S save")));
