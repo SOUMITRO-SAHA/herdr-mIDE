@@ -343,7 +343,7 @@ export default class MideChanges extends View {
   branchFooter(t) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
     return h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
-      .child(svg("mods/mide-files/icons/material/git.svg").size(12).flex_none())
+      .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
       .child(div().max_w(110).min_w(0).text_size(10).text_color(t.dim).truncate().child(repository))
       .child(div().text_size(10).text_color(t.dim).child("/"))
       .child(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
@@ -351,13 +351,14 @@ export default class MideChanges extends View {
   }
 
   historyRow(commit, t) {
-    return h_flex().id(`history-${commit.hash}`).h(42).flex_none().px(9).gap(8).items_center().rounded(6).hover((s) => s.bg(t.hover))
-      .child(div().w(48).flex_none().text_size(10).text_color(t.accent).child(commit.hash))
-      .child(v_flex().flex_1().min_w(0).gap(2)
-        .child(div().min_w(0).truncate().text_size(11).text_color(t.foreground).child(commit.subject || "(no subject)"))
-        .child(h_flex().gap(5).text_size(10).text_color(t.dim)
-          .child(div().max_w(120).truncate().child(commit.author || "Unknown author"))
-          .child(div().child(commit.age || ""))));
+    return v_flex().id(`history-${commit.hash}`).w_full().h(48).flex_none().px(10).py(5).gap(3).rounded(6).hover((s) => s.bg(t.hover))
+      .child(div().w_full().min_w(0).truncate().text_size(13).font_semibold().text_color(t.foreground).child(commit.subject || "(no subject)"))
+      .child(h_flex().w_full().min_w(0).items_center().gap(5)
+        .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.muted).child(commit.author || "Unknown author"))
+        .child(div().flex_none().text_size(10).text_color(t.dim).child("•"))
+        .child(div().flex_none().text_size(11).text_color(t.muted).child(commit.age || ""))
+        .child(div().flex_none().text_size(10).text_color(t.dim).child("•"))
+        .child(div().flex_none().text_size(11).text_color(t.muted).child(commit.hash)));
   }
 
   render(cx) {
@@ -411,11 +412,11 @@ export default class MideChanges extends View {
       .when(this.view === "history", (el) => el.child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
         .child(v_flex().id("mide-history-list").absolute().inset_0().overflow_y_scroll().p(6)
           .children(this.history.map((commit) => this.historyRow(commit, t)))
-          .when(!this.history.length, (e) => e.child(div().p(10).text_size(11).text_color(t.dim).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
+          .when(!this.history.length, (e) => e.child(div().p(10).text_size(12).text_color(t.muted).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
          .child(Scrollbar.vertical("mide-history-list").absolute().inset_0())))
       .when(this.view !== "branches", (el) => el.child(this.branchFooter(t)))
       .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
-        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(12).text_color(t.foreground)))
+        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
         .child(h_flex().h(30).flex_none().gap(8).items_center()
           .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "Stage changes to enable commit"))
           .child(this.commitActions(t, this.busy ? "Working…" : commitLabel, canCommit)))))

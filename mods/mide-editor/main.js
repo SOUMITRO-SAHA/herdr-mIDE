@@ -11,12 +11,10 @@ import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// One Dark syntax palette — the fallback when the active
-// theme doesn't define syntax_* tokens. Themes override per key: a theme
-// key "syntax_<name>" wins over this table, so palettes stay manageable
-// as theme data instead of mod code.
+// One Dark syntax defaults; the comment gray stays mod-scoped for readable
+// contrast, while other syntax colors can still be overridden by themes.
 const ONE_DARK = {
-  keyword: "#b477cf", string: "#a1c181", comment: "#5d636f", function: "#73ade9",
+  keyword: "#b477cf", string: "#a1c181", comment: "#8f969f", function: "#73ade9",
   type: "#6eb4bf", number: "#bf956a", constant: "#bf956a", boolean: "#bf956a",
   variable: "#acb2be", operator: "#6eb4bf", punctuation: "#b2b9c6",
   heading: "#d07277", "markup.raw": "#a1c181", "markup.bold": "#bf956a",
@@ -25,7 +23,7 @@ const ONE_DARK = {
 const SYNTAX_KEYS = Object.keys(ONE_DARK);
 const syntaxFor = (t) => {
   const map = {};
-  for (const key of SYNTAX_KEYS) map[key] = t[`syntax_${key}`] ?? ONE_DARK[key];
+  for (const key of SYNTAX_KEYS) map[key] = key === "comment" ? ONE_DARK.comment : t[`syntax_${key}`] ?? ONE_DARK[key];
   return map;
 };
 const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);
