@@ -42,9 +42,9 @@ generic UI glyphs come from Herdr's own mods (next section; see also
 
 ## Ayu Dark theme (`themes/ayu-dark.json`)
 
-The Ayu Dark palette is adapted from the Ayu theme for VS Code, version 1.6.0:
+The Ayu Dark palette is adapted from the Ayu editor theme, version 1.6.0:
 [ayu-theme/vscode-ayu](https://github.com/ayu-theme/vscode-ayu), by Ike
-Kurghinyan. It is licensed under the MIT License. Upstream VS Code color and
+Kurghinyan. It is licensed under the MIT License. Upstream color and
 token values are mapped to Herdr's theme format; no reference-IDE theme file, code, or
 assets are included.
 

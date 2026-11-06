@@ -11,19 +11,18 @@ import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// One Dark syntax defaults; the comment gray stays mod-scoped for readable
-// contrast, while other syntax colors can still be overridden by themes.
-const ONE_DARK = {
-  keyword: "#b477cf", string: "#a1c181", comment: "#8f969f", function: "#73ade9",
-  type: "#6eb4bf", number: "#bf956a", constant: "#bf956a", boolean: "#bf956a",
-  variable: "#acb2be", operator: "#6eb4bf", punctuation: "#b2b9c6",
-  heading: "#d07277", "markup.raw": "#a1c181", "markup.bold": "#bf956a",
-  "markup.italic": "#74ade8", link_uri: "#6eb4bf",
+// Ayu Dark syntax defaults; theme tokens override these for code rendering.
+const AYU_DARK = {
+  keyword: "#ff8f40", string: "#aad94c", comment: "#5a6673", function: "#ffb454",
+  type: "#59c2ff", number: "#d2a6ff", constant: "#d2a6ff", boolean: "#d2a6ff",
+  variable: "#bfbdb6", operator: "#f29668", punctuation: "#bfbdb6",
+  heading: "#aad94c", "markup.raw": "#f29668", "markup.bold": "#f07178",
+  "markup.italic": "#f07178", link_uri: "#39bae6",
 };
-const SYNTAX_KEYS = Object.keys(ONE_DARK);
+const SYNTAX_KEYS = Object.keys(AYU_DARK);
 const syntaxFor = (t) => {
   const map = {};
-  for (const key of SYNTAX_KEYS) map[key] = key === "comment" ? ONE_DARK.comment : t[`syntax_${key}`] ?? ONE_DARK[key];
+  for (const key of SYNTAX_KEYS) map[key] = t[`syntax_${key.replaceAll(".", "_")}`] ?? AYU_DARK[key];
   return map;
 };
 const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);

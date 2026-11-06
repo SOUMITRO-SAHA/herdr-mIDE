@@ -28,6 +28,13 @@ const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space }
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MATERIAL = "mods/mide-files/icons/material";
 
+function gitStatusColor(status, t) {
+  if (status === "A") return t.git_added ?? t.ansi2;
+  if (status === "D") return t.git_deleted ?? t.ansi1;
+  if (status === "U") return t.git_conflict ?? t.git_modified ?? t.ansi3;
+  return t.git_modified ?? t.ansi3;
+}
+
 export default class MideChanges extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
@@ -316,12 +323,12 @@ export default class MideChanges extends View {
   fileRow(f, t) {
     const parts = f.path.split("/"), name = parts.pop();
     const selected = this.open === f.path;
-    const color = f.status === "A" ? (t.git_added ?? t.ansi2) : f.status === "D" || f.status === "U" ? (t.git_deleted ?? t.ansi1) : (t.git_modified ?? t.blocked);
+    const color = gitStatusColor(f.status, t);
     return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
       .child(svg(`${MATERIAL}/file.svg`).size(16).flex_none())
       .child(div().w(10).text_size(10).font_semibold().text_color(color).child(f.status))
       .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
-      .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)))
+      .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`)))
       .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t,
         (checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
   }
@@ -383,8 +390,8 @@ export default class MideChanges extends View {
         .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(12).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History"))))
       .when(this.view === "changes", (el) => el.child(h_flex().h(30).flex_none().px(8).gap(6).items_center().border_b(1).border_color(t.border)
         .child(div().id("mide-view-diff").text_size(11).text_color(this.files.length ? t.muted : t.dim).when(Boolean(this.files.length), (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.openDiff(this.files[0], cx))).child("View Diff"))
-        .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
-        .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
+         .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
+         .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
         .child(div().flex_1())
         .child(this.stageActions(t, stageLabel, Boolean(this.files.length && !this.busy), (cx) => this.primaryStage(cx)))))
       .when(this.view === "branches", (el) => el

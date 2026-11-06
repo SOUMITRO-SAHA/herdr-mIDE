@@ -5,6 +5,7 @@
     "version": "0.1.13"
   },
   "type": "row",
+  "theme": "ayu-dark",
   "children": [
     {
       "id": "sidebar",

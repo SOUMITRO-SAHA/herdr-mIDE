@@ -33,12 +33,12 @@ else
   echo "  + layouts/herdr-mide.json"
 fi
 
-if [ -e "$HOME_DIR/themes/mide-night.json" ]; then
-  echo "  ! themes/mide-night.json already exists — skipping"
+if [ -e "$HOME_DIR/themes/ayu-dark.json" ]; then
+  echo "  ! themes/ayu-dark.json already exists — skipping"
 else
   mkdir -p "$HOME_DIR/themes"
-  cp "$REPO_DIR/themes/mide-night.json" "$HOME_DIR/themes/mide-night.json"
-  echo "  + themes/mide-night.json"
+  cp "$REPO_DIR/themes/ayu-dark.json" "$HOME_DIR/themes/ayu-dark.json"
+  echo "  + themes/ayu-dark.json"
 fi
 
 echo
