@@ -9,13 +9,17 @@ import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
 
-function location() {
+function location(previous) {
   const space = spaces().find(s => s.active), f = focused();
   const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
   const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
-  return { cwd: pane?.cwd || f?.cwd || space?.folder, on, space: space?.id };
+  // Mod panes (such as the editor opened below) have no cwd of their own.
+  // Keep following the terminal's folder when that mod takes focus in the
+  // same tab instead of falling back to the space's broader starting folder.
+  const cwd = pane?.cwd || (pane?.mod && previous?.space === space?.id && previous?.tab === f?.tab ? previous.cwd : null) || f?.cwd || space?.folder;
+  return { cwd, on, space: space?.id, tab: f?.tab };
 }
-const key = () => JSON.stringify(location());
+const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space });
 const PER_FOLDER = 500, TOTAL = 5000;
 
 const ICONS = "mods/mide-files/icons";
@@ -77,7 +81,7 @@ export default class MideFiles extends View {
   }
 
   current(context) {
-    return this.context === context && key() === context.key;
+    return this.context === context && key(location(context)) === context.key;
   }
 
   async loadFolder(path, context) {
@@ -90,14 +94,14 @@ export default class MideFiles extends View {
   }
 
   refresh(cx) {
-    const { cwd, on } = location(), next = key();
+    const loc = location(this.context), { cwd, on } = loc, next = key(loc);
     if (next !== this.context?.key) {
       if (this.context) this.saved.set(this.context.key, { folders: this.folders });
       const saved = this.saved.get(next);
-      this.context = { key: next, cwd, on }; this.root = cwd; this.on = on; this.entries = new Map(); this.folders = new Set(saved?.folders);
+      this.context = { key: next, ...loc }; this.root = cwd; this.on = on; this.entries = new Map(); this.folders = new Set(saved?.folders);
       this.pending = new Set(); this.marks = {}; this.folderMarks = new Map(); this.ignored = new Set(); this.ignoredDirs = []; this.watched = null; this.error = null; this.limited = false;
       this.loading = false;
-    }
+    } else this.context.tab = loc.tab;
     if (!cwd || this.loading) return;
     const context = this.context;
     this.loading = true;
@@ -148,10 +152,15 @@ export default class MideFiles extends View {
     });
   }
 
-  // Git status → color for the whole file name, so the tree tells the state
-  // of the repo at a glance: modified orange, added green, deleted red.
+  // Git status → color for the whole entry name, the way the reference
+  // IDE does it: dedicated theme tokens per status (orange modified, green
+  // added, red deleted/conflict), falling back to ANSI slots on themes
+  // that don't define them.
   markColor(mark, t) {
-    return mark === "A" ? t.ansi2 : mark === "D" || mark === "U" ? t.ansi1 : mark === "M" ? t.blocked : null;
+    if (mark === "A") return t.git_added ?? t.ansi2;
+    if (mark === "D" || mark === "U") return t.git_deleted ?? t.git_conflict ?? t.ansi1;
+    if (mark === "M") return t.git_modified ?? t.blocked;
+    return null;
   }
 
   toggle(path, cx) {
@@ -176,7 +185,24 @@ export default class MideFiles extends View {
   }
 
   open(path, cx) {
-    run("pane.split", { direction: "right", mod: "mide-editor", props: { file: `${this.root}/${path}` } });
+    const file = `${this.root}/${path}`;
+    const tab = focused()?.tab;
+    const inTab = panes().filter(p => p.tab === tab);
+    const editors = inTab.filter(p => p.mod === "mide-editor");
+    if (editors.length) {
+      // Replace any existing editor pane(s), keeping the new one beside the
+      // terminal that owns this folder. Split first so even a tab containing
+      // only editor panes always has a live target while the old copy closes.
+      const target = inTab.find(p => p.terminal && p.cwd === this.root)
+        ?? inTab.find(p => p.terminal && p.focused)
+        ?? inTab.find(p => p.terminal)
+        ?? inTab.find(p => p.mod !== "mide-editor")
+        ?? editors[0];
+      run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
+      for (const editor of editors) run("pane.close", { pane: editor.pane });
+      return;
+    }
+    run("pane.split", { direction: "right", mod: "mide-editor", props: { file } });
   }
 
   rows(prefix, depth, out, t) {
@@ -184,18 +210,19 @@ export default class MideFiles extends View {
     for (const entry of this.entries.get(prefix) ?? []) {
       if (out.length >= TOTAL) break;
       const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), abs = `${this.root}/${path}`, mark = this.marks[abs];
-      const markColor = mark ? this.markColor(mark, t) : null;
       const folderMark = entry.dir ? this.folderMarks.get(path) : null;
+      const status = mark ?? folderMark, statusColor = status ? this.markColor(status, t) : null;
       const ignored = this.ignored.has(abs) || this.ignoredDirs.some(d => abs.startsWith(`${d}/`));
+      const nameColor = statusColor ?? (ignored ? t.dim : t.muted);
       out.push(h_flex().id(`file-${path}`).h(26).flex_none().pl(8 + depth * 18).pr(8).gap(7).items_center().rounded(7).cursor_pointer().hover(s => s.bg(t.hover))
         .on_click((_e, cx) => entry.dir ? this.toggle(path, cx) : this.open(path, cx))
         .child(entry.dir
           ? svg(`${ICONS}/chevron-${open ? "down" : "right"}.svg`).size(12).flex_none().text_color(t.dim)
           : div().w(12).flex_none())
         .child(entry.dir
-          ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? this.markColor(folderMark, t) : t.dim)
+          ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? statusColor : t.dim)
           : image(`${MATERIAL}/${fileIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
-        .child(div().flex_1().min_w(0).truncate().text_color(markColor ?? (ignored ? t.dim : t.muted)).child(entry.name))
+        .child(div().flex_1().min_w(0).truncate().text_color(nameColor).child(entry.name))
         .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(markColor).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t);
     }
@@ -203,7 +230,7 @@ export default class MideFiles extends View {
   }
 
   render(cx) {
-    if (key() !== this.context?.key) this.refresh(cx);
+    if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
     const t = theme();
     return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)

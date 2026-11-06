@@ -13,6 +13,11 @@
     "chrome": "#171a21",
     "canvas": "#101218",
     "muted": "#9aa3b8",
-    "dim": "#5b6273"
+    "dim": "#5b6273",
+    "git_modified": "#ff9e64",
+    "git_added": "#98c379",
+    "git_deleted": "#e06c75",
+    "git_conflict": "#e06c75",
+    "git_ignored": "#5b6273"
   }
 }
