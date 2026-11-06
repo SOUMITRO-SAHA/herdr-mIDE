@@ -9,9 +9,17 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
 import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
 
-const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", svelte: "html", vue: "html", yaml: "toml" };
+const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-const syntaxStyle = (t, font) => JSON.stringify([t.ansi5, t.ansi2, t.dim, t.ansi4, t.ansi3, t.ansi1, t.ansi6, font]);
+// One Dark syntax palette — the default colorization of the reference IDE:
+// purple keywords, green strings, gray comments, blue functions, teal
+// types, tan numbers/constants/booleans.
+const SYNTAX = {
+  keyword: "#b477cf", string: "#a1c181", comment: "#5d636f", function: "#73ade9",
+  type: "#6eb4bf", number: "#bf956a", constant: "#bf956a", boolean: "#bf956a",
+  variable: "#acb2be", operator: "#6eb4bf", punctuation: "#b2b9c6",
+};
+const codeStyle = (font) => JSON.stringify([font]);
 
 export default class MideEditor extends View {
   init(_props, cx) {
@@ -30,17 +38,16 @@ export default class MideEditor extends View {
   createCode(value, file, t) {
     const font = settings().font_family, ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
     const code = EditorState.new({ language: LANG[ext] ?? ext, value,
-      font_family: font, font_size: 13,
-      syntax: { keyword: t.ansi5, string: t.ansi2, comment: t.dim, function: t.ansi4, type: t.ansi3, number: t.ansi1, constant: t.ansi6 } });
+      font_family: font, font_size: 13, syntax: SYNTAX });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();
     });
-    return { code, style: syntaxStyle(t, font) };
+    return { code, style: codeStyle(font) };
   }
 
   syncTheme(cx, t) {
-    if (!this.code || this.retheming || this.codeStyle === syntaxStyle(t, settings().font_family)) return;
+    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family)) return;
     const old = this.code, file = this.file;
     this.retheming = true;
     cx.spawn(async cx => {
