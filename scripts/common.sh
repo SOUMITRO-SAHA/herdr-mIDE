@@ -16,9 +16,10 @@ MODS="mide-files mide-changes mide-diff mide-editor"
 # Copy mods, layout and theme into the app home (overwrites installed
 # copies; install.sh is the no-clobber first-time installer).
 sync_targets() {
-  mkdir -p "$HERDR_APP_HOME/mods" "$HERDR_APP_HOME/layouts"
+  mkdir -p "$HERDR_APP_HOME/mods" "$HERDR_APP_HOME/layouts" "$HERDR_APP_HOME/themes"
   for mod in $MODS; do
     rsync -a --delete $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/"
   done
   rsync -a "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json"
+  rsync -a --delete --exclude=.DS_Store "$REPO_DIR/themes/" "$HERDR_APP_HOME/themes/"
 }

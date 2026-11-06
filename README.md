@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Remove this line to confirm you've reviewed this PR before submitting.
+
 # herdr-mIDE
 
 > The minimal IDE for [Herdr](https://herdr.dev) — built for the age of AI-assisted coding.
@@ -28,7 +31,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- Uses Herdr's active theme and updates with Herdr's theme settings.
+- Uses Herdr's active theme and updates with Herdr's theme settings; syntax colors come from the theme's `syntax_*` tokens — the shipped [`themes/mide-night.json`](themes/mide-night.json) mimics the One Dark look.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -42,7 +45,7 @@ cd herdr-mIDE
 herdr-app do layout.switch --name herdr-mide
 ```
 
-The installer copies the mods and layout into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+The installer copies the mods, layout and theme into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
 
 Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
 
@@ -55,7 +58,8 @@ layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff tab · split/unified · hunk navigation
-mods/mide-editor/         editor pane · save · Herdr theme
+mods/mide-editor/         editor pane · save · One Dark-syntax colors
+themes/mide-night.json    dark theme with syntax tokens (One Dark-style)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
 Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch

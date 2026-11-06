@@ -33,6 +33,14 @@ else
   echo "  + layouts/herdr-mide.json"
 fi
 
+if [ -e "$HOME_DIR/themes/mide-night.json" ]; then
+  echo "  ! themes/mide-night.json already exists — skipping"
+else
+  mkdir -p "$HOME_DIR/themes"
+  cp "$REPO_DIR/themes/mide-night.json" "$HOME_DIR/themes/mide-night.json"
+  echo "  + themes/mide-night.json"
+fi
+
 echo
 echo "Keys to merge into $HOME_DIR/keys.json (ask before replacing one you use):"
 cat "$REPO_DIR/keys.json"

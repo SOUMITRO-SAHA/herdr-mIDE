@@ -11,17 +11,24 @@ import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// One Dark syntax palette — the default colorization of the reference IDE:
-// purple keywords, green strings, gray comments, blue functions, teal
-// types, tan numbers/constants/booleans.
-const SYNTAX = {
+// the reference IDE-default (One Dark) syntax palette — the fallback when the active
+// theme doesn't define syntax_* tokens. Themes override per key: a theme
+// key "syntax_<name>" wins over this table, so palettes stay manageable
+// as theme data instead of mod code.
+const ONE_DARK = {
   keyword: "#b477cf", string: "#a1c181", comment: "#5d636f", function: "#73ade9",
   type: "#6eb4bf", number: "#bf956a", constant: "#bf956a", boolean: "#bf956a",
   variable: "#acb2be", operator: "#6eb4bf", punctuation: "#b2b9c6",
   heading: "#d07277", "markup.raw": "#a1c181", "markup.bold": "#bf956a",
   "markup.italic": "#74ade8", link_uri: "#6eb4bf",
 };
-const codeStyle = (font) => JSON.stringify([font]);
+const SYNTAX_KEYS = Object.keys(ONE_DARK);
+const syntaxFor = (t) => {
+  const map = {};
+  for (const key of SYNTAX_KEYS) map[key] = t[`syntax_${key}`] ?? ONE_DARK[key];
+  return map;
+};
+const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);
 
 export default class MideEditor extends View {
   init(_props, cx) {
@@ -40,16 +47,16 @@ export default class MideEditor extends View {
   createCode(value, file, t) {
     const font = settings().font_family, ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
     const code = EditorState.new({ language: LANG[ext] ?? ext, value,
-      font_family: font, font_size: 13, syntax: SYNTAX });
+      font_family: font, font_size: 13, syntax: syntaxFor(t) });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();
     });
-    return { code, style: codeStyle(font) };
+    return { code, style: codeStyle(font, t) };
   }
 
   syncTheme(cx, t) {
-    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family)) return;
+    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family, theme())) return;
     const old = this.code, file = this.file;
     this.retheming = true;
     cx.spawn(async cx => {

@@ -59,7 +59,11 @@ highlighting, ⌘S save and Herdr's active theme.
   `cmd-shift-e`): a 36px header with an `EDIT` mode chip, the file name, an
   orange `●` while unsaved and a **Save** button; the code with syntax
   highlighting (13px, the settings font); a 28px status bar with the full
-  path and an `⌘S save` hint. It follows Herdr's active theme.
+  path and an `⌘S save` hint. It follows Herdr's active theme — syntax
+  colors read the theme's `syntax_*` tokens (keyword/string/comment/
+  function/type/number + markdown markup names), falling back to a
+  built-in One Dark palette on themes without them; the shipped
+  `themes/mide-night.json` defines the full set.
 
 ## How it behaves
 
