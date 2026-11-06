@@ -22,6 +22,7 @@ install_mod() {
 
 install_mod mide-files
 install_mod mide-changes
+install_mod mide-diff
 install_mod mide-editor
 
 if [ -e "$HOME_DIR/layouts/herdr-mide.json" ]; then
@@ -37,7 +38,7 @@ echo "Keys to merge into $HOME_DIR/keys.json (ask before replacing one you use):
 cat "$REPO_DIR/keys.json"
 echo
 echo "Checking mods…"
-for mod in mide-files mide-changes mide-editor; do
+for mod in mide-files mide-changes mide-diff mide-editor; do
   herdr-app check "$HOME_DIR/mods/$mod" && echo "  ok $mod"
 done
 

@@ -11,7 +11,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 EXCLUDES="--exclude=.DS_Store --exclude=jsconfig.json --exclude=gpui-kit.d.ts"
 
 # Everything that installs into the app home.
-MODS="mide-files mide-changes mide-editor"
+MODS="mide-files mide-changes mide-diff mide-editor"
 
 # Copy mods, layout and theme into the app home (overwrites installed
 # copies; install.sh is the no-clobber first-time installer).

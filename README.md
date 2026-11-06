@@ -53,7 +53,8 @@ herdr-mIDE doesn't fork Herdr — it rides on it. The Herdr app redraws its whol
 ```
 layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
-mods/mide-changes/        staging · diff · commit · branches
+mods/mide-changes/        staging · commit · branches
+mods/mide-diff/           git diff tab · split/unified · hunk navigation
 mods/mide-editor/         editor pane · save · Herdr theme
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs

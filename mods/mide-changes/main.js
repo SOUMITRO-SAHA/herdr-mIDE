@@ -1,12 +1,10 @@
-// mIDE Changes — a git panel for the review-and-commit loop: staged and
-// unstaged files as separate groups with per-file staging, a detailed diff
-// below, a guided commit (staged files only), and an inline branch switcher.
-//
-// The diff rendering adapts Herdr's shipped `changes` mod (Apache-2.0):
-// numbered rows on a virtual list, so big diffs stay smooth.
+// mIDE Changes — a git panel for the review-and-commit loop: staged,
+// tracked and untracked files as separate groups with per-file staging,
+// a guided commit (staged files only), and an inline branch switcher.
+// Clicking a file opens its diff in the dedicated mIDE Diff tab.
 import { View, div } from "gpui-kit";
-import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, v_virtual_list } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings } from "herdr";
+import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar } from "gpui-base";
+import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
 
 function location(previous) {
   const space = spaces().find((s) => s.active), f = focused();
@@ -21,26 +19,11 @@ const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on });
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
-const countLines = (text) => text ? text.split("\n").length - Number(text.endsWith("\n")) : 0;
-
-// Numbers each diff line once, so a frame only draws the rows on screen.
-function diffRows(lines) {
-  let old = 0, next = 0;
-  return lines.map((line) => {
-    const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)/.exec(line);
-    if (match) { old = +match[1]; next = +match[2]; return { kind: "@", text: line }; }
-    const kind = line[0];
-    if (kind === "-") return { kind, number: old++, text: line.slice(1) || " " };
-    if (kind === "+") return { kind, number: next++, text: line.slice(1) || " " };
-    if (kind === " ") { old++; return { kind, number: next++, text: line.slice(1) || " " }; }
-    return { kind: "", text: line };
-  });
-}
 
 export default class MideChanges extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.view = "changes"; this.files = []; this.staged = 0; this.rows = []; this.diffWidth = 0;
+    this.view = "changes"; this.files = []; this.staged = 0;
     this.message = ""; this.typing = false; this.branches = []; this.branch = null; this.branchInput = null;
     this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
     this.input.set_auto_grow(2, 4);
@@ -79,9 +62,9 @@ export default class MideChanges extends View {
     const loc = location(this.location), { cwd, on } = loc, context = key(loc);
     this.location = loc;
     if (context !== this.context) {
-      this.context = context; this.root = null; this.files = []; this.open = null; this.branch = null;
-      this.setLines([]); this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
-      this.watched = null; this.closed = false; this.limited = false; this.view = "changes";
+      this.context = context; this.root = null; this.files = []; this.open = null; this.openStaged = null; this.branch = null;
+      this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
+      this.watched = null; this.limited = false; this.view = "changes";
     }
     if (!cwd) return;
     this.loading = true;
@@ -89,7 +72,7 @@ export default class MideChanges extends View {
       try {
         const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on });
         if (this.currentKey() !== context) return;
-        if (top.code !== 0) { this.root = null; this.files = []; this.setLines([]); this.open = null; this.error = "Not a git repository"; return; }
+        if (top.code !== 0) { this.root = null; this.files = []; this.open = null; this.error = "Not a git repository"; return; }
         const root = top.stdout.trim(), git = (args) => exec("git", [...READ, ...args], { cwd: root, on });
         const branch = await git(["branch", "--show-current"]);
         const status = await git(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"]);
@@ -126,51 +109,27 @@ export default class MideChanges extends View {
         this.files = files; this.staged = files.filter((f) => f.side === "index").length;
         this.limited = entries.length > 1000; this.error = null;
         this.watch(root, cx);
-        if (this.open && !files.some((f) => f.path === this.open)) { this.open = null; this.setLines([]); }
-        if (!this.open && !this.closed && files.length) this.open = files[0].path;
-        if (this.open) {
-          try { await this.load(this.open, context); }
-          catch { if (this.currentKey() === context) this.setLines(["Cannot preview this diff (too large or unreadable)"]); }
-        }
       } catch (e) { if (this.currentKey() === context) this.error = String(e); }
       finally { this.loading = false; cx.notify(); }
     });
   }
 
-  async load(path, context) {
-    const file = this.files.find((f) => f.path === path && (!this.openStaged || f.side === "index")) ?? this.files.find((f) => f.path === path);
-    const root = this.root, on = this.on;
-    if (!file) return;
-    let lines;
-    if (file.fresh) {
-      const text = await readTextFile(`${root}/${path}`, { on }).catch(() => null);
-      if (text === null) lines = ["Cannot preview this file (binary, too large, or unreadable)"];
-      else if (text.includes("\0")) lines = ["Binary file · no text diff"];
-      else lines = [`@@ -0,0 +1,${countLines(text)} @@`, ...text.slice(0, 400000).replace(/\n$/, "").split("\n").slice(0, 1500).map(l => `+${l}`)];
-    } else {
-      const r = await exec("git", [...READ, "diff", ...(file.side === "index" ? ["--cached"] : []), "--no-ext-diff", "--no-textconv", "--no-color", "--", path], { cwd: root, on });
-      if (r.code !== 0) throw new Error(r.stderr);
-      const all = r.stdout.replace(/\n$/, "").split("\n"), first = all.findIndex((l) => l.startsWith("@@"));
-      lines = first < 0 ? [file.binary ? "Binary file changed" : "No text diff available"] : all.slice(first);
-    }
-    if (this.currentKey() === context && this.open === path) this.setLines(lines.slice(0, 1500).map(line => line.length > 4000 ? line.slice(0, 4000) + "… (line truncated)" : line));
-  }
-
-  setLines(lines) {
-    this.rows = diffRows(lines);
-    this.diffWidth = Math.max(300, ...lines.map(line => line.length * 7 + 50));
-  }
-
-  pick(path, side, cx) {
-    this.open = this.open === path && this.openStaged === side ? null : path;
-    this.openStaged = side; this.setLines([]); this.note = null;
-    this.closed = !this.open;
-    const context = this.context;
-    if (this.open) cx.spawn(async (cx) => {
-      try { await this.load(path, context); }
-      catch (e) { if (this.currentKey() === context && this.open === path) this.note = `Cannot preview this diff: ${e}`; }
-      cx.notify();
-    });
+  // The panel is a list, not a split view: a click hands the file to the
+  // mIDE Diff mod. Reuse its tab when one exists so repeated browsing stays
+  // one tab instead of a trail of them.
+  openDiff(file, cx) {
+    if (!this.root) return;
+    const title = `Diff · ${file.path.split("/").pop()}`;
+    const request = { root: this.root, path: file.path, side: file.side, status: file.status, fresh: file.fresh, on: this.on, branch: this.branch, title };
+    this.open = file.path; this.openStaged = file.side; this.note = null;
+    setShared("mide.diff.request", request);
+    const space = spaces().find((s) => s.active), all = panes();
+    const existing = space?.tabs.find((tab) => all.some((p) => p.tab === tab.id && p.mod === "mide-diff"));
+    if (existing) {
+      run("tab.rename", { id: existing.id, name: title });
+      run("tab.select", { id: existing.id });
+      run("mide-diff.open");
+    } else run("tab.new", { name: title, mod: "mide-diff", props: request });
     cx.notify();
   }
 
@@ -234,18 +193,11 @@ export default class MideChanges extends View {
     cx.notify();
   }
 
-  diffRow({ kind, number, text }, t) {
-    if (kind === "@") return div().w_full().px(12).h(20).flex_none().truncate().bg(t.raised).text_color(t.dim).child(text);
-    return h_flex().w_full().h(20).flex_none().gap(10).when(kind === "+", (e) => e.bg(t.ansi2 + "18")).when(kind === "-", (e) => e.bg(t.ansi1 + "18"))
-      .child(div().w(30).flex_none().text_right().text_color(t.dim).child(number === undefined ? "" : String(number)))
-      .child(div().flex_1().min_w(0).truncate().child(text));
-  }
-
   fileRow(f, t) {
     const parts = f.path.split("/"), name = parts.pop();
     const selected = this.open === f.path && this.openStaged === f.side;
     const color = f.status === "A" ? (t.git_added ?? t.ansi2) : f.status === "D" || f.status === "U" ? (t.git_deleted ?? t.ansi1) : (t.git_modified ?? t.blocked);
-    return h_flex().id(`change-${f.side}-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.pick(f.path, f.side, cx))
+    return h_flex().id(`change-${f.side}-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
       .child(div().w(14).text_size(11).font_semibold().text_color(color).child(f.status))
       .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
       .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)))
@@ -268,8 +220,6 @@ export default class MideChanges extends View {
     if (this.currentKey() !== this.context) this.refresh(cx);
     const t = theme(), index = this.files.filter((f) => f.side === "index"), work = this.files.filter((f) => f.side !== "index");
     const tracked = work.filter((f) => !f.fresh), untracked = work.filter((f) => f.fresh);
-    const groupCount = [index, tracked, untracked].filter((files) => files.length).length;
-    const listMaxHeight = this.files.length * 28 + groupCount * 30 + 48;
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = new Set(this.files.map((f) => f.path)).size;
     const canCommit = Boolean(this.message.trim() && this.root && this.staged && !this.busy && !this.loading && this.context === this.currentKey());
@@ -300,22 +250,16 @@ export default class MideChanges extends View {
           .when(!this.branches.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading branches…" : "No local branches")))))
         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
       .when(this.view === "changes", (el) => el
-        .child(div().flex_1().min_h(44).max_h(listMaxHeight).relative().border_b(1).border_color(t.border)
+        .child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
           .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
             .when(Boolean(index.length), (e) => e.child(this.group("STAGED", index, t)))
             .when(Boolean(index.length && work.length), (e) => e.child(div().h(6).flex_none()))
             .when(Boolean(tracked.length), (e) => e.child(this.group("TRACKED", tracked, t)))
             .when(Boolean((index.length || tracked.length) && untracked.length), (e) => e.child(div().h(6).flex_none()))
             .when(Boolean(untracked.length), (e) => e.child(this.group("UNTRACKED", untracked, t)))
-            .when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder")))))
+            .when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder"))))
+            .when(this.limited, (e) => e.child(div().p(8).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files"))))
           .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
-        .when(this.limited, (e) => e.child(div().px(12).py(4).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files")))
-        .child(div().flex_1().min_h(0).relative().font_family(settings().font_family ?? "JetBrains Mono").text_size(11)
-          .child(div().id("mide-changes-diff-x").size_full().overflow_x_scrollbar()
-            .child(div().w_full().min_w(this.diffWidth).h_full().child(v_virtual_list("mide-changes-diff", this.rows.length, 20, (i) => String(i),
-              (range) => this.rows.slice(range.start, range.end).map((row) => this.diffRow(row, t))).size_full())))
-          .child(Scrollbar.vertical("mide-changes-diff").viewport_from_layout().absolute().inset_0())
-          .when(!this.open && this.files.length > 0, (e) => e.child(div().absolute().top(6).px(12).text_color(t.dim).child("Select a file to view its changes"))))
         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
       .when(this.view === "changes", (e) => e.child(h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
         .child(div().flex_1().min_w(0).text_size(10).text_color(t.dim).truncate().child(this.root?.split(/[\\/]/).pop() ?? "Repository"))

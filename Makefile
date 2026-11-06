@@ -15,7 +15,7 @@
 #   INTERVAL         dev loop poll seconds (default 1) — make dev INTERVAL=0.3
 
 INTERVAL ?= 1
-MODS := mide-files mide-changes mide-editor
+MODS := mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
 .PHONY: help dev sync check install status shot switch
