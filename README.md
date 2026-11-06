@@ -14,7 +14,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 - **File-type icons** — a glyph and color per language: `{}` yellow for JS, blue for TS, a snake for Python, a hexagon for Rust, and so on.
 - **Git status baked into the tree** — the whole file name is colored: 🟠 modified, 🟢 new/untracked, 🔴 deleted or conflicted, plus a bold status letter.
-- Lazy folders, `.git` hidden, live refresh from the folder watch.
+- Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
 
 ### 🌿 Changes — a git panel for the review-and-commit loop

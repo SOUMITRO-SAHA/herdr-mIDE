@@ -51,7 +51,8 @@ highlighting, ⌘S save and a theme cycler in its status bar.
 ## How it behaves
 
 - **Files** expands a folder on click (lazy, one `sh`/PowerShell listing per
-  folder, 500 entries per folder / 5,000 total, `.git` hidden); clicking a
+  folder, 500 entries per folder / 5,000 total, `.git` and `.DS_Store`
+  hidden); clicking a
   file runs `pane.split {direction: right, mod: mide-editor, props: {file}}`
   beside the terminal. Git marks refresh with the folder watch and every
   10s; modified/added/deleted coloring follows `git status
