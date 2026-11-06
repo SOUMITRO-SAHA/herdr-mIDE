@@ -87,7 +87,7 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 - **Heavyweight plugins / extension marketplaces** — config files over plugin systems
 - **Built-in debugger, notebooks, remote dev** — use the right tool for those
 - **AI code generation built-in** — herdr-mIDE is for *reviewing* agent output, not replacing agents
-- **Feature parity with VS Code** — minimal is the point
+- **Feature parity with full IDEs** — minimal is the point
 
 ## Suggesting roadmap changes
 

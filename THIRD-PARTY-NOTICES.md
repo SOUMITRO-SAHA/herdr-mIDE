@@ -3,8 +3,7 @@
 ## the previous icon family file icons (`assets/icons/the previous set/`)
 
 The file icons are from [the previous icon family](https://github.com/jesseweed/the previous icon family) by
-Jesse Weed — the icon set the reference IDE's default file-icon theme is built on — used
-and redistributed under its MIT license:
+Jesse Weed, used and redistributed under its MIT license:
 
 > Copyright (c) 2014 Jesse Weed
 >
@@ -28,12 +27,35 @@ and redistributed under its MIT license:
 > WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 A copy also travels into the mod as
-`mods/mide-files/icons/the previous set/LICENSE` (the mod must stay self-contained for
-ecosystem installs). The association map
+`mods/mide-files/icons/the previous set/LICENSE` (the mod must stay self-contained
+for ecosystem installs). The association map
 (`mods/mide-files/icons.js`) is generated from the previous icon family's own mapping and
 color palette by `scripts/the retired generator`; mask-style icons get
-its colors baked in. No assets from the the reference IDE's repository
-are used: the reference IDE's additional icon redesigns there are GPL-licensed.
+its colors baked in. the previous icon family is the only icon source used.
+
+## the previous glyph set tree glyphs (`assets/icons/tree/`)
+
+The folder, folder-open and chevron glyphs are from
+[the previous glyph set](https://the previous glyph set.dev), used under its ISC license:
+
+> ISC License
+>
+> Copyright (c) 2026 the previous glyph set Icons and Contributors
+>
+> Permission to use, copy, modify, and/or distribute this software for any
+> purpose with or without fee is hereby granted, provided that the above
+> copyright notice and this permission notice appear in all copies.
+>
+> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+> WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+> MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+> ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+> WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+> ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+> OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+The chevrons are among the icons the previous glyph set derives from the Feather project
+(MIT, © 2013-present Cole Bemis), as noted in the previous glyph set's own license file.
 
 ## Herdr shipped mods (Apache-2.0)
 
