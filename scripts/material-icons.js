@@ -66,6 +66,22 @@ const KEEP_ICONS = new Set([
   "tune",              // .env
   "maven",             // pom.xml
   "gradle",            // build.gradle(.kts)
+  // famous formats people recognize at a glance
+  "svg",               // .svg
+  "zip",               // .zip, .tar, .gz, .xz, .7z…
+  "pdf",               // .pdf
+  "font",              // .ttf, .otf, .woff…
+  "audio",             // .mp3, .wav, .flac…
+  "video",             // .mp4, .mkv, .mov…
+  "key",               // .pem, .key, .pub, .gpg
+  "certificate",       // .cer, .crt
+  "exe",               // .exe, .msi
+  "dll",               // .dll
+  "log",               // .log
+  "diff",              // .diff, .rej
+  "table",             // .csv, .xlsx, .tsv
+  "word",              // .doc, .docx
+  "powerpoint",        // .ppt, .pptx
 ]);
 
 const keep = (icon) => KEEP_ICONS.has(icon);
