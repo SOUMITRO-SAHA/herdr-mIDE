@@ -2,14 +2,16 @@
 
 Instructions for AI coding agents working in this repo.
 
-## Icons — use the material-icons-theme skill
+## Icons — two sources, nothing else
 
-**For any icon work — file, folder, tree, or UI glyphs — use our
-`material-icons-theme` skill first** (`.opencode/skills/material-icons-theme/SKILL.md`).
+**For any icon work, use our `material-icons-theme` skill first**
+(`.opencode/skills/material-icons-theme/SKILL.md`).
 
 - [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
-  (MIT) is the **only** icon source for this project — file icons,
-  folder glyphs, any new glyph. No other icon set may be shipped.
+  (MIT) is the only source for **file-type and folder icons**.
+- **Generic UI glyphs** (chevrons, tree controls) come from Herdr's own
+  icon system — the shipped mods in `../herdr-app/defaults/mods/` —
+  carried under Herdr's Apache-2.0 license. No other external resource.
 - Icons live in `mods/mide-files/icons/` — that folder is the single
   source of truth, hand-editable; `scripts/update-icons.sh` regenerates
   the file-icon set from upstream.

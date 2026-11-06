@@ -1,29 +1,5 @@
 # Third-party notices
 
-## the previous glyph set tree glyphs (`mods/mide-files/icons/`)
-
-The chevron glyphs are from
-[the previous glyph set](https://the previous glyph set.dev), used under its ISC license:
-
-> ISC License
->
-> Copyright (c) 2026 the previous glyph set Icons and Contributors
->
-> Permission to use, copy, modify, and/or distribute this software for any
-> purpose with or without fee is hereby granted, provided that the above
-> copyright notice and this permission notice appear in all copies.
->
-> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-> WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-> MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-> ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-> WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-> ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-> OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-The chevrons are among the icons the previous glyph set derives from the Feather project
-(MIT, © 2013-present Cole Bemis), as noted in the previous glyph set's own license file.
-
 ## Material Icon Theme icons (`mods/mide-files/icons/`)
 
 All icons in this project — the file-type icons
@@ -60,12 +36,46 @@ rewritten to `currentColor` so Herdr's theme tints the glyphs — muted
 when clean, change-colored underneath. The association map
 (`mods/mide-files/icons.js`) is generated from the theme's own
 `fileIcons.ts` mapping by `scripts/update-icons.sh`. Sourcing rule:
-Material Icon Theme is the only icon source in this project (see
+Material Icon Theme is the only source for file-type and folder icons;
+generic UI glyphs come from Herdr's own mods (next section; see also
 `.opencode/skills/material-icons-theme/SKILL.md`, local agent config).
+
+## Ayu Dark theme (`themes/ayu-dark.json`)
+
+The Ayu Dark palette is adapted from the Ayu theme for VS Code, version 1.6.0:
+[ayu-theme/vscode-ayu](https://github.com/ayu-theme/vscode-ayu), by Ike
+Kurghinyan. It is licensed under the MIT License. Upstream VS Code color and
+token values are mapped to Herdr's theme format; no reference-IDE theme file, code, or
+assets are included.
+
+> MIT License
+>
+> Copyright (c) 2016 Ike Kurghinyan
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
 
 ## Herdr shipped mods (Apache-2.0)
 
 Parts of `mods/mide-files/main.js` (folder listing) and
 `mods/mide-changes/main.js` (diff rendering) adapt Herdr's shipped `files`
-and `changes` mods, which are Apache-2.0 licensed. See
-https://github.com/herdrdev/herdr-app.
+and `changes` mods, and the tree chevron glyphs
+(`mods/mide-files/icons/chevron-down.svg`, `chevron-right.svg`) are taken
+from Herdr's shipped `files` mod (`defaults/mods/files/` in the app
+repo, name-bearing class attributes stripped). All Apache-2.0 licensed.
+See https://github.com/herdrdev/herdr-app.

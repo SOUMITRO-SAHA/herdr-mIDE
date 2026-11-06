@@ -31,7 +31,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- Uses Herdr's active theme and updates with Herdr's theme settings; syntax colors come from the theme's `syntax_*` tokens — the shipped [`themes/mide-night.json`](themes/mide-night.json) mimics the One Dark look.
+- The layout selects the bundled Ayu Dark theme; editor syntax uses its `syntax_*` tokens and follows later Herdr theme changes.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -58,8 +58,8 @@ layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff tab · split/unified · hunk navigation
-mods/mide-editor/         editor pane · save · One Dark-syntax colors
-themes/mide-night.json    dark theme with syntax tokens (One Dark-style)
+mods/mide-editor/         editor pane · save · theme-driven syntax colors
+themes/ayu-dark.json      Ayu Dark theme and syntax palette (MIT)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
 Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch
@@ -95,4 +95,4 @@ Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot
 
 ## License
 
-[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): icons from Material Icon Theme (MIT), chevron glyphs from the previous glyph set (ISC), and parts adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
+[Apache-2.0](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): file and folder icons from Material Icon Theme (MIT), and code parts plus the chevron glyphs adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).

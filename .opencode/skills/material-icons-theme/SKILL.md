@@ -1,6 +1,6 @@
 ---
 name: material-icons-theme
-description: Source and use icons from Material Icon Theme (github.com/material-extensions/vscode-material-icon-theme) in herdr-mIDE. The only icon source in this project — for file icons, folder glyphs, tree and UI glyphs alike. Use whenever icons are added, replaced, recolored, or mapped — and always credit it in THIRD-PARTY-NOTICES.md.
+description: Source file-type and folder icons from Material Icon Theme (github.com/material-extensions/vscode-material-icon-theme) in herdr-mIDE. The only source for file/folder icons — generic UI glyphs (chevrons, tree controls) instead come from Herdr's own icon system under Apache-2.0. Use whenever icons are added, replaced, recolored, or mapped — and always credit what ships in THIRD-PARTY-NOTICES.md.
 compatibility: Used by the AI coding agent building this project (not loaded by herdr-mIDE).
 metadata:
   author: localfirstai
@@ -11,9 +11,12 @@ references:
 
 # Material Icon Theme
 
-Material Icon Theme is the only icon source in herdr-mIDE. Every icon
-in this repo comes from here: the file-type icons in the Files panel,
-the solid folder pair, any new tree or UI glyph.
+Material Icon Theme is the only source for **file-type and folder
+icons** in herdr-mIDE: the file-type icons in the Files panel and the
+solid folder pair. Generic UI glyphs (chevrons, tree controls) do NOT
+come from here — they come from Herdr's own icon system
+(`../herdr-app/defaults/mods/`), carried under Herdr's Apache-2.0
+license and credited in THIRD-PARTY-NOTICES.md.
 
 ## Source Of Truth
 
@@ -50,7 +53,7 @@ modifications. Our project stays MIT; these files are MIT too.
    optional icon packs (`enabledFor:`) are skipped, matching upstream's
    defaults; `filenamePatterns` regex entries are skipped too.
 2. Folder and tree glyphs live in `mods/mide-files/icons/` (folder.svg,
-   folder-open.svg, chevrons).
+   folder-open.svg from Material; chevrons from Herdr's own mods).
 3. Everything is materialized into `mods/mide-files/icons/` by
    `make assets` (`make dev`/`make sync` do it automatically — the mod
    must stay self-contained for ecosystem installs).
