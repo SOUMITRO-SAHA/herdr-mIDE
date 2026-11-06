@@ -10,6 +10,66 @@ const [srcFile, iconsDir, mapOut, version] = process.argv.slice(2);
 const fs = require("fs");
 const path = require("path");
 
+// — The keep list: a minimal IDE carries only what coding projects actually
+// use. Languages are the practical top 20 cross-referenced from TIOBE
+// (Nov 2025), the Stack Overflow 2025 survey and PYPL; everything else
+// falls back to the plain `file` glyph. Folder glyphs live separately in
+// icons/ (folder.svg, folder-open.svg) — this set is file icons only.
+const KEEP_ICONS = new Set([
+  // languages (top 20) + their immediate family files
+  "python",            // .py, pyproject-adjacent
+  "javascript",        // .js, .mjs, .cjs
+  "typescript",        // .ts, .mts, .cts
+  "typescript-def",    // .d.ts
+  "java",              // .java
+  "csharp",            // .cs
+  "cpp",               // .cpp, .cc, .cxx, .hpp, .hh…
+  "c",                 // .c
+  "h",                 // .h (C/C++ headers have their own glyph)
+  "php",               // .php
+  "go",                // .go
+  "go-mod",            // go.mod / go.sum
+  "rust",              // .rs
+  "ruby",              // .rb, Gemfile
+  "kotlin",            // .kt, .kts
+  "swift",             // .swift
+  "dart",              // .dart
+  "lua",               // .lua
+  "scala",             // .scala, .sc
+  "r",                 // .r, .R
+  "database",          // .sql
+  "console",           // .sh, .bash, .zsh, .fish
+  // the practical face of JS/TS: React and Vue files
+  "react",             // .jsx
+  "react_ts",          // .tsx
+  "vue",               // .vue
+  // universal non-language files
+  "file",              // the unknown-type fallback
+  "git",               // .gitignore, .gitattributes…
+  "lock",              // *.lock
+  "yaml",              // .yaml, .yml
+  "toml",              // .toml
+  "json",              // .json
+  "markdown",          // .md
+  "readme",            // README
+  "html",              // .html
+  "css",               // .css
+  "sass",              // .scss, .sass
+  "docker",            // Dockerfile, compose files
+  "license",           // LICENSE
+  "makefile",          // Makefile
+  "image",             // .png, .jpg, .svg, .ico…
+  "nodejs",            // package.json
+  "tsconfig",          // tsconfig.json
+  "editorconfig",      // .editorconfig
+  "settings",          // .ini, .conf
+  "tune",              // .env
+  "maven",             // pom.xml
+  "gradle",            // build.gradle(.kts)
+]);
+
+const keep = (icon) => KEEP_ICONS.has(icon);
+
 const src = fs.readFileSync(srcFile, "utf8");
 const SUFFIX = {}, NAMES = {};
 
@@ -29,13 +89,20 @@ for (const [, name, body] of src.matchAll(/name:\s*['"]([^'"]+)['"]([^{}]*)\}/g)
   }
 }
 
-// Drop associations whose icon SVG is not shipped (pattern-only names etc.).
-const drop = (map) => Object.fromEntries(Object.entries(map).filter(([k, icon]) => {
-  if (fs.existsSync(path.join(iconsDir, `${icon}.svg`))) return true;
-  console.warn(`  ! no svg for icon "${icon}" (from "${k}") — dropping`);
-  return false;
-}));
-const suffix = drop(SUFFIX), names = drop(NAMES);
+// Associations: keep only icons in the minimal set — everything else
+// resolves to the generic file glyph at render time.
+const suffix = {}, names = {};
+for (const [key, table, out] of [["fileExtensions", SUFFIX, suffix], ["fileNames", NAMES, names]]) {
+  for (const [k, icon] of Object.entries(table)) if (keep(icon)) out[k] = icon;
+}
+
+// Sanity: every kept icon must exist on disk.
+const missing = [...new Set([...Object.values(suffix), ...Object.values(names)])]
+  .filter((icon) => !fs.existsSync(path.join(iconsDir, `${icon}.svg`)));
+if (missing.length) {
+  console.error(`  ! keep-list icons missing on disk: ${missing.join(", ")}`);
+  process.exit(1);
+}
 
 const line = (obj) => JSON.stringify(obj).replace(/",/g, '",\n  ').replace(/^\{/, "{\n  ").replace(/\}$/, "\n}");
 fs.writeFileSync(mapOut,
@@ -50,16 +117,15 @@ export const NAMES = ${line(names)};
 export const PREFIX = [];
 `);
 
-// Prune SVGs the map never references (folder variants, clones, extras):
-// mods/mide-files/icons/material/ holds only what the project uses.
-const used = new Set(["file", ...Object.values(suffix), ...Object.values(names)]);
+// Prune SVGs outside the keep list (folder variants, clones, niche
+// languages, tooling logos): the mod ships only what it renders.
 let removed = 0;
 for (const f of fs.readdirSync(iconsDir)) {
-  if (f.endsWith(".svg") && !used.has(f.replace(/\.svg$/, ""))) {
+  if (f.endsWith(".svg") && !KEEP_ICONS.has(f.replace(/\.svg$/, ""))) {
     fs.unlinkSync(path.join(iconsDir, f));
     removed++;
   }
 }
-if (removed) console.log(`  pruned ${removed} unreferenced svgs`);
+if (removed) console.log(`  pruned ${removed} icons outside the keep list`);
 
 console.log(`  associations: ${Object.keys(suffix).length} suffix, ${Object.keys(names).length} name`);

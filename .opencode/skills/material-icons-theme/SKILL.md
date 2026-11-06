@@ -78,9 +78,11 @@ M14.483 6H4.721a1 1 0 0 0-.949.684L2 12V5h12a1 1 0 0 0-1-1H7.562a1 1 0 0 1-.64-.
 
 ## Rules
 
-- Any new icon: look in Material Icon Theme first (523 icons ship in
-  this repo — the build prunes everything the map does not
-  reference; ~1250 exist upstream). Fetch from the npm tarball, convert
+- Any new icon: look in Material Icon Theme first (47 icons ship in
+  this repo — a minimal keep-list: the top-20 languages
+  (TIOBE/Stack Overflow/PYPL-researched) plus universal file types;
+  the build prunes everything outside `KEEP_ICONS` in
+  scripts/material-icons.js; ~1250 exist upstream). Fetch from the npm tarball, convert
   fills to `currentColor`, drop into `mods/mide-files/icons/`.
 - **Every adoption must be credited** in `THIRD-PARTY-NOTICES.md`
   before commit — MIT text, © Material Extensions, modifications noted.
