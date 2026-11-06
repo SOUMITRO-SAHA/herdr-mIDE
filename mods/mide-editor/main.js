@@ -11,7 +11,7 @@ import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// the reference IDE-default (One Dark) syntax palette — the fallback when the active
+// One Dark syntax palette — the fallback when the active
 // theme doesn't define syntax_* tokens. Themes override per key: a theme
 // key "syntax_<name>" wins over this table, so palettes stay manageable
 // as theme data instead of mod code.
