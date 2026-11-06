@@ -17,8 +17,8 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   (300 to 900px), opened from the tab bar's Files and Changes buttons like
   the shipped panels.
 - **The Files panel** (`mide-files`, 42px header "Files" + folder name,
-  26px rows): a lazy tree with chevrons and theme-tinted folder glyphs —
-  muted when clean, colored by the most severe change underneath
+  26px rows): a lazy tree with chevrons and theme-tinted **solid folder
+  glyphs** — muted when clean, colored by the most severe change underneath
   (orange modified, red deleted, green new), swapping to an open glyph
   while expanded — file names one step muted against the foreground and
   ghosted when git-ignored (dependencies, build output, local secrets),
