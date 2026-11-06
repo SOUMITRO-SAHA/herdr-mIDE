@@ -7,27 +7,30 @@
 // (ROADMAP Phase 1). The mode chip and key plumbing below are its landing pad.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
-import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
+import { props, theme, themes, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// Ayu Dark syntax defaults; theme tokens override these for code rendering.
-// The host highlighter folds every variable.* scope (call names, objects,
-// params, this) into one "variable" bucket and leaves properties unstyled,
-// so these palettes color that bucket with the function orange — call names
-// dominate it in this repo's fluent style — and dim punctuation so chains
-// read as structure. Kept mod-side so no app update can regress it.
-const AYU_DARK = {
-  keyword: "#ff8f40", string: "#aad94c", comment: "#5a6673", function: "#ffb454",
-  type: "#59c2ff", number: "#d2a6ff", constant: "#d2a6ff", boolean: "#d2a6ff",
-  variable: "#ffb454", operator: "#f29668", punctuation: "#8b939e",
-  heading: "#aad94c", "markup.raw": "#f29668", "markup.bold": "#f07178",
-  "markup.italic": "#f07178", link_uri: "#39bae6",
-};
-const SYNTAX_KEYS = Object.keys(AYU_DARK);
+// Syntax colors come from the active theme's syntax_* tokens. Any token the
+// active theme leaves unset falls back to our shipped ayu-dark theme, read
+// through themes() at runtime — themes/ayu-dark.json is the single source of
+// truth; no palette copy lives here. Tokens still missing (theme not
+// installed) are omitted, so the host's own defaults apply. Why that theme's
+// variable token is the function orange: the host highlighter folds every
+// variable.* scope (call names, objects, params, this) into one "variable"
+// bucket and leaves properties unstyled, and call names dominate that bucket
+// in this repo's fluent style.
+const SYNTAX_KEYS = ["keyword", "string", "comment", "function", "type", "number", "constant", "boolean", "variable", "operator", "punctuation", "heading", "markup.raw", "markup.bold", "markup.italic", "link_uri"];
+const FALLBACK_THEME = "ayu-dark";
+const syntaxFallback = () => themes().find((th) => th.name === FALLBACK_THEME)?.colors ?? {};
 const syntaxFor = (t) => {
+  let fallback; // resolved lazily — skipped when the theme defines every token.
   const map = {};
-  for (const key of SYNTAX_KEYS) map[key] = t[`syntax_${key.replaceAll(".", "_")}`] ?? AYU_DARK[key];
+  for (const key of SYNTAX_KEYS) {
+    const token = `syntax_${key.replaceAll(".", "_")}`;
+    const color = t[token] ?? (fallback === undefined ? (fallback = syntaxFallback()) : fallback)[token];
+    if (color) map[key] = color;
+  }
   return map;
 };
 const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);
