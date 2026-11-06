@@ -191,15 +191,21 @@ export default class MideFiles extends View {
     const editors = inTab.filter(p => p.mod === "mide-editor");
     if (editors.length) {
       // Replace any existing editor pane(s), keeping the new one beside the
-      // terminal that owns this folder. Split first so even a tab containing
-      // only editor panes always has a live target while the old copy closes.
+      // terminal that owns this folder. Close them before splitting the
+      // terminal so its width is restored before the replacement takes half.
       const target = inTab.find(p => p.terminal && p.cwd === this.root)
         ?? inTab.find(p => p.terminal && p.focused)
         ?? inTab.find(p => p.terminal)
-        ?? inTab.find(p => p.mod !== "mide-editor")
-        ?? editors[0];
-      run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
-      for (const editor of editors) run("pane.close", { pane: editor.pane });
+        ?? inTab.find(p => p.mod !== "mide-editor");
+      if (target) {
+        for (const editor of editors) run("pane.close", { pane: editor.pane });
+        run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
+      } else {
+        // If this tab contains only editor panes, keep a live pane as the
+        // split target, then close the old editor copies.
+        run("pane.split", { direction: "right", pane: editors[0].pane, mod: "mide-editor", props: { file } });
+        for (const editor of editors) run("pane.close", { pane: editor.pane });
+      }
       return;
     }
     run("pane.split", { direction: "right", mod: "mide-editor", props: { file } });
@@ -223,7 +229,7 @@ export default class MideFiles extends View {
           ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? statusColor : t.dim)
           : image(`${MATERIAL}/${fileIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
         .child(div().flex_1().min_w(0).truncate().text_color(nameColor).child(entry.name))
-        .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(markColor).child(mark))));
+        .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(statusColor).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t);
     }
     return out;
