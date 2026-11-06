@@ -12,10 +12,15 @@ import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
 // Ayu Dark syntax defaults; theme tokens override these for code rendering.
+// The host highlighter folds every variable.* scope (call names, objects,
+// params, this) into one "variable" bucket and leaves properties unstyled,
+// so these palettes color that bucket with the function orange — call names
+// dominate it in this repo's fluent style — and dim punctuation so chains
+// read as structure. Kept mod-side so no app update can regress it.
 const AYU_DARK = {
   keyword: "#ff8f40", string: "#aad94c", comment: "#5a6673", function: "#ffb454",
   type: "#59c2ff", number: "#d2a6ff", constant: "#d2a6ff", boolean: "#d2a6ff",
-  variable: "#bfbdb6", operator: "#f29668", punctuation: "#bfbdb6",
+  variable: "#ffb454", operator: "#f29668", punctuation: "#8b939e",
   heading: "#aad94c", "markup.raw": "#f29668", "markup.bold": "#f07178",
   "markup.italic": "#f07178", link_uri: "#39bae6",
 };
