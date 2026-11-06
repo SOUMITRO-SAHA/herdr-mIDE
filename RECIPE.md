@@ -5,7 +5,7 @@ that shows file-type icons and colors each file by its git status, and a
 **Changes** panel with staged and unstaged groups, per-file staging, a
 detailed diff, a guided commit and an inline branch switcher. Clicking a file
 in Files opens it in an editor pane beside the terminal, with syntax
-highlighting, ⌘S save and a theme cycler in its status bar.
+highlighting, ⌘S save and Herdr's active theme.
 
 ![herdr-mIDE](preview.png)
 
@@ -58,8 +58,8 @@ highlighting, ⌘S save and a theme cycler in its status bar.
 - **The editor pane** (`mide-editor`, opened by clicking a file in Files or
   `cmd-shift-e`): a 36px header with an `EDIT` mode chip, the file name, an
   orange `●` while unsaved and a **Save** button; the code with syntax
-  highlighting (13px, the settings font); a 28px status bar with a theme
-  cycler `◐ <name>`, the full path, and an `⌘S save` hint.
+  highlighting (13px, the settings font); a 28px status bar with the full
+  path and an `⌘S save` hint. It follows Herdr's active theme.
 
 ## How it behaves
 
@@ -81,12 +81,11 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   switch`, **New** runs `git switch -c`, "delete" runs `git branch -d`;
   every action refreshes the panel; Escape (or the chip) returns to the
   changes view.
-- **The editor** loads `props().file`, marks dirty on any edit, saves with
+- **The editor** loads `props().file`, marks dirty on any edit, follows Herdr's
+  active theme (including syntax colors), and saves with
   the **Save** button, `mide-editor.save` (bound to `cmd-s` in
   `keys.json`'s `mod:mide-editor` section) and shows `Save failed: …` on
-  error. The status bar's theme cycler (or `mide-editor.theme` on
-  `cmd-alt-t`) steps through `themes()` with `app.theme`, remembering the
-  pick in shared state `mide.theme`.
+  error.
 
 ## Built from
 
@@ -109,14 +108,11 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   Diff rows and the virtual list adapt Herdr's shipped `changes` mod
   (Apache-2.0). Programs: `git` only.
 - **`mods/mide-editor`** (`"focusable": true`): `main.js`. Herdr functions:
-  `props`, `theme`, `themes`, `settings`, `readTextFile`, `writeTextFile`,
-  `run`, `shared`, `setShared`, `nextCommand`; gpui-base's `Editor` /
+  `props`, `theme`, `settings`, `readTextFile`, `writeTextFile`,
+  `nextCommand`; gpui-base's `Editor` /
   `EditorState`.
 - **`keys.json`**: global `cmd-shift-e` splits an editor pane;
-  `mod:mide-editor` binds `cmd-s` to `mide-editor.save` and `cmd-alt-t` to
-  `mide-editor.theme`.
-- **`themes/mide-night.json`**: an example custom theme (Herdr's
-  `themes/*.json` format) so the theme cycler has somewhere to land.
+  `mod:mide-editor` binds `cmd-s` to `mide-editor.save`.
 
 ## Watch out
 

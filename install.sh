@@ -1,5 +1,5 @@
 #!/bin/sh
-# herdr-mIDE installer — copies the mods, layout and theme into the Herdr app
+# herdr-mIDE installer — copies the mods and layout into the Herdr app
 # home (~/.config/herdr-app), never overwriting anything already there.
 # Keys are printed for a manual merge (per Herdr's mod-install conventions).
 set -e
@@ -30,14 +30,6 @@ else
   mkdir -p "$HOME_DIR/layouts"
   cp "$REPO_DIR/layouts/herdr-mide.json" "$HOME_DIR/layouts/herdr-mide.json"
   echo "  + layouts/herdr-mide.json"
-fi
-
-if [ -e "$HOME_DIR/themes/mide-night.json" ]; then
-  echo "  ! themes/mide-night.json already exists — skipping"
-else
-  mkdir -p "$HOME_DIR/themes"
-  cp "$REPO_DIR/themes/mide-night.json" "$HOME_DIR/themes/mide-night.json"
-  echo "  + themes/mide-night.json"
 fi
 
 echo

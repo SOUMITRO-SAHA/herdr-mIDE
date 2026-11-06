@@ -17,7 +17,7 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 | Detailed diff view | ✅ | `git diff [--cached]` on a virtual list (done in v0) |
 | Better staging & commit flow | ✅ | per-file `git add` / `restore --staged`, commit-staged-only (done in v0) |
 | Branch switching | ✅ | `git switch` / `switch -c` / `branch -d` (done in v0) |
-| Theme updation | ✅ | `themes()` + `app.theme` + `themes/*.json` (done in v0) |
+| Herdr theme integration | ✅ | Panels and editor use the active Herdr theme |
 | Vim editing | ⚠️ | `EditorState` has **no cursor/selection API** (only `value()`/`set_value()`) — needs a custom editor core (Phase 1) |
 
 ---
@@ -25,11 +25,11 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 ## Phase 0 — Foundation ✅ (done)
 
 - [x] Decide stack: a Herdr layout + mod package (herdr-sim distribution pattern)
-- [x] Repo setup — install script, RECIPE.md, keys, example theme
+- [x] Repo setup — install script, RECIPE.md, keys
 - [x] Layout `herdr-mide`: Herdr's main with mIDE Files and Changes panels
 - [x] `mide-files`: tree, type icons, git-status colors, open-in-editor
 - [x] `mide-changes`: staged/unstaged groups, per-file staging, diff, commit, branches
-- [x] `mide-editor`: pane with highlighting, ⌘S save, theme cycling
+- [x] `mide-editor`: pane with highlighting, ⌘S save, active Herdr theme
 - [x] All mods pass `herdr-app check`
 
 ## Phase 1 — Editor core

@@ -17,7 +17,7 @@ INTERVAL="${INTERVAL:-1}"
 
 echo "Watching (every ${INTERVAL}s):"
 echo "  $REPO_DIR/mods/mide-*  →  $HERDR_APP_HOME/mods/"
-echo "  layouts/herdr-mide.json, themes/mide-night.json"
+echo "  layouts/herdr-mide.json"
 echo "Herdr reloads each file as it lands. Ctrl-C to stop."
 echo "Verify: make status (errors) · make shot (window PNG)"
 
@@ -27,7 +27,6 @@ while :; do
       rsync -a --delete --itemize-changes $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/" || true
     done
     rsync -a --itemize-changes "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json" || true
-    rsync -a --itemize-changes "$REPO_DIR/themes/mide-night.json" "$HERDR_APP_HOME/themes/mide-night.json" || true
   )"
   if [ -n "$changed" ]; then
     echo ""

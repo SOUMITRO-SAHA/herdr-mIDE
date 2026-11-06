@@ -25,10 +25,10 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 - **Guided commit flow** — commit is enabled only with a message *and* staged files; nothing is staged implicitly.
 - **Branch switcher** — switch, create, and delete branches without leaving the panel.
 
-### ⌨️ Editor — a minimal, themeable editor pane
+### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- **Live theme cycling** — one click (or ⌘⌥T) steps through every theme, restyling terminals, panels and editor together; custom themes drop into Herdr's `themes/` folder (see [`themes/mide-night.json`](themes/mide-night.json)).
+- Uses Herdr's active theme and updates with Herdr's theme settings.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -42,7 +42,7 @@ cd herdr-mIDE
 herdr-app do layout.switch --name herdr-mide
 ```
 
-The installer copies the mods, layout and theme into `~/.config/herdr-app` (never overwriting), prints the two key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+The installer copies the mods and layout into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
 
 Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
 
@@ -54,9 +54,8 @@ herdr-mIDE doesn't fork Herdr — it rides on it. The Herdr app redraws its whol
 layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · diff · commit · branches
-mods/mide-editor/         editor pane · save · theme cycling
-themes/mide-night.json    an example custom theme
-keys.json                 ⌘⇧E editor pane · ⌘S save · ⌘⌥T theme
+mods/mide-editor/         editor pane · save · Herdr theme
+keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
 Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch
 scripts/                  the logic behind the commands (shared common.sh)

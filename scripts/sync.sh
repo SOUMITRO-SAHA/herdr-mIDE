@@ -1,5 +1,5 @@
 #!/bin/sh
-# herdr-mIDE sync — one-shot copy of mods, layout and theme into the Herdr
+# herdr-mIDE sync — one-shot copy of mods and layout into the Herdr
 # app home. Overwrites the installed copies (dev semantics); install.sh at
 # the repo root is the no-clobber first-time installer.
 #

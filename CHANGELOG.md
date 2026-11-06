@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - File-icon matching resolves like a full IDE: exact file name first (`package.json`, `docker-compose.yml`, `CMakeLists.txt`…), then the longest dotted suffix (`foo.d.ts` tries `d.ts` before `ts`), then name prefixes — and lockfiles (`Cargo.lock`, `poetry.lock`…) now get the lock glyph. Tree icons render at 16px, level with the row text.
-- Folder status colorization now works the way the reference IDE does it: the color of the most severe change underneath (conflict/deleted red, modified orange, new green) paints the folder's glyph **and its title**, propagating up every ancestor folder, so the path to a changed file lights up as a whole. The colors moved to dedicated theme tokens — `git_modified` (orange), `git_added` (green), `git_deleted`/`git_conflict` (red), `git_ignored` (deep muted) — so `modified` is properly orange instead of borrowing a derived red-ish token, and `mide-night` ships all five.
-- File names render calm: muted against the foreground instead of full-bright, and git-ignored paths (dependencies, build output, local secrets) go one step deeper so they stop shouting; changed names keep their orange/red/green. The night theme ships tuned `muted` and `dim` values for the hierarchy.
+- Folder status colorization now works the way the reference IDE does it: the color of the most severe change underneath (conflict/deleted red, modified orange, new green) paints the folder's glyph **and its title**, propagating up every ancestor folder, so the path to a changed file lights up as a whole. The colors use dedicated Herdr theme tokens when available, with ANSI fallbacks for other themes.
+- File names render calm: muted against the foreground instead of full-bright, and git-ignored paths (dependencies, build output, local secrets) go one step deeper so they stop shouting; changed names keep their orange/red/green.
 
 ### Added
 - Folders in the tree now switch between closed and open glyphs on expand/collapse (the previous glyph set folder pair, tree-tinted like before).

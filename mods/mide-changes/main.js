@@ -267,20 +267,26 @@ export default class MideChanges extends View {
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
     const t = theme(), index = this.files.filter((f) => f.side === "index"), work = this.files.filter((f) => f.side !== "index");
+    const tracked = work.filter((f) => !f.fresh), untracked = work.filter((f) => f.fresh);
+    const groupCount = [index, tracked, untracked].filter((files) => files.length).length;
+    const listMaxHeight = this.files.length * 28 + groupCount * 30 + 48;
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
-    const canCommit = Boolean(this.message.trim() && this.root && this.staged && !this.busy && !this.loading);
+    const fileCount = new Set(this.files.map((f) => f.path)).size;
+    const canCommit = Boolean(this.message.trim() && this.root && this.staged && !this.busy && !this.loading && this.context === this.currentKey());
     return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
         if (e.key === "escape" && this.view === "branches") { this.view = "changes"; cx.notify(); }
       })
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().font_semibold().child("Changes"))
-        .child(div().px(5).py(1).rounded(4).border_1().border_color(t.border).text_size(10).text_color(t.muted).child(`${this.files.length} files`))
+        .child(div().font_semibold().child(this.view === "branches" ? "Branches" : "Changes"))
+        .when(this.view === "changes", (e) => e.child(div().px(5).py(1).rounded(4).border_1().border_color(t.border).text_size(10).text_color(t.muted).child(`${fileCount} files`)))
         .child(div().flex_1())
-        .child(div().text_size(11).text_color(t.ansi2).child(`+${add}`)).child(div().text_size(11).text_color(t.ansi1).child(`−${del}`))
-        .child(div().id("mide-branch").h(24).px(8).flex().items_center().gap(6).rounded(7).border_1().border_color(t.border).text_size(11).text_color(this.branch ? t.foreground : t.dim).cursor_pointer().hover((s) => s.border_color(t.input)).on_click((_e, cx) => this.view === "branches" ? (this.view = "changes", cx.notify()) : this.showBranches(cx))
-          .child(`⑂ ${this.branch ?? this.root?.split(/[\\/]/).pop() ?? "—"}`)))
+        .when(this.view === "changes", (e) => e
+          .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
+          .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
+          .child(div().id("mide-stage-all").h(24).px(9).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).text_color(work.length && !this.busy ? t.foreground : t.dim).when(Boolean(work.length && !this.busy), (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.stageAll(cx))).child(this.busy ? "Working…" : "Stage All")))
+        .when(this.view === "branches", (e) => e.child(div().id("mide-branch-back").h(24).px(8).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child("Back"))))
       .when(this.view === "branches", (el) => el
         .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(6).gap(2)
           .children(this.branches.map((name) => h_flex().id(`branch-${name}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(name === this.branch, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.switchBranch(name, cx))
@@ -294,12 +300,13 @@ export default class MideChanges extends View {
           .when(!this.branches.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading branches…" : "No local branches")))))
         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
       .when(this.view === "changes", (el) => el
-        .child(div().flex_1().min_h(44).max_h(Math.max(index.length, work.length) * 28 + 96).relative().border_b(1).border_color(t.border)
+        .child(div().flex_1().min_h(44).max_h(listMaxHeight).relative().border_b(1).border_color(t.border)
           .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
             .when(Boolean(index.length), (e) => e.child(this.group("STAGED", index, t)))
             .when(Boolean(index.length && work.length), (e) => e.child(div().h(6).flex_none()))
-            .when(Boolean(work.length), (e) => e.child(this.group("CHANGES", work, t,
-              [div().id("mide-stage-all").text_size(11).text_color(t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.stageAll(cx)).child("stage all")])))
+            .when(Boolean(tracked.length), (e) => e.child(this.group("TRACKED", tracked, t)))
+            .when(Boolean((index.length || tracked.length) && untracked.length), (e) => e.child(div().h(6).flex_none()))
+            .when(Boolean(untracked.length), (e) => e.child(this.group("UNTRACKED", untracked, t)))
             .when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder")))))
           .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
         .when(this.limited, (e) => e.child(div().px(12).py(4).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files")))
@@ -309,9 +316,15 @@ export default class MideChanges extends View {
               (range) => this.rows.slice(range.start, range.end).map((row) => this.diffRow(row, t))).size_full())))
           .child(Scrollbar.vertical("mide-changes-diff").viewport_from_layout().absolute().inset_0())
           .when(!this.open && this.files.length > 0, (e) => e.child(div().absolute().top(6).px(12).text_color(t.dim).child("Select a file to view its changes"))))
-        .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)))
-        .child(h_flex().flex_none().p(10).gap(8).border_t(1).border_color(t.border)
-          .child(div().id("mide-commit-message").flex_1().min_w(0).h(32).px(10).flex().items_center().rounded(8).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
-          .child(div().id("mide-commit").h(32).px(14).flex().items_center().rounded(8).bg(canCommit ? t.solid : t.raised).text_color(canCommit ? t.solid_foreground : t.dim).text_size(12).when(canCommit, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Working…" : `Commit ${this.staged || ""}`.trim()))));
+        .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
+      .when(this.view === "changes", (e) => e.child(h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
+        .child(div().flex_1().min_w(0).text_size(10).text_color(t.dim).truncate().child(this.root?.split(/[\\/]/).pop() ?? "Repository"))
+        .child(div().id("mide-branch").h(23).max_w(150).px(7).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(10).text_color(this.branch ? t.foreground : t.dim).cursor_pointer().hover((s) => s.border_color(t.input)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? "—"))
+        .child(div().id("mide-fetch").h(23).px(7).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(10).text_color(this.busy ? t.dim : t.muted).when(!this.busy, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.fetch(cx))).child(this.busy ? "Working…" : "Fetch"))))
+      .child(v_flex().flex_none().p(8).gap(7).border_t(1).border_color(t.border)
+        .child(div().id("mide-commit-message").h(72).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(12).text_color(t.foreground)))
+        .child(h_flex().h(30).flex_none().gap(8).items_center()
+          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : "Stage changes to enable commit"))
+          .child(div().id("mide-commit").h(30).px(14).flex().items_center().rounded(7).bg(canCommit ? t.solid : t.raised).text_color(canCommit ? t.solid_foreground : t.dim).text_size(11).when(canCommit, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Working…" : "Commit"))));
   }
 }
