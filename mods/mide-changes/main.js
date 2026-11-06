@@ -1,9 +1,9 @@
 // mIDE Changes — a git panel for the review-and-commit loop: staged,
 // tracked and untracked files as separate groups with per-file staging,
-// a guided commit (staged files only), and an inline branch switcher.
+// staged and tracked-only commits, and an inline branch switcher.
 // Clicking a file opens its diff in the dedicated mIDE Diff tab.
-import { View, div } from "gpui-kit";
-import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar } from "gpui-base";
+import { View, div, svg } from "gpui-kit";
+import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
 
 function location(previous) {
@@ -26,12 +26,14 @@ const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space }
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
+const MATERIAL = "mods/mide-files/icons/material";
 
 export default class MideChanges extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.view = "changes"; this.files = []; this.staged = 0;
+    this.view = "changes"; this.files = []; this.staged = 0; this.history = [];
     this.message = ""; this.typing = false; this.branches = []; this.branch = null; this.branchInput = null;
+    this.stageMenuOpen = false; this.commitMenuOpen = false;
     this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
     this.input.set_auto_grow(2, 4);
     this.input.on("change", (_e, cx) => {
@@ -69,7 +71,7 @@ export default class MideChanges extends View {
     const loc = location(this.location), { cwd, on } = loc, context = key(loc);
     this.location = loc;
     if (context !== this.context) {
-      this.context = context; this.root = null; this.files = []; this.open = null; this.openStaged = null; this.branch = null;
+      this.context = context; this.root = null; this.files = []; this.history = []; this.open = null; this.branch = null;
       this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
       this.watched = null; this.limited = false; this.view = "changes";
     }
@@ -84,15 +86,19 @@ export default class MideChanges extends View {
         const branch = await git(["branch", "--show-current"]);
         const status = await git(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"]);
         if (status.code !== 0) throw new Error(status.stderr);
-        // Stats per side of the index, so each group shows its own +/−.
-        const stats = {};
-        for (const result of [await git(["diff", "--cached", "--numstat", "-z", "--no-renames"]), await git(["diff", "--numstat", "-z", "--no-renames"])]) {
+        // Keep staged and unstaged line counts separate, as files can appear
+        // in both groups when only part of a change is staged.
+        const stats = { index: {}, work: {} };
+        const statResults = [
+          ["index", await git(["diff", "--cached", "--numstat", "-z", "--no-renames"])],
+          ["work", await git(["diff", "--numstat", "-z", "--no-renames"])],
+        ];
+        for (const [side, result] of statResults) {
           if (result.code !== 0) throw new Error(result.stderr);
           for (const entry of result.stdout.split("\0")) {
             const [a, d, ...parts] = entry.split("\t");
             if (!parts.length) continue;
-            const path = parts.join("\t"), old = stats[path] ?? { add: 0, del: 0 };
-            stats[path] = { add: old.add + (Number(a) || 0), del: old.del + (Number(d) || 0), binary: a === "-" };
+            stats[side][parts.join("\t")] = { add: Number(a) || 0, del: Number(d) || 0, binary: a === "-" };
           }
         }
         const files = [];
@@ -101,19 +107,19 @@ export default class MideChanges extends View {
           const xy = entry.slice(0, 2), path = entry.slice(3);
           const conflict = xy.includes("U") || xy === "AA" || xy === "DD";
           const fresh = xy === "??";
-          const inIndex = !fresh && xy[0] !== " ";
-          const inWork = fresh || xy[1] !== " ";
-          const stat = stats[path] ?? { add: 0, del: 0 };
-          const row = { path, conflict, fresh, add: stat.add, del: stat.del, binary: stat.binary };
-          if (conflict) files.push({ ...row, side: "work", status: "U" });
-          else {
-            if (inIndex) files.push({ ...row, side: "index", status: xy[0] === "A" ? "A" : xy[0] === "D" ? "D" : "M" });
-            if (inWork) files.push({ ...row, side: "work", status: fresh || xy[1] === "A" ? "A" : xy[1] === "D" ? "D" : "M" });
-          }
+          const staged = !fresh && xy[0] !== " ";
+          const unstaged = fresh || xy[1] !== " ";
+          const indexStat = stats.index[path] ?? { add: 0, del: 0 };
+          const workStat = stats.work[path] ?? { add: 0, del: 0 };
+          const statusCode = conflict ? "U" : fresh || xy.includes("A") ? "A" : xy.includes("D") ? "D" : "M";
+          files.push({
+            path, conflict, fresh, staged, unstaged, status: statusCode,
+            add: indexStat.add + workStat.add, del: indexStat.del + workStat.del,
+          });
         }
         if (this.currentKey() !== context) return;
         this.root = root; this.on = on; this.branch = branch.code === 0 ? branch.stdout.trim() : null;
-        this.files = files; this.staged = files.filter((f) => f.side === "index").length;
+        this.files = files; this.staged = files.filter((f) => f.staged).length;
         this.limited = entries.length > 1000; this.error = null;
         this.watch(root, cx);
       } catch (e) { if (this.currentKey() === context) this.error = String(e); }
@@ -121,14 +127,13 @@ export default class MideChanges extends View {
     });
   }
 
-  // The panel is a list, not a split view: a click hands the file to the
-  // mIDE Diff mod. Reuse its tab when one exists so repeated browsing stays
-  // one tab instead of a trail of them.
+  // Reuse the diff tab so browsing files does not leave a trail of tabs.
   openDiff(file, cx) {
     if (!this.root) return;
     const title = `Diff · ${file.path.split("/").pop()}`;
-    const request = { root: this.root, path: file.path, side: file.side, status: file.status, fresh: file.fresh, on: this.on, branch: this.branch, title };
-    this.open = file.path; this.openStaged = file.side; this.note = null;
+    const side = file.unstaged || file.fresh ? "work" : "index";
+    const request = { root: this.root, path: file.path, side, status: file.status, fresh: file.fresh, on: this.on, branch: this.branch, title };
+    this.open = file.path; this.note = null;
     setShared("mide.diff.request", request);
     const focus = focused(), allSpaces = spaces();
     const space = allSpaces.find(s => s.id === focus?.space) ?? allSpaces.find(s => s.active);
@@ -162,15 +167,68 @@ export default class MideChanges extends View {
   stage(file, cx) { this.git(cx, ["add", "--", file.path]); }
   unstage(file, cx) { this.git(cx, ["restore", "--staged", "--", file.path]); }
   stageAll(cx) { this.git(cx, ["add", "-A"]); }
+  unstageAll(cx) { this.git(cx, ["reset", "-q", "HEAD", "--", "."]); }
+  primaryStage(cx) {
+    if (this.files.some((file) => file.unstaged)) this.stageAll(cx);
+    else if (this.staged) this.unstageAll(cx);
+  }
+  stageGroup(files, stage, cx) {
+    const paths = files.map((file) => file.path);
+    if (!paths.length) return;
+    this.git(cx, stage ? ["add", "--", ...paths] : ["restore", "--staged", "--", ...paths]);
+  }
   fetch(cx) { this.git(cx, ["fetch", "--prune"]); }
 
-  commit(cx) {
-    if (!this.message.trim() || !this.root || this.busy || this.loading || this.context !== this.currentKey() || !this.staged) return;
+  selectTab(view, cx) {
+    this.view = view;
+    if (view === "history") {
+      if (!this.root) {
+        this.history = []; this.historyError = "No repository"; this.historyLoading = false; cx.notify(); return;
+      }
+      if (this.historyLoading) { cx.notify(); return; }
+      this.history = []; this.historyError = null; this.historyLoading = true;
+      const root = this.root, on = this.on, context = this.context;
+      cx.spawn(async (cx) => {
+        try {
+          const result = await exec("git", [...READ, "log", "-n", "100", "--format=%h%x00%s%x00%an%x00%ar"], { cwd: root, on });
+          if (this.currentKey() !== context) return;
+          if (result.code !== 0) throw new Error((result.stderr || result.stdout).trim());
+          this.history = result.stdout.split("\n").filter(Boolean).map((line) => {
+            const [hash, subject, author, age] = line.split("\0");
+            return { hash, subject, author, age };
+          });
+        } catch (e) { if (this.currentKey() === context) this.historyError = String(e); }
+        finally { if (this.currentKey() === context) this.historyLoading = false; cx.notify(); }
+      });
+    }
+    cx.notify();
+  }
+
+  commit(cx, scope = "auto") {
+    const tracked = this.files.some((file) => !file.fresh);
+    const stageTracked = scope === "tracked" || (scope === "auto" && !this.staged);
+    if (!this.message.trim() || !this.root || this.busy || this.loading || this.context !== this.currentKey()) return;
+    if (stageTracked ? !tracked : !this.staged) return;
     const message = this.message.trim();
-    this.git(cx, ["commit", "-m", message], () => { this.message = ""; this.input.set_value(""); });
+    const root = this.root, on = this.on, context = this.context;
+    this.busy = true; this.note = null;
+    cx.spawn(async (cx) => {
+      try {
+        if (stageTracked) {
+          const staged = await exec("git", ["add", "-u"], { cwd: root, on });
+          if (staged.code !== 0) throw new Error((staged.stderr || staged.stdout).trim());
+        }
+        const result = await exec("git", ["commit", "-m", message], { cwd: root, on });
+        if (result.code !== 0) throw new Error((result.stderr || result.stdout).trim());
+        if (this.currentKey() === context) { this.message = ""; this.input.set_value(""); }
+      } catch (e) { if (this.currentKey() === context) this.note = String(e); }
+      finally { this.busy = false; this.refresh(cx); cx.notify(); }
+    });
+    cx.notify();
   }
 
   showBranches(cx) {
+    this.returnView = this.view === "history" ? "history" : "changes";
     this.view = "branches"; this.branches = []; this.branchError = null;
     const root = this.root, on = this.on, context = this.context;
     cx.spawn(async (cx) => {
@@ -186,7 +244,10 @@ export default class MideChanges extends View {
   }
 
   switchBranch(name, cx) {
-    this.git(cx, ["switch", name], () => { this.view = "changes"; });
+    this.git(cx, ["switch", name], () => {
+      this.view = this.returnView ?? "changes";
+      if (this.view === "history") this.selectTab("history", cx);
+    });
     cx.notify();
   }
 
@@ -194,7 +255,10 @@ export default class MideChanges extends View {
     const name = this.newBranch.value().trim();
     if (!name) return;
     this.newBranch.set_value("");
-    this.git(cx, ["switch", "-c", name], () => { this.view = "changes"; });
+    this.git(cx, ["switch", "-c", name], () => {
+      this.view = this.returnView ?? "changes";
+      if (this.view === "history") this.selectTab("history", cx);
+    });
   }
 
   deleteBranch(name, cx) {
@@ -202,82 +266,159 @@ export default class MideChanges extends View {
     cx.notify();
   }
 
-  fileRow(f, t) {
-    const parts = f.path.split("/"), name = parts.pop();
-    const selected = this.open === f.path && this.openStaged === f.side;
-    const color = f.status === "A" ? (t.git_added ?? t.ansi2) : f.status === "D" || f.status === "U" ? (t.git_deleted ?? t.ansi1) : (t.git_modified ?? t.blocked);
-    return h_flex().id(`change-${f.side}-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
-      .child(div().w(14).text_size(11).font_semibold().text_color(color).child(f.status))
-      .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
-      .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)))
-      .child(Checkbox.new(`stage-${f.side}-${f.path}`).w(14).h(14).flex_none().checked(f.side === "index")
-        .accessibility_label(`${f.side === "index" ? "Unstage" : "Stage"} ${f.path}`)
-        .on_click((_e, cx) => cx.stop_propagation())
-        .on_change((checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
+  menuItem(id, label, enabled, t, action) {
+    return h_flex().id(id).h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+      .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
+      .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.commitMenuOpen = false; action(cx); cx.notify(); } })
+      .child(label);
   }
 
-  group(label, files, t, extra) {
+  stageActions(t, label, enabled, action) {
+    return h_flex().h(24).flex_none().rounded(6).border_1().border_color(t.border)
+      .child(div().id("mide-stage-all").h_full().px(8).flex().items_center().rounded_l(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+        .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
+        .on_click((_e, cx) => { if (enabled) action(cx); }).child(label))
+      .child(Popover.new("mide-stage-menu").open(this.stageMenuOpen).anchor("bottom_right")
+        .on_open_change((open, cx) => { this.stageMenuOpen = open; cx.notify(); })
+        .trigger(div().id("mide-stage-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_size(10).text_color(t.muted).accessibility_label("Stage actions").cursor_pointer().child("More"))
+        .content(v_flex().min_w(150).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
+          .child(this.menuItem("mide-menu-stage-all", "Stage All", !this.busy && this.files.some((file) => file.unstaged), t, (cx) => this.stageAll(cx)))
+          .child(this.menuItem("mide-menu-unstage-all", "Unstage All", !this.busy && Boolean(this.staged), t, (cx) => this.unstageAll(cx)))))
+      .flex_none();
+  }
+
+  commitActions(t, label, enabled) {
+    return h_flex().h(30).flex_none().rounded(7).bg(enabled ? t.solid : t.raised)
+      .child(div().id("mide-commit").h_full().px(12).flex().items_center().rounded_l(6).text_size(11).text_color(enabled ? t.solid_foreground : t.dim)
+        .when(enabled, (e) => e.cursor_pointer())
+        .on_click((_e, cx) => this.commit(cx)).child(label))
+      .child(Popover.new("mide-commit-menu").open(this.commitMenuOpen).anchor("top_right")
+        .on_open_change((open, cx) => { this.commitMenuOpen = open; cx.notify(); })
+        .trigger(div().id("mide-commit-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_size(10).text_color(enabled ? t.solid_foreground : t.dim).accessibility_label("Commit options").cursor_pointer().child("More"))
+        .content(v_flex().min_w(180).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
+          .child(this.menuItem("mide-menu-commit-staged", "Commit Staged Changes", enabled && Boolean(this.staged), t, (cx) => this.commit(cx, "staged")))
+          .child(this.menuItem("mide-menu-commit-tracked", "Commit Tracked Changes", enabled && this.files.some((file) => !file.fresh), t, (cx) => this.commit(cx, "tracked")))))
+      .flex_none();
+  }
+
+  stageCheckbox(id, label, checked, indeterminate, t, onChange) {
+    const active = checked || indeterminate;
+    return Checkbox.new(id).w(14).h(14).flex_none().disabled(this.busy).checked(checked).indeterminate(indeterminate)
+      .accessibility_label(label)
+      .on_click((_e, cx) => cx.stop_propagation())
+      .on_change(onChange)
+      .child(div().size(14).flex().items_center().justify_center().rounded(3).border_1()
+        .border_color(active ? t.accent : t.border).bg(checked ? t.accent : t.background)
+        .text_size(10).font_semibold().text_color(checked ? t.background : t.accent)
+        .child(checked ? "✓" : indeterminate ? "−" : ""));
+  }
+
+  fileRow(f, t) {
+    const parts = f.path.split("/"), name = parts.pop();
+    const selected = this.open === f.path;
+    const color = f.status === "A" ? (t.git_added ?? t.ansi2) : f.status === "D" || f.status === "U" ? (t.git_deleted ?? t.ansi1) : (t.git_modified ?? t.blocked);
+    return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
+      .child(svg(`${MATERIAL}/file.svg`).size(16).flex_none())
+      .child(div().w(10).text_size(10).font_semibold().text_color(color).child(f.status))
+      .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
+      .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)))
+      .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t,
+        (checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
+  }
+
+  group(label, files, t) {
+    const fullyStaged = files.filter((file) => file.staged && !file.unstaged).length;
+    const allStaged = fullyStaged === files.length;
+    const partlyStaged = files.some((file) => file.staged && file.unstaged) || (fullyStaged > 0 && !allStaged);
     return v_flex().flex_none()
       .child(h_flex().h(24).px(8).gap(6).items_center()
         .child(div().text_size(11).font_semibold().text_color(t.muted).child(label))
         .child(div().text_size(10).text_color(t.dim).child(String(files.length)))
-        .child(div().flex_1()).children(extra ?? []))
+        .child(div().flex_1())
+        .child(this.stageCheckbox(`stage-group-${label.toLowerCase()}`, `${allStaged ? "Unstage" : "Stage"} all ${label.toLowerCase()} files`, allStaged, partlyStaged, t,
+          (checked, cx) => this.stageGroup(files, checked, cx))))
       .children(files.map((f) => this.fileRow(f, t)));
+  }
+
+  branchFooter(t) {
+    const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
+    return h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
+      .child(svg("mods/mide-files/icons/material/git.svg").size(12).flex_none())
+      .child(div().max_w(110).min_w(0).text_size(10).text_color(t.dim).truncate().child(repository))
+      .child(div().text_size(10).text_color(t.dim).child("/"))
+      .child(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
+      .child(div().id("mide-fetch").h(23).px(7).flex().items_center().rounded(5).border_1().border_color(t.border).text_size(10).text_color(this.busy ? t.dim : t.muted).when(!this.busy, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.fetch(cx))).child(this.busy ? "Working…" : "Fetch"));
+  }
+
+  historyRow(commit, t) {
+    return h_flex().id(`history-${commit.hash}`).h(42).flex_none().px(9).gap(8).items_center().rounded(6).hover((s) => s.bg(t.hover))
+      .child(div().w(48).flex_none().text_size(10).text_color(t.accent).child(commit.hash))
+      .child(v_flex().flex_1().min_w(0).gap(2)
+        .child(div().min_w(0).truncate().text_size(11).text_color(t.foreground).child(commit.subject || "(no subject)"))
+        .child(h_flex().gap(5).text_size(10).text_color(t.dim)
+          .child(div().max_w(120).truncate().child(commit.author || "Unknown author"))
+          .child(div().child(commit.age || ""))));
   }
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const t = theme(), index = this.files.filter((f) => f.side === "index"), work = this.files.filter((f) => f.side !== "index");
-    const tracked = work.filter((f) => !f.fresh), untracked = work.filter((f) => f.fresh);
+    const t = theme(), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
-    const fileCount = new Set(this.files.map((f) => f.path)).size;
-    const canCommit = Boolean(this.message.trim() && this.root && this.staged && !this.busy && !this.loading && this.context === this.currentKey());
+    const fileCount = this.files.length;
+    const hasTrackedChanges = tracked.length > 0;
+    const canCommit = Boolean(this.message.trim() && this.root && (this.staged || hasTrackedChanges) && !this.busy && !this.loading && this.context === this.currentKey());
+    const stageLabel = this.files.some((file) => file.unstaged) ? "Stage All" : "Unstage All";
+    const commitLabel = this.staged ? "Commit" : "Commit Tracked";
     return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
-        if (e.key === "escape" && this.view === "branches") { this.view = "changes"; cx.notify(); }
+        if (e.key === "escape" && this.view === "branches") { this.view = this.returnView ?? "changes"; cx.notify(); }
       })
-      .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().font_semibold().child(this.view === "branches" ? "Branches" : "Changes"))
-        .when(this.view === "changes", (e) => e.child(div().px(5).py(1).rounded(4).border_1().border_color(t.border).text_size(10).text_color(t.muted).child(`${fileCount} files`)))
+      .when(this.view === "branches", (el) => el.child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
+        .child(div().font_semibold().flex_1().child("Branches"))
+        .child(div().id("mide-branch-back").h(24).px(8).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { this.view = this.returnView ?? "changes"; cx.notify(); }).child("Back"))))
+      .when(this.view !== "branches", (el) => el.child(h_flex().h(36).flex_none().border_b(1).border_color(t.border)
+        .child(div().id("mide-tab-changes").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "changes" ? t.accent : t.background).text_size(12).text_color(this.view === "changes" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child(`Changes (${fileCount})`))
+        .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(12).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History"))))
+      .when(this.view === "changes", (el) => el.child(h_flex().h(30).flex_none().px(8).gap(6).items_center().border_b(1).border_color(t.border)
+        .child(div().id("mide-view-diff").text_size(11).text_color(this.files.length ? t.muted : t.dim).when(Boolean(this.files.length), (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.openDiff(this.files[0], cx))).child("View Diff"))
+        .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
+        .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
         .child(div().flex_1())
-        .when(this.view === "changes", (e) => e
-          .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
-          .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
-          .child(div().id("mide-stage-all").h(24).px(9).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).text_color(work.length && !this.busy ? t.foreground : t.dim).when(Boolean(work.length && !this.busy), (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.stageAll(cx))).child(this.busy ? "Working…" : "Stage All")))
-        .when(this.view === "branches", (e) => e.child(div().id("mide-branch-back").h(24).px(8).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child("Back"))))
+        .child(this.stageActions(t, stageLabel, Boolean(this.files.length && !this.busy), (cx) => this.primaryStage(cx)))))
       .when(this.view === "branches", (el) => el
         .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(6).gap(2)
           .children(this.branches.map((name) => h_flex().id(`branch-${name}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(name === this.branch, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.switchBranch(name, cx))
             .child(div().flex_1().min_w(0).truncate().child(name))
             .when(name === this.branch, (e) => e.child(div().text_size(10).text_color(t.dim).child("current")))
             .when(name !== this.branch, (e) => e.child(div().id(`branch-del-${name}`).text_size(11).text_color(t.muted).hover((s) => s.text_color(t.ansi1)).on_click((_e, cx) => { cx.stop_propagation(); this.deleteBranch(name, cx); }).child("delete")))))
-          .child(h_flex().h(32).flex_none().px(8).mt(6).gap(8).items_center()
-            .child(div().flex_1().min_w(0).h(28).px(8).flex().items_center().rounded(7).border_1().border_color(t.border).child(Input.new(this.newBranch).h_full().text_size(12).text_color(t.foreground).on("submit", (_e, cx) => this.createBranch(cx))))
-            .child(div().id("mide-branch-new").h(28).px(10).flex().items_center().rounded(7).bg(t.solid).text_color(t.solid_foreground).text_size(12).cursor_pointer().on_click((_e, cx) => this.createBranch(cx)).child("New")))
-          .when(Boolean(this.branchError), (e) => e.child(div().p(8).text_size(11).text_color(t.ansi1).child(this.branchError)))
-          .when(!this.branches.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading branches…" : "No local branches")))))
-        .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
+           .child(h_flex().h(32).flex_none().px(8).mt(6).gap(8).items_center()
+             .child(div().flex_1().min_w(0).h(28).px(8).flex().items_center().rounded(7).border_1().border_color(t.border).child(Input.new(this.newBranch).h_full().text_size(12).text_color(t.foreground).on("submit", (_e, cx) => this.createBranch(cx))))
+             .child(div().id("mide-branch-new").h(28).px(10).flex().items_center().rounded(7).bg(t.solid).text_color(t.solid_foreground).text_size(12).cursor_pointer().on_click((_e, cx) => this.createBranch(cx)).child("New")))
+           .when(Boolean(this.branchError), (e) => e.child(div().p(8).text_size(11).text_color(t.ansi1).child(this.branchError)))
+           .when(!this.branches.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading branches…" : "No local branches")))))
+         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
       .when(this.view === "changes", (el) => el
         .child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
           .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
-            .when(Boolean(index.length), (e) => e.child(this.group("STAGED", index, t)))
-            .when(Boolean(index.length && work.length), (e) => e.child(div().h(6).flex_none()))
-            .when(Boolean(tracked.length), (e) => e.child(this.group("TRACKED", tracked, t)))
-            .when(Boolean((index.length || tracked.length) && untracked.length), (e) => e.child(div().h(6).flex_none()))
-            .when(Boolean(untracked.length), (e) => e.child(this.group("UNTRACKED", untracked, t)))
+            .when(Boolean(tracked.length), (e) => e.child(this.group("Tracked", tracked, t)))
+            .when(Boolean(tracked.length && untracked.length), (e) => e.child(div().h(6).flex_none()))
+            .when(Boolean(untracked.length), (e) => e.child(this.group("Untracked", untracked, t)))
             .when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder"))))
             .when(this.limited, (e) => e.child(div().p(8).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files"))))
           .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
-      .when(this.view === "changes", (e) => e.child(h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
-        .child(div().flex_1().min_w(0).text_size(10).text_color(t.dim).truncate().child(this.root?.split(/[\\/]/).pop() ?? "Repository"))
-        .child(div().id("mide-branch").h(23).max_w(150).px(7).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(10).text_color(this.branch ? t.foreground : t.dim).cursor_pointer().hover((s) => s.border_color(t.input)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? "—"))
-        .child(div().id("mide-fetch").h(23).px(7).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(10).text_color(this.busy ? t.dim : t.muted).when(!this.busy, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.fetch(cx))).child(this.busy ? "Working…" : "Fetch"))))
-      .child(v_flex().flex_none().p(8).gap(7).border_t(1).border_color(t.border)
-        .child(div().id("mide-commit-message").h(72).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(12).text_color(t.foreground)))
+      .when(this.view === "history", (el) => el.child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
+        .child(v_flex().id("mide-history-list").absolute().inset_0().overflow_y_scroll().p(6)
+          .children(this.history.map((commit) => this.historyRow(commit, t)))
+          .when(!this.history.length, (e) => e.child(div().p(10).text_size(11).text_color(t.dim).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
+         .child(Scrollbar.vertical("mide-history-list").absolute().inset_0())))
+      .when(this.view !== "branches", (el) => el.child(this.branchFooter(t)))
+      .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
+        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(12).text_color(t.foreground)))
         .child(h_flex().h(30).flex_none().gap(8).items_center()
-          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : "Stage changes to enable commit"))
-          .child(div().id("mide-commit").h(30).px(14).flex().items_center().rounded(7).bg(canCommit ? t.solid : t.raised).text_color(canCommit ? t.solid_foreground : t.dim).text_size(11).when(canCommit, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Working…" : "Commit"))));
+          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "Stage changes to enable commit"))
+          .child(this.commitActions(t, this.busy ? "Working…" : commitLabel, canCommit)))))
+      .when(this.view === "branches" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)));
   }
 }

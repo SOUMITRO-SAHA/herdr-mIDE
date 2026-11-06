@@ -22,10 +22,10 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 ### 🌿 Changes — a git panel for the review-and-commit loop
 
-- **STAGED and CHANGES groups** — see exactly what a commit will contain.
-- **Per-file staging** — `+` to stage, `−` to unstage, "stage all" for everything the agent touched.
+- **Tracked and Untracked groups** — each file has a tri-state staging checkbox; partially staged files stay visible as partially staged.
+- **Stage All / Unstage All** — one split action stages every change or clears the index, with per-group selection too.
 - **Detailed diff view** — line-numbered, tinted additions/deletions, smooth on big diffs.
-- **Guided commit flow** — commit is enabled only with a message *and* staged files; nothing is staged implicitly.
+- **Commit flow** — commits staged files when present; otherwise **Commit Tracked** stages tracked edits, excluding untracked files. The menu also lets you choose the scope explicitly.
 - **Branch switcher** — switch, create, and delete branches without leaving the panel.
 
 ### ⌨️ Editor — a minimal editor pane

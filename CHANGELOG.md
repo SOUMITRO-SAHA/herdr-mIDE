@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- The Changes panel now groups files by staging state, offers per-file Stage/Unstage actions plus Stage All/Unstage All, and keeps the current branch visible in its footer selector.
+- The Changes panel now follows the reference IDE's Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.
 - The separate root `assets/` icon tree is gone — `mods/mide-files/icons/` is the single home for every icon, since the mod has to be self-contained anyway. One place to edit, no copy step, and `make assets` is removed; `scripts/update-icons.sh` regenerates the file-type set in place.
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is generated from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph, and the generator prunes everything outside the list. `scripts/update-icons.sh` is the one regeneration entry point. Folder glyphs and chevrons are unchanged.
 

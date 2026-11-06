@@ -2,7 +2,7 @@
 
 Herdr's window with a minimal IDE in the right-hand panel: a **Files** panel
 that shows file-type icons and colors each file by its git status, and a
-**Changes** panel with staged and unstaged groups, per-file staging, a
+**Changes** panel with tracked and untracked groups, per-file staging, a
 detailed diff, a guided commit and an inline branch switcher. Clicking a file
 in Files opens it in an editor pane beside the terminal, with syntax
 highlighting, ⌘S save and Herdr's active theme.
@@ -38,19 +38,12 @@ highlighting, ⌘S save and Herdr's active theme.
   modified, green (`ansi2`) added/untracked, red (`ansi1`) deleted or
   conflicted, with a small bold status letter (`M`, `A`, `D`, `U`) on the
   right.
-- **The Changes panel** (`mide-changes`, 42px header): "Changes", a count
-  pill, total `+`/`−` in green/red, and a branch chip `⑂ <branch>` on the
-  right (bordered, opens the branch view). Below, the file list in two
-  groups with 11px semibold labels: **STAGED** and **CHANGES** (plus
-  "stage all" on the CHANGES label row). Each 28px row: a bold colored
-  status letter, dim folder path + bright name, per-file `+N`/`−N`, and an
-  action on the right — `+` to stage (work side) or `−` to unstage (index
-  side). Below the list, the **diff**: 20px rows, unified, line numbers,
-  green-tinted additions (`ansi2 + "18"`), red-tinted deletions
-  (`ansi1 + "18"`), `@@` hunk headers on `raised`, on a virtual list with
-  its own scrollbars. At the bottom: a commit message input (32px, accent
-  border while focused) and a **Commit N** button (solid while enabled,
-  where N is the staged count).
+- **The Changes panel** (`mide-changes`): **Changes** and **History** tabs;
+  a `View Diff` summary with aggregate `+`/`−` counts and a Stage All /
+  Unstage All split action; **Tracked** and **Untracked** groups with counts,
+  per-file tri-state staging checkboxes, and group-level selection. The footer
+  keeps the repository and current branch (for example `main`) visible beside
+  Fetch and opens the branch switcher. The commit composer sits below it.
 - **The branch view** (inside `mide-changes`, replaces list + diff while
   open): 28px branch rows (selected background on the current one,
   "current" label, "delete" in red on hover for others), and a "branch
@@ -74,13 +67,12 @@ highlighting, ⌘S save and Herdr's active theme.
   10s; modified/added/deleted coloring follows `git status
   --porcelain=v1` per path.
 - **Changes** refreshes on the repo's folder watch and every 10s. Clicking a
-  row toggles its diff (staged rows diff `--cached`, unstaged `git diff`,
-  untracked files read as all-additions); the first file's diff shows until
-  you pick another. `+` on a work row runs `git add -- <path>`, `−` on an
-  index row `git restore --staged -- <path>`, "stage all" runs `git add -A`.
-  **Commit** runs `git commit -m <message>` with the staged files only — it
-  is disabled (dim, no cursor) until a message and at least one staged file
-  exist. Enter in the message input commits.
+  row opens its diff in the dedicated Diff tab. The row checkbox stages or
+  unstages the file; its indeterminate state marks a partially staged file.
+  The top split action runs `git add -A` or `git reset`; group checkboxes stage
+  or unstage only that group. Commit defaults to staged files, or to tracked
+  changes (excluding untracked files) when nothing is staged; the menu exposes
+  both scopes. Enter in the message input commits.
 - **The branch chip** opens the branch view: clicking a branch runs `git
   switch`, **New** runs `git switch -c`, "delete" runs `git branch -d`;
   every action refreshes the panel; Escape (or the chip) returns to the
