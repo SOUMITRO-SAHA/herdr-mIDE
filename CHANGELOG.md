@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Icons now come entirely from Material Icon Theme (MIT)** — 1199 file-type icons replace the previous 169-icon set, and the association map is generated from the theme's own mapping (1332 suffixes + 1084 names, roughly four times the previous coverage). `scripts/update-icons.sh` is the one regeneration entry point. Folder glyphs and chevrons are unchanged.
+- **Icons now come entirely from Material Icon Theme (MIT)** — 523 file-type icons — exactly the set the map references, pruned of everything unused — replace the previous 169-icon set, and the association map is generated from the theme's own mapping (1332 suffixes + 1084 names, roughly four times the previous coverage). `scripts/update-icons.sh` is the one regeneration entry point. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
 - Files panel: macOS `.DS_Store` files no longer appear in the tree (filtered in both the `sh` and PowerShell listings; other dotfiles still show).

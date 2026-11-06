@@ -50,4 +50,16 @@ export const NAMES = ${line(names)};
 export const PREFIX = [];
 `);
 
+// Prune SVGs the map never references (folder variants, clones, extras):
+// assets/ holds only what the project uses.
+const used = new Set(["file", ...Object.values(suffix), ...Object.values(names)]);
+let removed = 0;
+for (const f of fs.readdirSync(iconsDir)) {
+  if (f.endsWith(".svg") && !used.has(f.replace(/\.svg$/, ""))) {
+    fs.unlinkSync(path.join(iconsDir, f));
+    removed++;
+  }
+}
+if (removed) console.log(`  pruned ${removed} unreferenced svgs`);
+
 console.log(`  associations: ${Object.keys(suffix).length} suffix, ${Object.keys(names).length} name`);

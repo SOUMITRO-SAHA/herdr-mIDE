@@ -93,8 +93,8 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   440px, and the shipped `tabs` mod is kept — its Files and Changes buttons
   already toggle the `files` and `changes` block ids.
 - **`mods/mide-files`**: `main.js` (tree, marks, icons, open-in-editor),
-  `icons/` (folder + chevron glyphs) and `icons/material/` (1199 Material
-  Icon Theme SVGs), `icons.js` (the generated suffix/name map). Herdr
+  `icons/` (folder + chevron glyphs) and `icons/material/` (523 Material Icon Theme SVGs — exactly the set the
+  map references), `icons.js` (the generated suffix/name map). Herdr
   functions: `spaces`, `panes`, `focused`, `exec`, `watchFolder`,
   `theme`, `run`. Folder listing adapted from Herdr's shipped `files`
   mod (Apache-2.0). Icons are canonical in the repo's `assets/icons/`
