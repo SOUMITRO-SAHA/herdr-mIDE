@@ -19,7 +19,7 @@ highlighting, ⌘S save and Herdr's active theme.
 - **The Files panel** (`mide-files`, 42px header "Files" + folder name,
   26px rows): a lazy tree with chevrons and theme-tinted **solid folder
   glyphs** — muted when clean, colored (glyph **and** title) by the most
-  severe change underneath (orange modified, red deleted, green new),
+   severe change underneath (golden yellow modified, red deleted, green new),
   propagating up every ancestor folder, swapping to an open glyph while
   expanded — file names one step muted against the foreground and
   ghosted when git-ignored (dependencies, build output, local secrets),
@@ -34,10 +34,11 @@ highlighting, ⌘S save and Herdr's active theme.
    universal files like git/yaml/json/docker/lock).
    Match order: exact name, then longest dotted suffix, then the
    theme's default file glyph for unknown types. The **whole
-  file name is colored by git status**: orange (`theme().blocked`)
-  modified, green (`ansi2`) added/untracked, red (`ansi1`) deleted or
-  conflicted, with a small bold status letter (`M`, `A`, `D`, `U`) on the
-  right.
+   file name is colored by git status**: golden yellow modified, green
+   added/untracked, red deleted or conflicted, with a small bold status
+   letter (`M`, `A`, `D`, `U`) on the right. The bundled dark theme uses
+   One Dark's status colors (`#dec184`, `#a1c181`, `#d07277`), while
+   other themes supply their own colors.
 - **The Changes panel** (`mide-changes`): **Changes** and **History** tabs;
   a `View Diff` summary with aggregate `+`/`−` counts and a Stage All /
   Unstage All split action; **Tracked** and **Untracked** groups with counts,
