@@ -18,6 +18,8 @@ const SYNTAX = {
   keyword: "#b477cf", string: "#a1c181", comment: "#5d636f", function: "#73ade9",
   type: "#6eb4bf", number: "#bf956a", constant: "#bf956a", boolean: "#bf956a",
   variable: "#acb2be", operator: "#6eb4bf", punctuation: "#b2b9c6",
+  heading: "#d07277", "markup.raw": "#a1c181", "markup.bold": "#bf956a",
+  "markup.italic": "#74ade8", link_uri: "#6eb4bf",
 };
 const codeStyle = (font) => JSON.stringify([font]);
 
