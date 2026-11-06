@@ -1,0 +1,9 @@
+{
+  "global": {
+    "cmd-shift-e": { "command": "pane.split", "args": { "direction": "right", "mod": "mide-editor" } }
+  },
+  "mod:mide-editor": {
+    "cmd-s": "mide-editor.save",
+    "cmd-alt-t": "mide-editor.theme"
+  }
+}

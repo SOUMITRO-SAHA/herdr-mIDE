@@ -1,0 +1,211 @@
+// mIDE Files — a file manager for the focused pane's folder with file-type
+// icons and git status colors on the tree. Clicking a file opens it in the
+// mIDE editor pane.
+//
+// Folder listing adapts Herdr's shipped `files` mod (Apache-2.0):
+// same sh/PowerShell helpers, same lazy expansion, same bounded reads.
+import { View, div, svg } from "gpui-kit";
+import { v_flex, h_flex } from "gpui-base";
+import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
+
+function location() {
+  const space = spaces().find(s => s.active), f = focused();
+  const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
+  const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
+  return { cwd: pane?.cwd || f?.cwd || space?.folder, on, space: space?.id };
+}
+const key = () => JSON.stringify(location());
+const PER_FOLDER = 500, TOTAL = 5000;
+
+// One glyph per file family, tinted per type. Add rows here as languages join.
+const ICONS = "mods/mide-files/icons";
+const TYPES = {
+  js: ["braces", "#f0db4f"], mjs: ["braces", "#f0db4f"], cjs: ["braces", "#f0db4f"],
+  jsx: ["braces", "#61dafb"],
+  ts: ["braces", "#3178c6"], mts: ["braces", "#3178c6"], cts: ["braces", "#3178c6"], tsx: ["braces", "#3178c6"],
+  json: ["braces", "#cbcb41"], jsonc: ["braces", "#cbcb41"],
+  html: ["code", "#e34c26"], htm: ["code", "#e34c26"], xhtml: ["code", "#e34c26"],
+  xml: ["code", "#8a919f"], vue: ["code", "#41b883"], svelte: ["code", "#ff3e00"],
+  c: ["code", "#a8b9cc"], h: ["code", "#a8b9cc"], cpp: ["code", "#00599c"], cc: ["code", "#00599c"], hpp: ["code", "#00599c"],
+  css: ["hash", "#42a5f5"], scss: ["hash", "#cf649a"], sass: ["hash", "#cf649a"], less: ["hash", "#2f6ba8"],
+  py: ["snake", "#5aaee3"], pyi: ["snake", "#5aaee3"],
+  rs: ["hexagon", "#dea584"], go: ["hexagon", "#00add8"],
+  md: ["type", "#58a6ff"], mdx: ["type", "#58a6ff"], txt: ["type", "#8a919f"],
+  sh: ["terminal", "#89e051"], bash: ["terminal", "#89e051"], zsh: ["terminal", "#89e051"], fish: ["terminal", "#89e051"],
+  yaml: ["sliders", "#e05b77"], yml: ["sliders", "#e05b77"],
+  toml: ["sliders", "#8a919f"], ini: ["sliders", "#8a919f"], cfg: ["sliders", "#8a919f"], conf: ["sliders", "#8a919f"], env: ["sliders", "#8a919f"],
+  png: ["image", "#a074c4"], jpg: ["image", "#a074c4"], jpeg: ["image", "#a074c4"], gif: ["image", "#a074c4"], bmp: ["image", "#a074c4"], ico: ["image", "#a074c4"], icns: ["image", "#a074c4"], webp: ["image", "#a074c4"],
+  svg: ["image", "#ffb13b"],
+  lock: ["lock", "#d9a05b"],
+  zip: ["archive", "#c98a4b"], tar: ["archive", "#c98a4b"], gz: ["archive", "#c98a4b"], "7z": ["archive", "#c98a4b"], rar: ["archive", "#c98a4b"],
+};
+// Whole-name matches win over extensions: lockfiles and dotfiles.
+const NAMES = {
+  "package-lock.json": ["lock", "#7fa050"], "yarn.lock": ["lock", "#7fa050"], "pnpm-lock.yaml": ["lock", "#7fa050"],
+  "cargo.lock": ["lock", "#dea584"], "flake.lock": ["lock", "#dea584"], "poetry.lock": ["lock", "#5aaee3"],
+  ".gitignore": ["git-branch", "#f14e32"], ".gitattributes": ["git-branch", "#f14e32"], ".gitmodules": ["git-branch", "#f14e32"],
+  ".env": ["sliders", "#8a919f"], ".env.local": ["sliders", "#8a919f"], ".env.example": ["sliders", "#8a919f"],
+  "dockerfile": ["hexagon", "#2496ed"], "makefile": ["terminal", "#8a919f"], "justfile": ["terminal", "#8a919f"],
+};
+const FOLDER_COLOR = "#e0b25f";
+
+function fileIcon(name) {
+  const hit = NAMES[name.toLowerCase()] ?? TYPES[name.includes(".") ? name.split(".").pop().toLowerCase() : ""];
+  return hit ? { glyph: hit[0], color: hit[1] } : null;
+}
+
+async function directory(path, on) {
+  const windowsDirectory = async () => {
+    const r = await exec("powershell", ["-NoProfile", "-Command", "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); & { param($p) @(Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop | Where-Object Name -ne '.git' | Select-Object -First 501 | ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $_.LinkType -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } }) | ConvertTo-Json -Compress } '" + path.replace(/['‘’‚‛]/g, "$&$&") + "'"], { on });
+    if (r.code !== 0) throw new Error(r.stderr || "Cannot list this folder");
+    const result = JSON.parse(r.stdout || "[]");
+    return Array.isArray(result) ? result : [result];
+  };
+  if (!on && globalThis.window?.platform === "windows") return windowsDirectory();
+  const script = 'n=0; for p in "$1"/* "$1"/.[!.]* "$1"/..?*; do [ -e "$p" ] || [ -L "$p" ] || continue; name=${p##*/}; [ "$name" = .git ] && continue; if [ -d "$p" ]; then kind=d; else kind=f; fi; printf "%s\\0%s\\0" "$kind" "$name"; n=$((n+1)); [ "$n" -gt 500 ] && break; done; test -d "$1"';
+  let r;
+  try { r = await exec("sh", ["-c", script, "mide-files", path], { on }); }
+  catch (e) {
+    if (on && String(e).includes("cannot start sh: program not found")) return windowsDirectory();
+    throw e;
+  }
+  if (r.code !== 0) throw new Error(r.stderr || "Cannot list this folder");
+  const fields = r.stdout.split("\0"), out = [];
+  for (let i = 0; i + 1 < fields.length; i += 2) out.push({ name: fields[i + 1], dir: fields[i] === "d" });
+  return out;
+}
+
+export default class MideFiles extends View {
+  init(_props, cx) {
+    this.saved = new Map();
+    this.entries = new Map(); this.folders = new Set(); this.pending = new Set(); this.marks = {};
+    this.refresh(cx);
+    cx.timer.every(10000, cx => this.refresh(cx));
+  }
+
+  watch(root, cx) {
+    if (this.on || this.watched === root) return;
+    this.watched = root;
+    const context = this.context;
+    cx.spawn(async cx => {
+      try { while (this.context === context) { await watchFolder(root); if (this.current(context)) this.refresh(cx); } }
+      catch { if (this.context === context) this.watched = null; }
+    });
+  }
+
+  current(context) {
+    return this.context === context && key() === context.key;
+  }
+
+  async loadFolder(path, context) {
+    const { on, cwd: root } = context;
+    const entries = await directory(path ? `${root}/${path}` : root, on);
+    if (!this.current(context) || (path && !this.folders.has(path))) return;
+    const used = [...this.entries.entries()].filter(([p]) => p !== path).reduce((n, [, e]) => n + e.length, 0);
+    this.entries.set(path, entries.slice(0, Math.max(0, Math.min(PER_FOLDER, TOTAL - used))).sort((a, b) => Number(b.dir) - Number(a.dir) || a.name.localeCompare(b.name)));
+    if (entries.length > PER_FOLDER || used + entries.length > TOTAL) this.limited = true;
+  }
+
+  refresh(cx) {
+    const { cwd, on } = location(), next = key();
+    if (next !== this.context?.key) {
+      if (this.context) this.saved.set(this.context.key, { folders: this.folders });
+      const saved = this.saved.get(next);
+      this.context = { key: next, cwd, on }; this.root = cwd; this.on = on; this.entries = new Map(); this.folders = new Set(saved?.folders);
+      this.pending = new Set(); this.marks = {}; this.watched = null; this.error = null; this.limited = false;
+      this.loading = false;
+    }
+    if (!cwd || this.loading) return;
+    const context = this.context;
+    this.loading = true;
+    this.limited = false;
+    cx.spawn(async cx => {
+      try {
+        for (const path of ["", ...this.folders]) {
+          if (!this.current(context)) return;
+          await this.loadFolder(path, context);
+        }
+        const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
+        const marks = {};
+        if (top?.code === 0) {
+          // Writes nothing under .git (index lock, fsmonitor cookie): the folder watch would refresh again.
+          const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
+          if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
+            const xy = entry.slice(0, 2);
+            marks[`${top.stdout.trim()}/${entry.slice(3)}`] = xy === "??" || xy.includes("A") ? "A" : xy.includes("U") ? "U" : xy.includes("D") ? "D" : "M";
+          }
+        }
+        if (!this.current(context)) return;
+        this.marks = marks; this.error = null; this.watch(cwd, cx);
+      } catch (e) { if (this.current(context)) this.error = String(e); }
+      finally { if (this.context === context) this.loading = false; cx.notify(); }
+    });
+  }
+
+  // Git status → color for the whole file name, so the tree tells the state
+  // of the repo at a glance: modified orange, added green, deleted red.
+  markColor(mark, t) {
+    return mark === "A" ? t.ansi2 : mark === "D" || mark === "U" ? t.ansi1 : mark === "M" ? t.blocked : null;
+  }
+
+  toggle(path, cx) {
+    if (this.folders.has(path)) {
+      for (const folder of [...this.folders]) if (folder === path || folder.startsWith(path + "/")) {
+        this.folders.delete(folder);
+        this.entries.delete(folder);
+      }
+    } else {
+      this.folders.add(path);
+      if (!this.entries.has(path) && !this.pending.has(path)) {
+        const context = this.context;
+        this.pending.add(path);
+        cx.spawn(async cx => {
+          try { await this.loadFolder(path, context); }
+          catch (e) { if (this.current(context)) this.error = String(e); }
+          finally { if (this.context === context) this.pending.delete(path); cx.notify(); }
+        });
+      }
+    }
+    cx.notify();
+  }
+
+  open(path, cx) {
+    run("pane.split", { direction: "right", mod: "mide-editor", props: { file: `${this.root}/${path}` } });
+  }
+
+  rows(prefix, depth, out, t) {
+    if (out.length >= TOTAL || depth > 40) return out;
+    for (const entry of this.entries.get(prefix) ?? []) {
+      if (out.length >= TOTAL) break;
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), mark = this.marks[`${this.root}/${path}`];
+      const icon = entry.dir ? null : fileIcon(entry.name);
+      const markColor = mark ? this.markColor(mark, t) : null;
+      out.push(h_flex().id(`file-${path}`).h(26).flex_none().pl(8 + depth * 18).pr(8).gap(7).items_center().rounded(7).cursor_pointer().hover(s => s.bg(t.hover))
+        .on_click((_e, cx) => entry.dir ? this.toggle(path, cx) : this.open(path, cx))
+        .child(entry.dir
+          ? svg(`${ICONS}/chevron-${open ? "down" : "right"}.svg`).size(12).flex_none().text_color(t.dim)
+          : div().w(12).flex_none())
+        .child(entry.dir
+          ? svg(`${ICONS}/folder.svg`).size(14).flex_none().text_color(FOLDER_COLOR)
+          : icon
+            ? svg(`${ICONS}/${icon.glyph}.svg`).size(14).flex_none().text_color(icon.color)
+            : svg(`${ICONS}/file.svg`).size(14).flex_none().text_color(t.muted))
+        .child(div().flex_1().min_w(0).truncate().when(Boolean(markColor), el => el.text_color(markColor)).child(entry.name))
+        .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(markColor).child(mark))));
+      if (entry.dir && open) this.rows(path, depth + 1, out, t);
+    }
+    return out;
+  }
+
+  render(cx) {
+    if (key() !== this.context?.key) this.refresh(cx);
+    const t = theme();
+    return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
+      .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
+        .child(div().font_semibold().child("Files"))
+        .child(div().flex_1().min_w(0).truncate().text_right().text_size(12).text_color(t.dim).child(this.root?.split(/[\\/]/).pop() ?? "")))
+      .child(v_flex().id("mide-files-tree").flex_1().min_h(0).overflow_y_scrollbar().p(6).children(this.rows("", 0, [], t))
+        .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
+        .when(this.limited, el => el.child(div().p(8).text_size(11).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total"))));
+  }
+}

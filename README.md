@@ -1,0 +1,78 @@
+# herdr-mIDE
+
+> The minimal IDE for [Herdr](https://herdr.dev) — built for the age of AI-assisted coding.
+
+**herdr-mIDE** is a layout + mod package for the [Herdr app](https://herdr.dev): a better file manager, a better git panel, and a minimal editor — all living inside the same window as your terminals and coding agents.
+
+Most of the coding work today is done by AI agents. What's left for us is the *last mile*: review what the agent changed, make small surgical edits, stage the right files, and ship. Existing IDEs are built for a world where you write all the code. **herdr-mIDE is built for the world where you don't.**
+
+![herdr-mIDE](preview.png)
+
+## What's inside
+
+### 📁 Files — a file manager that tells you everything at a glance
+
+- **File-type icons** — a glyph and color per language: `{}` yellow for JS, blue for TS, a snake for Python, a hexagon for Rust, and so on.
+- **Git status baked into the tree** — the whole file name is colored: 🟠 modified, 🟢 new/untracked, 🔴 deleted or conflicted, plus a bold status letter.
+- Lazy folders, `.git` hidden, live refresh from the folder watch.
+- **Click a file to edit it** — it opens in the editor pane beside your terminal.
+
+### 🌿 Changes — a git panel for the review-and-commit loop
+
+- **STAGED and CHANGES groups** — see exactly what a commit will contain.
+- **Per-file staging** — `+` to stage, `−` to unstage, "stage all" for everything the agent touched.
+- **Detailed diff view** — line-numbered, tinted additions/deletions, smooth on big diffs.
+- **Guided commit flow** — commit is enabled only with a message *and* staged files; nothing is staged implicitly.
+- **Branch switcher** — switch, create, and delete branches without leaving the panel.
+
+### ⌨️ Editor — a minimal, themeable editor pane
+
+- Syntax highlighting, ⌘S save, unsaved indicator.
+- **Live theme cycling** — one click (or ⌘⌥T) steps through every theme, restyling terminals, panels and editor together; custom themes drop into Herdr's `themes/` folder (see [`themes/mide-night.json`](themes/mide-night.json)).
+- **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
+
+## Install
+
+You need the [Herdr app](https://herdr.dev) (0.1.13 or later) on macOS, Linux or Windows.
+
+```sh
+git clone https://github.com/SOUMITRO-SAHA/herdr-mIDE
+cd herdr-mIDE
+./install.sh
+herdr-app do layout.switch --name herdr-mide
+```
+
+The installer copies the mods, layout and theme into `~/.config/herdr-app` (never overwriting), prints the two key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+
+Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
+
+## How it works
+
+herdr-mIDE doesn't fork Herdr — it rides on it. The Herdr app redraws its whole interface from files (layouts are JSON trees, panels are small JavaScript mods with a GPU UI), and it hot-reloads them while it runs. That gives herdr-mIDE terminals, agents, themes, spaces and remote machines for free, and makes every file in this repo live-editable.
+
+```
+layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
+mods/mide-files/          file tree · type icons · git-status colors
+mods/mide-changes/        staging · diff · commit · branches
+mods/mide-editor/         editor pane · save · theme cycling
+themes/mide-night.json    an example custom theme
+keys.json                 ⌘⇧E editor pane · ⌘S save · ⌘⌥T theme
+```
+
+[RECIPE.md](./RECIPE.md) documents the build for humans and agents (it's the brief Herdr's ecosystem uses to install and rebuild packages). [ROADMAP.md](./ROADMAP.md) has the plan and the grounding study.
+
+## Development
+
+```sh
+./install.sh        # copy into ~/.config/herdr-app and check
+```
+
+Edit, `./install.sh`, and Herdr hot-reloads (saving a mod file reloads it in place — you can also edit the installed copy directly and copy back). Run `herdr-app check mods/<name>` after every change: it's the only parser that matters. `herdr-app shot` saves a PNG of the window for UI debugging, and `herdr-app status` lists mod errors.
+
+## Status
+
+🚧 **v0 — foundation.** The panels and editor work today (all mods pass `herdr-app check`); vim mode, hunk-level staging and the agent-review flow are next. See the [roadmap](./ROADMAP.md).
+
+## License
+
+[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — except parts adapted from Herdr's shipped `files` and `changes` mods, which keep Herdr's Apache-2.0 license.
