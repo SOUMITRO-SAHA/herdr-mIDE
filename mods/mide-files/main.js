@@ -155,11 +155,12 @@ export default class MideFiles extends View {
   // Git status → color for the whole entry name, the way the reference
   // IDE does it: dedicated theme tokens per status (orange modified, green
   // added, red deleted/conflict), falling back to ANSI slots on themes
-  // that don't define them.
+  // that don't define them — ansi slots exist in every Herdr theme and
+  // carry the right hues (orange-yellow, green, red).
   markColor(mark, t) {
     if (mark === "A") return t.git_added ?? t.ansi2;
     if (mark === "D" || mark === "U") return t.git_deleted ?? t.git_conflict ?? t.ansi1;
-    if (mark === "M") return t.git_modified ?? t.blocked;
+    if (mark === "M") return t.git_modified ?? t.ansi3;
     return null;
   }
 
