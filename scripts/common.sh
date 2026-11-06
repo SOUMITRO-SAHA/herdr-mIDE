@@ -18,8 +18,8 @@ MODS="mide-files mide-changes mide-editor"
 # materialized into the mod folder before any sync. Never edit the copies in
 # mods/ by hand — edit assets/ and re-run this (make assets does).
 sync_assets() {
-  mkdir -p "$REPO_DIR/mods/mide-files/icons/the previous set"
-  rsync -a --delete --exclude=.DS_Store "$REPO_DIR/assets/icons/the previous set/" "$REPO_DIR/mods/mide-files/icons/the previous set/"
+  mkdir -p "$REPO_DIR/mods/mide-files/icons/material"
+  rsync -a --delete --exclude=.DS_Store "$REPO_DIR/assets/icons/material/" "$REPO_DIR/mods/mide-files/icons/material/"
   rsync -a --exclude=.DS_Store "$REPO_DIR/assets/icons/tree/" "$REPO_DIR/mods/mide-files/icons/"
 }
 

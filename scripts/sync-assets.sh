@@ -1,7 +1,7 @@
 #!/bin/sh
 # Materializes the canonical root-level assets into the mods that ship them:
-#   assets/icons/the previous set/ → mods/mide-files/icons/the previous set/   (169 file-type icons)
-#   assets/icons/tree/ → mods/mide-files/icons/         (folder + chevrons)
+#   assets/icons/material/ → mods/mide-files/icons/material/ (file-type icons)
+#   assets/icons/tree/     → mods/mide-files/icons/          (folder + chevrons)
 #
 # Mods stay self-contained (herdr ecosystem installs copy mods/<name>/ as-is),
 # so the copies are committed too — but assets/ is the source of truth.

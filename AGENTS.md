@@ -8,7 +8,8 @@ Instructions for AI coding agents working in this repo.
 `material-icons-theme` skill first** (`.opencode/skills/material-icons-theme/SKILL.md`).
 
 - [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
-  (MIT) is the default icon source for this project.
+  (MIT) is the **only** icon source for this project — file icons,
+  folder glyphs, any new glyph. No other icon set may be shipped.
 - Glyphs land in `assets/icons/` (canonical), never hand-edited under
   `mods/`; rewrite baked fills to `currentColor` so the theme tints them.
 - **Every adopted icon must be credited in

@@ -12,7 +12,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 ### 📁 Files — a file manager that tells you everything at a glance
 
-- **File-type icons** — the the previous icon family icon family (MIT): full-color icons for 300+ file types, plus open/closed folder states in the tree; unknown files fall back to its default text-lines icon. `scripts/the retired generator` regenerates everything from the MIT source set.
+- **File-type icons** — the Material Icon Theme set (MIT): full-color icons for 1300+ file types, plus open/closed folder states in the tree; unknown files fall back to the theme's plain file icon. `scripts/update-icons.sh` regenerates everything from the MIT source set.
 - **Git status baked into the tree** — the whole file name is colored: 🟠 modified, 🟢 new/untracked, 🔴 deleted or conflicted, plus a bold status letter.
 - Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
@@ -57,7 +57,7 @@ mods/mide-changes/        staging · diff · commit · branches
 mods/mide-editor/         editor pane · save · theme cycling
 themes/mide-night.json    an example custom theme
 keys.json                 ⌘⇧E editor pane · ⌘S save · ⌘⌥T theme
-assets/icons/             canonical icons: the previous set/ (file types) · tree/ (folder, chevrons)
+assets/icons/             canonical icons: material/ (file types) · tree/ (folder, chevrons)
 Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch
 scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
@@ -91,4 +91,4 @@ Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot co
 
 ## License
 
-[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): file icons from the previous icon family (MIT), tree glyphs from the previous glyph set (ISC) and Material Icon Theme (MIT), and parts adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
+[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): icons from Material Icon Theme (MIT), chevron glyphs from the previous glyph set (ISC), and parts adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
