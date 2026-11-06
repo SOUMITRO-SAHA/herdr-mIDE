@@ -51,7 +51,7 @@ export const PREFIX = [];
 `);
 
 // Prune SVGs the map never references (folder variants, clones, extras):
-// assets/ holds only what the project uses.
+// mods/mide-files/icons/material/ holds only what the project uses.
 const used = new Set(["file", ...Object.values(suffix), ...Object.values(names)]);
 let removed = 0;
 for (const f of fs.readdirSync(iconsDir)) {

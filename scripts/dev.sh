@@ -22,8 +22,6 @@ echo "Herdr reloads each file as it lands. Ctrl-C to stop."
 echo "Verify: make status (errors) · make shot (window PNG)"
 
 while :; do
-  # Edits under assets/ materialize into the mod first, then ship.
-  sync_assets
   changed="$(
     for mod in $MODS; do
       rsync -a --itemize-changes $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/" || true

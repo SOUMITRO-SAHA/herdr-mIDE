@@ -97,10 +97,9 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   map references), `icons.js` (the generated suffix/name map). Herdr
   functions: `spaces`, `panes`, `focused`, `exec`, `watchFolder`,
   `theme`, `run`. Folder listing adapted from Herdr's shipped `files`
-  mod (Apache-2.0). Icons are canonical in the repo's `assets/icons/`
-  (`material/` + `tree/`) and materialized into the mod by
-  `scripts/sync-assets.sh` (mods stay self-contained for ecosystem
-  installs). Regenerate the set with `scripts/update-icons.sh` (fetches
+  mod (Apache-2.0). All icons live in the mod itself
+  (`mods/mide-files/icons/` — the single source of truth).
+  Regenerate the file-type set with `scripts/update-icons.sh` (fetches
   the material-icon-theme npm package — Material Icon Theme is the only
   icon source in this project).
 - **`mods/mide-changes`**: `main.js`. Herdr functions: `spaces`, `panes`,
@@ -119,12 +118,11 @@ highlighting, ⌘S save and a theme cycler in its status bar.
 
 ## Watch out
 
-- **Icons are generated twice over**: canonical in `assets/icons/`
-  (`material/`, `tree/`), materialized into `mods/mide-files/icons/` by
-  `make assets` / `make sync` / `make dev`. Never edit the mod copies by
-  hand — edit `assets/` (or re-run `scripts/update-icons.sh`) and
-  let the scripts copy. The mod copy stays committed so ecosystem
-  installs (which copy `mods/<name>/` as-is) keep working.
+- **Icons have one home**: `mods/mide-files/icons/` — the mod folder
+  is self-contained (ecosystem installs copy `mods/<name>/` as-is), so
+  there is no separate assets tree and no copy step. Regenerate the
+  file-type set with `scripts/update-icons.sh`; never commit icons from
+  any other source.
 
 - **The built-in EditorState has no cursor or selection API** — only
   `value()`/`set_value()`/`on(change…)`. Modal (Vim) editing therefore

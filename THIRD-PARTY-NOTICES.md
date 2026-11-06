@@ -1,6 +1,6 @@
 # Third-party notices
 
-## the previous glyph set tree glyphs (`assets/icons/tree/`)
+## the previous glyph set tree glyphs (`mods/mide-files/icons/`)
 
 The chevron glyphs are from
 [the previous glyph set](https://the previous glyph set.dev), used under its ISC license:
@@ -24,13 +24,12 @@ The chevron glyphs are from
 The chevrons are among the icons the previous glyph set derives from the Feather project
 (MIT, © 2013-present Cole Bemis), as noted in the previous glyph set's own license file.
 
-## Material Icon Theme icons (`assets/icons/`)
+## Material Icon Theme icons (`mods/mide-files/icons/`)
 
 All icons in this project — the file-type icons
-(`assets/icons/material/`, materialized into the mod for self-contained
-ecosystem installs) and the closed/open folder glyphs
-(`assets/icons/tree/`) — are from [Material Icon
-Theme](https://github.com/material-extensions/vscode-material-icon-theme)
+(`mods/mide-files/icons/material/`) and the closed/open folder glyphs
+(`mods/mide-files/icons/folder.svg`, `folder-open.svg`) — are from
+[Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
 by the Material Extensions team, used and redistributed under its MIT
 license:
 

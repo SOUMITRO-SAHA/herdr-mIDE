@@ -10,8 +10,9 @@ Instructions for AI coding agents working in this repo.
 - [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
   (MIT) is the **only** icon source for this project — file icons,
   folder glyphs, any new glyph. No other icon set may be shipped.
-- Glyphs land in `assets/icons/` (canonical), never hand-edited under
-  `mods/`; rewrite baked fills to `currentColor` so the theme tints them.
+- Icons live in `mods/mide-files/icons/` — that folder is the single
+  source of truth, hand-editable; `scripts/update-icons.sh` regenerates
+  the file-icon set from upstream.
 - **Every adopted icon must be credited in
   [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) before commit** —
   license text, copyright holder, and any modifications noted. Notices
