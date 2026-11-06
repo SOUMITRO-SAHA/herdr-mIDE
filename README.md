@@ -57,10 +57,13 @@ mods/mide-changes/        staging · diff · commit · branches
 mods/mide-editor/         editor pane · save · theme cycling
 themes/mide-night.json    an example custom theme
 keys.json                 ⌘⇧E editor pane · ⌘S save · ⌘⌥T theme
-Makefile                  the entry point: dev · sync · check · install · status · shot · switch
-scripts/                  the logic behind the commands (dev.sh, sync.sh, shared common.sh)
+assets/icons/             canonical icons: the previous set/ (file types) · tree/ (folder, chevrons)
+Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch
+scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
 ```
+
+Icons are managed in `assets/icons/` and materialized into the mod by `make assets` (mods must stay self-contained for ecosystem installs, so the copies are committed too — but `assets/` is the source of truth; never edit the copies by hand).
 
 [RECIPE.md](./RECIPE.md) documents the build for humans and agents (it's the brief Herdr's ecosystem uses to install and rebuild packages). [ROADMAP.md](./ROADMAP.md) has the plan and the grounding study.
 
@@ -80,7 +83,7 @@ make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 
 The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
-Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
+Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot copy) and `sync-assets.sh` (materialize `assets/` icons into the mod) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
 ## Status
 

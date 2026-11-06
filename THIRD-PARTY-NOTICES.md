@@ -1,6 +1,6 @@
 # Third-party notices
 
-## the previous icon family file icons (`mods/mide-files/icons/the previous set/`)
+## the previous icon family file icons (`assets/icons/the previous set/`)
 
 The file icons are from [the previous icon family](https://github.com/jesseweed/the previous icon family) by
 Jesse Weed — the icon set the reference IDE's default file-icon theme is built on — used
@@ -27,8 +27,9 @@ and redistributed under its MIT license:
 > OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 > WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-A copy also travels with the icons as
-`mods/mide-files/icons/the previous set/LICENSE`. The association map
+A copy also travels into the mod as
+`mods/mide-files/icons/the previous set/LICENSE` (the mod must stay self-contained for
+ecosystem installs). The association map
 (`mods/mide-files/icons.js`) is generated from the previous icon family's own mapping and
 color palette by `scripts/the retired generator`; mask-style icons get
 its colors baked in. No assets from the the reference IDE's repository

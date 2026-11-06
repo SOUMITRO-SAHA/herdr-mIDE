@@ -93,10 +93,12 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   + their MIT LICENSE; 80 color-baked by the script), `icons.js` (the
   generated suffix/name/prefix map). Herdr functions: `spaces`, `panes`,
   `focused`, `exec`, `watchFolder`, `theme`, `run`. Folder listing
-  adapted from Herdr's shipped `files` mod (Apache-2.0). Regenerate the
-  icon set with `scripts/the retired generator` (clones
-  jesseweed/the previous icon family; never mix in the reference IDE repo assets — those additions are
-  GPL).
+  adapted from Herdr's shipped `files` mod (Apache-2.0). Icons are
+  canonical in the repo's `assets/icons/` (`the previous set/` + `tree/`) and
+  materialized into the mod by `scripts/sync-assets.sh` (mods stay
+  self-contained for ecosystem installs). Regenerate the set with
+  `scripts/the retired generator` (clones jesseweed/the previous icon family; never mix in
+  the reference IDE repo assets — those additions are GPL).
 - **`mods/mide-changes`**: `main.js`. Herdr functions: `spaces`, `panes`,
   `focused`, `exec`, `readTextFile`, `watchFolder`, `theme`, `settings`.
   Diff rows and the virtual list adapt Herdr's shipped `changes` mod
@@ -112,6 +114,13 @@ highlighting, ⌘S save and a theme cycler in its status bar.
   `themes/*.json` format) so the theme cycler has somewhere to land.
 
 ## Watch out
+
+- **Icons are generated twice over**: canonical in `assets/icons/`
+  (`the previous set/`, `tree/`), materialized into `mods/mide-files/icons/` by
+  `make assets` / `make sync` / `make dev`. Never edit the mod copies by
+  hand — edit `assets/` (or re-run `scripts/the retired generator`) and
+  let the scripts copy. The mod copy stays committed so ecosystem
+  installs (which copy `mods/<name>/` as-is) keep working.
 
 - **The built-in EditorState has no cursor or selection API** — only
   `value()`/`set_value()`/`on(change…)`. Modal (Vim) editing therefore

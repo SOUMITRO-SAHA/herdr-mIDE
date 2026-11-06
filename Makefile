@@ -4,6 +4,7 @@
 #   make dev       watch loop: sync repo → Herdr app home on every change;
 #                  Herdr hot-reloads each mod as it lands. Ctrl-C to stop.
 #   make sync      one-shot copy of mods, layout and theme into the app home
+#   make assets    materialize root assets/ icons into the mod folder
 #   make check     herdr-app check on every mod (the runtime's own parser)
 #   make install   first-time install (never overwrites; prints keys to merge)
 #   make status    what the window says: layout, focus, errors from mods
@@ -18,12 +19,13 @@ INTERVAL ?= 1
 MODS := mide-files mide-changes mide-editor
 
 .DEFAULT_GOAL := help
-.PHONY: help dev sync check install status shot switch
+.PHONY: help dev sync assets check install status shot switch
 
 help:
 	@echo "herdr-mIDE commands:"
 	@echo "  make dev      live sync + hot reload (Ctrl-C to stop)"
 	@echo "  make sync     one-shot copy into the Herdr app home"
+	@echo "  make assets   materialize assets/ icons into the mod"
 	@echo "  make check    herdr-app check every mod"
 	@echo "  make install  first-time install (install.sh)"
 	@echo "  make status   window state + mod errors"
@@ -35,6 +37,9 @@ dev:
 
 sync:
 	@./scripts/sync.sh
+
+assets:
+	@./scripts/sync-assets.sh
 
 check:
 	@for mod in $(MODS); do herdr-app check mods/$$mod || exit 1; done
