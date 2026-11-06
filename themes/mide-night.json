@@ -11,6 +11,8 @@
     "accent": "#7aa2f7",
     "border": "#262a35",
     "chrome": "#171a21",
-    "canvas": "#101218"
+    "canvas": "#101218",
+    "muted": "#9aa3b8",
+    "dim": "#5b6273"
   }
 }

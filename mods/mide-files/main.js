@@ -63,7 +63,7 @@ async function directory(path, on) {
 export default class MideFiles extends View {
   init(_props, cx) {
     this.saved = new Map();
-    this.entries = new Map(); this.folders = new Set(); this.pending = new Set(); this.marks = {}; this.folderMarks = new Map();
+    this.entries = new Map(); this.folders = new Set(); this.pending = new Set(); this.marks = {}; this.folderMarks = new Map(); this.ignored = new Set(); this.ignoredDirs = [];
     this.refresh(cx);
     cx.timer.every(10000, cx => this.refresh(cx));
   }
@@ -97,7 +97,7 @@ export default class MideFiles extends View {
       if (this.context) this.saved.set(this.context.key, { folders: this.folders });
       const saved = this.saved.get(next);
       this.context = { key: next, cwd, on }; this.root = cwd; this.on = on; this.entries = new Map(); this.folders = new Set(saved?.folders);
-      this.pending = new Set(); this.marks = {}; this.folderMarks = new Map(); this.watched = null; this.error = null; this.limited = false;
+      this.pending = new Set(); this.marks = {}; this.folderMarks = new Map(); this.ignored = new Set(); this.ignoredDirs = []; this.watched = null; this.error = null; this.limited = false;
       this.loading = false;
     }
     if (!cwd || this.loading) return;
@@ -112,12 +112,21 @@ export default class MideFiles extends View {
         }
         const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
         const marks = {};
+        const ignored = new Set(), ignoredDirs = [];
         if (top?.code === 0) {
           // Writes nothing under .git (index lock, fsmonitor cookie): the folder watch would refresh again.
           const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
           if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
             const xy = entry.slice(0, 2);
             marks[`${top.stdout.trim()}/${entry.slice(3)}`] = xy === "??" || xy.includes("A") ? "A" : xy.includes("U") ? "U" : xy.includes("D") ? "D" : "M";
+          }
+          // Ignored paths (git collapses directories to `!! dir/`): they
+          // ghost the tree's names. Capped — this is tinting, not inventory.
+          const skipped = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--ignored=matching"], { cwd, on }).catch(() => null);
+          if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(Boolean).slice(0, 2000)) {
+            if (!entry.startsWith("!! ")) continue;
+            const p = `${top.stdout.trim()}/${entry.slice(3)}`;
+            if (p.endsWith("/")) ignoredDirs.push(p.slice(0, -1)); else ignored.add(p);
           }
         }
         if (!this.current(context)) return;
@@ -135,7 +144,7 @@ export default class MideFiles extends View {
             if (!prev || SEVERITY.indexOf(mark) < SEVERITY.indexOf(prev)) folderMarks.set(folder, mark);
           }
         }
-        this.marks = marks; this.folderMarks = folderMarks; this.error = null; this.watch(cwd, cx);
+        this.marks = marks; this.folderMarks = folderMarks; this.ignored = ignored; this.ignoredDirs = ignoredDirs; this.error = null; this.watch(cwd, cx);
       } catch (e) { if (this.current(context)) this.error = String(e); }
       finally { if (this.context === context) this.loading = false; cx.notify(); }
     });
@@ -176,9 +185,10 @@ export default class MideFiles extends View {
     if (out.length >= TOTAL || depth > 40) return out;
     for (const entry of this.entries.get(prefix) ?? []) {
       if (out.length >= TOTAL) break;
-      const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), mark = this.marks[`${this.root}/${path}`];
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), abs = `${this.root}/${path}`, mark = this.marks[abs];
       const markColor = mark ? this.markColor(mark, t) : null;
       const folderMark = entry.dir ? this.folderMarks.get(path) : null;
+      const ignored = this.ignored.has(abs) || this.ignoredDirs.some(d => abs.startsWith(`${d}/`));
       out.push(h_flex().id(`file-${path}`).h(26).flex_none().pl(8 + depth * 18).pr(8).gap(7).items_center().rounded(7).cursor_pointer().hover(s => s.bg(t.hover))
         .on_click((_e, cx) => entry.dir ? this.toggle(path, cx) : this.open(path, cx))
         .child(entry.dir
@@ -187,7 +197,7 @@ export default class MideFiles extends View {
         .child(entry.dir
           ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? this.markColor(folderMark, t) : t.dim)
           : image(`${LEGACY}/${fileIcon(entry.name) ?? "default"}.svg`).w(16).h(16).flex_none())
-        .child(div().flex_1().min_w(0).truncate().when(Boolean(markColor), el => el.text_color(markColor)).child(entry.name))
+        .child(div().flex_1().min_w(0).truncate().text_color(markColor ?? (ignored ? t.dim : t.muted)).child(entry.name))
         .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(markColor).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t);
     }
