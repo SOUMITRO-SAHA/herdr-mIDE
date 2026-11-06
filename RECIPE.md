@@ -19,10 +19,10 @@ highlighting, ⌘S save and Herdr's active theme.
 - **The Files panel** (`mide-files`, 42px header "Files" + folder name,
   26px rows): a lazy tree with chevrons and theme-tinted **solid folder
   glyphs** — muted when clean, colored (glyph **and** title) by the most
-   severe change underneath (golden yellow modified, red deleted, green new),
+  severe change underneath (golden yellow modified, red deleted, green new),
   propagating up every ancestor folder, swapping to an open glyph while
-  expanded — file names one step muted against the foreground and
-  ghosted when git-ignored (dependencies, build output, local secrets),
+  expanded — file and folder names in regular weight, muted when clean and
+  dimmer when git-ignored (dependencies, build output, local secrets),
   taking their change color when modified via dedicated theme tokens
   (`git_modified`/`git_added`/`git_deleted`/`git_conflict`, with ANSI
   fallbacks on other themes) — and a full-color
@@ -34,11 +34,12 @@ highlighting, ⌘S save and Herdr's active theme.
    universal files like git/yaml/json/docker/lock).
    Match order: exact name, then longest dotted suffix, then the
    theme's default file glyph for unknown types. The **whole
-   file name is colored by git status**: golden yellow modified, green
-   added/untracked, red deleted or conflicted, with a small bold status
+   file name is colored by git status**: golden yellow modified or conflicted,
+   green added/untracked, red deleted, with a small bold status
    letter (`M`, `A`, `D`, `U`) on the right. The bundled dark theme uses
    One Dark's status colors (`#dec184`, `#a1c181`, `#d07277`), while
-   other themes supply their own colors.
+   other themes supply their own colors. Normal and ignored names use
+   `file_muted` and `git_ignored` (falling back to `muted` and `dim`).
 - **The Changes panel** (`mide-changes`): **Changes** and **History** tabs;
   a `View Diff` summary with aggregate `+`/`−` counts and a Stage All /
   Unstage All split action; **Tracked** and **Untracked** groups with counts,

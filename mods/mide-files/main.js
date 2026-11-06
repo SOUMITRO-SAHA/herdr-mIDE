@@ -28,6 +28,15 @@ function location(previous) {
 const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space });
 const PER_FOLDER = 500, TOTAL = 5000;
 
+// the reference IDE's label precedence combines index and worktree: conflicts, deletions,
+// modifications, then additions (including untracked files).
+function statusMark(xy) {
+  if (["DD", "AU", "UD", "UA", "DU", "AA", "UU"].includes(xy)) return "U";
+  if (xy.includes("D")) return "D";
+  if (xy.includes("M") || xy.includes("T")) return "M";
+  return xy === "??" || xy.includes("A") ? "A" : "M";
+}
+
 const ICONS = "mods/mide-files/icons";
 const MATERIAL = "mods/mide-files/icons/material";
 
@@ -118,7 +127,7 @@ export default class MideFiles extends View {
           if (!this.current(context)) return;
           await this.loadFolder(path, context);
         }
-        const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
+        const top = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
         const marks = {};
         const ignored = new Set(), ignoredDirs = [];
         if (top?.code === 0) {
@@ -126,21 +135,20 @@ export default class MideFiles extends View {
           const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
           if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
             const xy = entry.slice(0, 2);
-            marks[`${top.stdout.trim()}/${entry.slice(3)}`] = xy === "??" || xy.includes("A") ? "A" : xy.includes("U") ? "U" : xy.includes("D") ? "D" : "M";
+            marks[`${top.stdout.trim()}/${entry.slice(3)}`] = statusMark(xy);
           }
           // Ignored paths (git collapses directories to `!! dir/`): they
           // ghost the tree's names. Capped — this is tinting, not inventory.
           const skipped = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--ignored=matching"], { cwd, on }).catch(() => null);
-          if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(Boolean).slice(0, 2000)) {
-            if (!entry.startsWith("!! ")) continue;
+          if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(entry => entry.startsWith("!! ")).slice(0, 2000)) {
             const p = `${top.stdout.trim()}/${entry.slice(3)}`;
             if (p.endsWith("/")) ignoredDirs.push(p.slice(0, -1)); else ignored.add(p);
           }
         }
         if (!this.current(context)) return;
         // Folders take the color of the most severe change under them:
-        // conflicts and deletions (red) first, then modifications
-        // (orange), then new files (green) — same palette as the names.
+        // conflicts first, then deletions, modifications and new files —
+        // the same precedence as individual names.
         const SEVERITY = "UDMA";
         const folderMarks = new Map();
         for (const [marked, mark] of Object.entries(marks)) {
@@ -159,13 +167,13 @@ export default class MideFiles extends View {
   }
 
   // Git status → color for the whole entry name, the way the reference
-  // IDE does it: dedicated theme tokens per status (orange modified, green
-  // added, red deleted/conflict), falling back to ANSI slots on themes
+  // IDE does it: dedicated theme tokens per status, falling back to ANSI slots on themes
   // that don't define them — ansi slots exist in every Herdr theme and
   // carry the right hues (orange-yellow, green, red).
   markColor(mark, t) {
     if (mark === "A") return t.git_added ?? t.ansi2;
-    if (mark === "D" || mark === "U") return t.git_deleted ?? t.git_conflict ?? t.ansi1;
+    if (mark === "D") return t.git_deleted ?? t.ansi1;
+    if (mark === "U") return t.git_conflict ?? t.git_modified ?? t.ansi3;
     if (mark === "M") return t.git_modified ?? t.ansi3;
     return null;
   }
@@ -230,8 +238,8 @@ export default class MideFiles extends View {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), abs = `${this.root}/${path}`, mark = this.marks[abs];
       const folderMark = entry.dir ? this.folderMarks.get(path) : null;
       const status = mark ?? folderMark, statusColor = status ? this.markColor(status, t) : null;
-      const ignored = this.ignored.has(abs) || this.ignoredDirs.some(d => abs.startsWith(`${d}/`));
-      const nameColor = statusColor ?? (ignored ? t.dim : t.muted);
+      const ignored = this.ignored.has(abs) || this.ignoredDirs.some(d => abs === d || abs.startsWith(`${d}/`));
+      const nameColor = statusColor ?? (ignored ? (t.git_ignored ?? t.dim) : (t.file_muted ?? t.muted));
       out.push(h_flex().id(`file-${path}`).h(26).flex_none().pl(8 + depth * 18).pr(8).gap(7).items_center().rounded(7).cursor_pointer().hover(s => s.bg(t.hover))
         .on_click((_e, cx) => entry.dir ? this.toggle(path, cx) : this.open(path, cx))
         .child(entry.dir
@@ -240,7 +248,7 @@ export default class MideFiles extends View {
         .child(entry.dir
           ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? statusColor : t.dim)
           : image(`${MATERIAL}/${fileIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
-        .child(div().flex_1().min_w(0).truncate().text_color(nameColor).child(entry.name))
+        .child(div().flex_1().min_w(0).truncate().font_normal().text_color(nameColor).child(entry.name))
         .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(statusColor).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t);
     }
