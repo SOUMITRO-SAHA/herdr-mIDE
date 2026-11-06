@@ -91,4 +91,4 @@ Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot co
 
 ## License
 
-[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): file icons from the previous icon family (MIT), tree glyphs from the previous glyph set (ISC), and parts adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
+[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): file icons from the previous icon family (MIT), tree glyphs from the previous glyph set (ISC) and Material Icon Theme (MIT), and parts adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
