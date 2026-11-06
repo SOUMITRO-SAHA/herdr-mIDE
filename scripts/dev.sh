@@ -24,7 +24,7 @@ echo "Verify: make status (errors) · make shot (window PNG)"
 while :; do
   changed="$(
     for mod in $MODS; do
-      rsync -a --itemize-changes $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/" || true
+      rsync -a --delete --itemize-changes $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/" || true
     done
     rsync -a --itemize-changes "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json" || true
     rsync -a --itemize-changes "$REPO_DIR/themes/mide-night.json" "$HERDR_APP_HOME/themes/mide-night.json" || true

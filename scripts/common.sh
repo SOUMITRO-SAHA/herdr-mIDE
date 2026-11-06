@@ -18,7 +18,7 @@ MODS="mide-files mide-changes mide-editor"
 sync_targets() {
   mkdir -p "$HERDR_APP_HOME/mods" "$HERDR_APP_HOME/layouts" "$HERDR_APP_HOME/themes"
   for mod in $MODS; do
-    rsync -a $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/"
+    rsync -a --delete $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/"
   done
   rsync -a "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json"
   rsync -a "$REPO_DIR/themes/mide-night.json" "$HERDR_APP_HOME/themes/mide-night.json"
