@@ -12,7 +12,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 ### 📁 Files — a file manager that tells you everything at a glance
 
-- **File-type icons** — a glyph and color per language: `{}` yellow for JS, blue for TS, a snake for Python, a hexagon for Rust, and so on.
+- **File-type icons from the reference IDE's default set** — the the previous icon family icon family (MIT): full-color icons for 300+ file types, with reference-style associations; unknown files get its default text-lines icon. `scripts/the retired generator` regenerates everything from the source set.
 - **Git status baked into the tree** — the whole file name is colored: 🟠 modified, 🟢 new/untracked, 🔴 deleted or conflicted, plus a bold status letter.
 - Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
@@ -88,4 +88,4 @@ Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot
 
 ## License
 
-[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — except parts adapted from Herdr's shipped `files` and `changes` mods, which keep Herdr's Apache-2.0 license.
+[MIT](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): the file icons come from the previous icon family (MIT, © 2014 Jesse Weed) — the icon set the reference IDE's default theme uses — and parts adapted from Herdr's shipped `files` and `changes` mods keep Herdr's Apache-2.0 license.
