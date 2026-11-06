@@ -63,11 +63,19 @@ keys.json                 ⌘⇧E editor pane · ⌘S save · ⌘⌥T theme
 
 ## Development
 
+Every command lives in the root `Makefile`:
+
 ```sh
-./install.sh        # copy into ~/.config/herdr-app and check
+make dev        # live loop: sync on every save, Herdr hot-reloads in place
+make sync       # one-shot copy into ~/.config/herdr-app
+make check      # herdr-app check every mod (the runtime's own parser)
+make install    # first-time install (never overwrites; prints keys to merge)
+make status     # window state + errors from files and mods
+make shot       # screenshot of the window → herdr-shot.png
+make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 ```
 
-Edit, `./install.sh`, and Herdr hot-reloads (saving a mod file reloads it in place — you can also edit the installed copy directly and copy back). Run `herdr-app check mods/<name>` after every change: it's the only parser that matters. `herdr-app shot` saves a PNG of the window for UI debugging, and `herdr-app status` lists mod errors.
+The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
 ## Status
 
