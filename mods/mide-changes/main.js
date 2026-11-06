@@ -5,16 +5,19 @@
 // The diff rendering adapts Herdr's shipped `changes` mod (Apache-2.0):
 // numbered rows on a virtual list, so big diffs stay smooth.
 import { View, div } from "gpui-kit";
-import { v_flex, h_flex, InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
+import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, v_virtual_list } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings } from "herdr";
 
-function location() {
+function location(previous) {
   const space = spaces().find((s) => s.active), f = focused();
   const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
   const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
-  return { cwd: pane?.cwd || f?.cwd || space?.folder, on };
+  // A focused mod pane has no cwd. Keep the terminal's folder when a viewer
+  // takes focus in the same tab rather than jumping to the space's root.
+  const cwd = pane?.cwd || (pane?.mod && previous?.space === space?.id && previous?.tab === f?.tab ? previous.cwd : null) || f?.cwd || space?.folder;
+  return { cwd, on, space: space?.id, tab: f?.tab };
 }
-const key = () => JSON.stringify(location());
+const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on });
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
@@ -39,7 +42,8 @@ export default class MideChanges extends View {
     this.handle = cx.focus_handle();
     this.view = "changes"; this.files = []; this.staged = 0; this.rows = []; this.diffWidth = 0;
     this.message = ""; this.typing = false; this.branches = []; this.branch = null; this.branchInput = null;
-    this.input = InputState.new({ placeholder: "Commit message" });
+    this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
+    this.input.set_auto_grow(2, 4);
     this.input.on("change", (_e, cx) => {
       const had = Boolean(this.message.trim());
       this.message = this.input.value();
@@ -66,9 +70,14 @@ export default class MideChanges extends View {
     });
   }
 
+  currentKey() {
+    return key(location(this.location));
+  }
+
   refresh(cx) {
     if (this.loading || this.busy) return;
-    const { cwd, on } = location(), context = key();
+    const loc = location(this.location), { cwd, on } = loc, context = key(loc);
+    this.location = loc;
     if (context !== this.context) {
       this.context = context; this.root = null; this.files = []; this.open = null; this.branch = null;
       this.setLines([]); this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
@@ -79,7 +88,7 @@ export default class MideChanges extends View {
     cx.spawn(async (cx) => {
       try {
         const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd, on });
-        if (key() !== context) return;
+        if (this.currentKey() !== context) return;
         if (top.code !== 0) { this.root = null; this.files = []; this.setLines([]); this.open = null; this.error = "Not a git repository"; return; }
         const root = top.stdout.trim(), git = (args) => exec("git", [...READ, ...args], { cwd: root, on });
         const branch = await git(["branch", "--show-current"]);
@@ -112,7 +121,7 @@ export default class MideChanges extends View {
             if (inWork) files.push({ ...row, side: "work", status: fresh || xy[1] === "A" ? "A" : xy[1] === "D" ? "D" : "M" });
           }
         }
-        if (key() !== context) return;
+        if (this.currentKey() !== context) return;
         this.root = root; this.on = on; this.branch = branch.code === 0 ? branch.stdout.trim() : null;
         this.files = files; this.staged = files.filter((f) => f.side === "index").length;
         this.limited = entries.length > 1000; this.error = null;
@@ -121,9 +130,9 @@ export default class MideChanges extends View {
         if (!this.open && !this.closed && files.length) this.open = files[0].path;
         if (this.open) {
           try { await this.load(this.open, context); }
-          catch { if (key() === context) this.setLines(["Cannot preview this diff (too large or unreadable)"]); }
+          catch { if (this.currentKey() === context) this.setLines(["Cannot preview this diff (too large or unreadable)"]); }
         }
-      } catch (e) { if (key() === context) this.error = String(e); }
+      } catch (e) { if (this.currentKey() === context) this.error = String(e); }
       finally { this.loading = false; cx.notify(); }
     });
   }
@@ -144,7 +153,7 @@ export default class MideChanges extends View {
       const all = r.stdout.replace(/\n$/, "").split("\n"), first = all.findIndex((l) => l.startsWith("@@"));
       lines = first < 0 ? [file.binary ? "Binary file changed" : "No text diff available"] : all.slice(first);
     }
-    if (key() === context && this.open === path) this.setLines(lines.slice(0, 1500).map(line => line.length > 4000 ? line.slice(0, 4000) + "… (line truncated)" : line));
+    if (this.currentKey() === context && this.open === path) this.setLines(lines.slice(0, 1500).map(line => line.length > 4000 ? line.slice(0, 4000) + "… (line truncated)" : line));
   }
 
   setLines(lines) {
@@ -159,7 +168,7 @@ export default class MideChanges extends View {
     const context = this.context;
     if (this.open) cx.spawn(async (cx) => {
       try { await this.load(path, context); }
-      catch (e) { if (key() === context && this.open === path) this.note = `Cannot preview this diff: ${e}`; }
+      catch (e) { if (this.currentKey() === context && this.open === path) this.note = `Cannot preview this diff: ${e}`; }
       cx.notify();
     });
     cx.notify();
@@ -175,8 +184,8 @@ export default class MideChanges extends View {
       try {
         const r = await exec("git", args, { cwd: root, on });
         if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim());
-        if (key() === context && then) then();
-      } catch (e) { if (key() === context) this.note = String(e); }
+        if (this.currentKey() === context && then) then();
+      } catch (e) { if (this.currentKey() === context) this.note = String(e); }
       finally { this.busy = false; this.refresh(cx); cx.notify(); }
     });
     cx.notify();
@@ -185,9 +194,10 @@ export default class MideChanges extends View {
   stage(file, cx) { this.git(cx, ["add", "--", file.path]); }
   unstage(file, cx) { this.git(cx, ["restore", "--staged", "--", file.path]); }
   stageAll(cx) { this.git(cx, ["add", "-A"]); }
+  fetch(cx) { this.git(cx, ["fetch", "--prune"]); }
 
   commit(cx) {
-    if (!this.message.trim() || !this.root || this.busy || this.loading || this.context !== key() || !this.staged) return;
+    if (!this.message.trim() || !this.root || this.busy || this.loading || this.context !== this.currentKey() || !this.staged) return;
     const message = this.message.trim();
     this.git(cx, ["commit", "-m", message], () => { this.message = ""; this.input.set_value(""); });
   }
@@ -198,10 +208,10 @@ export default class MideChanges extends View {
     cx.spawn(async (cx) => {
       try {
         const r = await exec("git", [...READ, "branch", "--format=%(refname:short)"], { cwd: root, on });
-        if (key() !== context) return;
+        if (this.currentKey() !== context) return;
         if (r.code !== 0) throw new Error(r.stderr);
         this.branches = r.stdout.split("\n").map(s => s.trim()).filter(Boolean).slice(0, 200);
-      } catch (e) { if (key() === context) this.branchError = String(e); }
+      } catch (e) { if (this.currentKey() === context) this.branchError = String(e); }
       finally { cx.notify(); }
     });
     cx.notify();
@@ -234,15 +244,15 @@ export default class MideChanges extends View {
   fileRow(f, t) {
     const parts = f.path.split("/"), name = parts.pop();
     const selected = this.open === f.path && this.openStaged === f.side;
-    const color = f.status === "A" ? t.ansi2 : f.status === "D" || f.status === "U" ? t.ansi1 : t.blocked;
+    const color = f.status === "A" ? (t.git_added ?? t.ansi2) : f.status === "D" || f.status === "U" ? (t.git_deleted ?? t.ansi1) : (t.git_modified ?? t.blocked);
     return h_flex().id(`change-${f.side}-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.pick(f.path, f.side, cx))
       .child(div().w(14).text_size(11).font_semibold().text_color(color).child(f.status))
       .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
       .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)))
-      // Stage and unstage sit on the row itself: the "better file adding" flow.
-      .child(f.side === "work"
-        ? div().id(`stage-${f.path}`).text_size(11).text_color(t.muted).hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { cx.stop_propagation(); this.stage(f, cx); }).child("+")
-        : div().id(`unstage-${f.path}`).text_size(11).text_color(t.muted).hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { cx.stop_propagation(); this.unstage(f, cx); }).child("−"));
+      .child(Checkbox.new(`stage-${f.side}-${f.path}`).w(14).h(14).flex_none().checked(f.side === "index")
+        .accessibility_label(`${f.side === "index" ? "Unstage" : "Stage"} ${f.path}`)
+        .on_click((_e, cx) => cx.stop_propagation())
+        .on_change((checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
   }
 
   group(label, files, t, extra) {
@@ -255,7 +265,7 @@ export default class MideChanges extends View {
   }
 
   render(cx) {
-    if (key() !== this.context) this.refresh(cx);
+    if (this.currentKey() !== this.context) this.refresh(cx);
     const t = theme(), index = this.files.filter((f) => f.side === "index"), work = this.files.filter((f) => f.side !== "index");
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const canCommit = Boolean(this.message.trim() && this.root && this.staged && !this.busy && !this.loading);
