@@ -10,13 +10,19 @@ import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
 
 function location(previous) {
-  const space = spaces().find(s => s.active), f = focused();
-  const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
+  const f = focused(), allSpaces = spaces();
+  const space = allSpaces.find(s => s.id === f?.space) ?? allSpaces.find(s => s.active);
+  const allPanes = panes(), pane = f?.pane ? allPanes.find(p => p.pane === f.pane) : null;
+  const tabIds = new Set(space?.tabs.map(tab => tab.id) ?? []);
+  const terminals = allPanes.filter(p => tabIds.has(p.tab) && p.terminal && p.cwd);
+  const tabTerminal = terminals.find(p => p.tab === f?.tab);
   const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
-  // Mod panes (such as the editor opened below) have no cwd of their own.
-  // Keep following the terminal's folder when that mod takes focus in the
-  // same tab instead of falling back to the space's broader starting folder.
-  const cwd = pane?.cwd || (pane?.mod && previous?.space === space?.id && previous?.tab === f?.tab ? previous.cwd : null) || f?.cwd || space?.folder;
+  // Mod-only tabs have no cwd. Keep the workspace of the tab that opened
+  // them; when a mod is split beside a terminal, prefer that terminal's live
+  // folder. A space's initial folder can be stale after terminals move.
+  const cwd = pane?.cwd || f?.cwd || tabTerminal?.cwd
+    || (pane?.mod && previous?.space === space?.id ? previous.cwd : null)
+    || terminals[0]?.cwd || space?.folder;
   return { cwd, on, space: space?.id, tab: f?.tab };
 }
 const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space });
@@ -187,20 +193,20 @@ export default class MideFiles extends View {
 
   open(path, cx) {
     const file = `${this.root}/${path}`;
-    const tab = focused()?.tab;
+    const focus = focused(), tab = focus?.tab;
     const inTab = panes().filter(p => p.tab === tab);
     const editors = inTab.filter(p => p.mod === "mide-editor");
+    const terminalTarget = inTab.find(p => p.terminal && p.cwd === this.root)
+      ?? inTab.find(p => p.terminal && p.focused)
+      ?? inTab.find(p => p.terminal);
+    const otherTarget = terminalTarget ?? inTab.find(p => p.mod !== "mide-editor");
     if (editors.length) {
       // Replace any existing editor pane(s), keeping the new one beside the
       // terminal that owns this folder. Close them before splitting the
       // terminal so its width is restored before the replacement takes half.
-      const target = inTab.find(p => p.terminal && p.cwd === this.root)
-        ?? inTab.find(p => p.terminal && p.focused)
-        ?? inTab.find(p => p.terminal)
-        ?? inTab.find(p => p.mod !== "mide-editor");
-      if (target) {
+      if (otherTarget) {
         for (const editor of editors) run("pane.close", { pane: editor.pane });
-        run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
+        run("pane.split", { direction: "right", pane: otherTarget.pane, mod: "mide-editor", props: { file } });
       } else {
         // If this tab contains only editor panes, keep a live pane as the
         // split target, then close the old editor copies.
@@ -209,7 +215,12 @@ export default class MideFiles extends View {
       }
       return;
     }
-    run("pane.split", { direction: "right", mod: "mide-editor", props: { file } });
+    const target = otherTarget ?? inTab[0];
+    if (target) run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
+    else {
+      const space = spaces().find(s => s.id === focus?.space) ?? spaces().find(s => s.active);
+      run("tab.new", { name: `Editor · ${path.split("/").pop()}`, ...(space ? { space: space.id } : {}), mod: "mide-editor", props: { file } });
+    }
   }
 
   rows(prefix, depth, out, t) {

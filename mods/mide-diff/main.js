@@ -77,7 +77,7 @@ export default class MideDiff extends View {
     this.handle = cx.focus_handle();
     this.scroll = VirtualListScrollHandle.new();
     this.request = null; this.sides = {}; this.rows = []; this.hunkRows = []; this.hunk = 0;
-    this.diffWidth = 0; this.splitWidth = 0;
+    this.diffWidth = 0;
     this.side = "work"; this.mode = "split"; this.busy = false; this.error = null; this.watching = false; this.limited = false;
     this.open(props() ?? shared("mide.diff.request"), cx);
     cx.spawn(async (cx) => {
@@ -165,12 +165,11 @@ export default class MideDiff extends View {
       : { rows: [], hunkRows: [] };
     this.rows = built.rows; this.hunkRows = built.hunkRows;
     this.hunk = Math.max(0, Math.min(this.hunk, this.hunkRows.length - 1));
-    // Long lines scroll sideways instead of being cut off. Split needs a
-    // width for each half; unified needs one for the whole row.
+    // Unified mode can scroll sideways to reveal long lines. Split mode
+    // stays within the viewport and gives each side exactly half its width.
     const longest = this.rows.reduce((n, row) => Math.max(n,
       (row.text ?? "").length, (row.left?.text ?? "").length, (row.right?.text ?? "").length), 0);
     this.diffWidth = Math.max(400, Math.min(2400, longest * 7 + 150));
-    this.splitWidth = Math.max(300, Math.min(1600, longest * 7 + 96));
   }
 
   setSide(side, cx) {
@@ -306,7 +305,7 @@ export default class MideDiff extends View {
           .when(!this.busy && !this.error && !result?.error && !result?.combined && !result?.binary && !this.rows.length, (el) => el.child(this.emptyState(`No ${this.side === "index" ? "staged" : this.request?.fresh ? "untracked" : "unstaged"} changes.`, t)))
           .when(!this.error && !result?.error && !result?.combined && !result?.binary && Boolean(this.rows.length), (el) => el
             .child(div().id("mide-diff-x").size_full().overflow_x_scrollbar()
-              .child(div().w_full().min_w(this.mode === "unified" ? this.diffWidth : this.splitWidth * 2 + 1).h_full().child(v_virtual_list("mide-diff", this.rows.length, LINE, (i) => String(i),
+              .child(div().w_full().min_w(this.mode === "unified" ? this.diffWidth : 0).h_full().child(v_virtual_list("mide-diff", this.rows.length, LINE, (i) => String(i),
                 (range) => this.rows.slice(range.start, range.end).map((row) => this.mode === "split" ? this.splitRow(row, t) : this.unifiedRow(row, t))).track_scroll(this.scroll).size_full())))
             .child(Scrollbar.vertical("mide-diff").viewport_from_layout().absolute().inset_0())))
       .when(this.limited, (e) => e.child(div().px(12).py(3).text_size(10).text_color(t.dim).child("Diff truncated for speed")))

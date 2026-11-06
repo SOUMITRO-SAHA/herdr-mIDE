@@ -7,15 +7,22 @@ import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, S
 import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
 
 function location(previous) {
-  const space = spaces().find((s) => s.active), f = focused();
-  const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
+  const f = focused(), allSpaces = spaces();
+  const space = allSpaces.find(s => s.id === f?.space) ?? allSpaces.find(s => s.active);
+  const allPanes = panes(), pane = f?.pane ? allPanes.find(p => p.pane === f.pane) : null;
+  const tabIds = new Set(space?.tabs.map(tab => tab.id) ?? []);
+  const terminals = allPanes.filter(p => tabIds.has(p.tab) && p.terminal && p.cwd);
+  const tabTerminal = terminals.find(p => p.tab === f?.tab);
   const on = f?.pane === null ? (f.terminal?.includes("/") ? f.terminal.split("/")[0] : null) : space?.machine ?? null;
-  // A focused mod pane has no cwd. Keep the terminal's folder when a viewer
-  // takes focus in the same tab rather than jumping to the space's root.
-  const cwd = pane?.cwd || (pane?.mod && previous?.space === space?.id && previous?.tab === f?.tab ? previous.cwd : null) || f?.cwd || space?.folder;
+  // Mod-only tabs have no cwd. Keep the workspace of the tab that opened
+  // them; when a mod is split beside a terminal, prefer that terminal's live
+  // folder. A space's initial folder can be stale after terminals move.
+  const cwd = pane?.cwd || f?.cwd || tabTerminal?.cwd
+    || (pane?.mod && previous?.space === space?.id ? previous.cwd : null)
+    || terminals[0]?.cwd || space?.folder;
   return { cwd, on, space: space?.id, tab: f?.tab };
 }
-const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on });
+const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space });
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
@@ -123,13 +130,15 @@ export default class MideChanges extends View {
     const request = { root: this.root, path: file.path, side: file.side, status: file.status, fresh: file.fresh, on: this.on, branch: this.branch, title };
     this.open = file.path; this.openStaged = file.side; this.note = null;
     setShared("mide.diff.request", request);
-    const space = spaces().find((s) => s.active), all = panes();
+    const focus = focused(), allSpaces = spaces();
+    const space = allSpaces.find(s => s.id === focus?.space) ?? allSpaces.find(s => s.active);
+    const all = panes();
     const existing = space?.tabs.find((tab) => all.some((p) => p.tab === tab.id && p.mod === "mide-diff"));
     if (existing) {
       run("tab.rename", { id: existing.id, name: title });
       run("tab.select", { id: existing.id });
       run("mide-diff.open");
-    } else run("tab.new", { name: title, mod: "mide-diff", props: request });
+    } else run("tab.new", { name: title, ...(space ? { space: space.id } : {}), mod: "mide-diff", props: request });
     cx.notify();
   }
 
