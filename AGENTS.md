@@ -2,6 +2,19 @@
 
 Instructions for AI coding agents working in this repo.
 
+## Ownership and API boundary
+
+- This repository owns herdr-mIDE only. `herdr-app` is an external project;
+  never edit, patch, build, install, or replace it to support an mIDE feature.
+- Implement against Herdr's publicly documented and released mod APIs only.
+  Do not treat sibling-repository source, vendored internals, or unannounced
+  exports as supported API.
+- If a feature cannot be implemented with those public APIs, stop before
+  implementing or building a host-side change and ask the user for direction.
+  Do not silently add a host dependency or private-API fallback.
+- Running the installed `herdr-app check` command to validate mIDE mods is
+  allowed; building or modifying the Herdr app is not.
+
 ## Icons — two sources, nothing else
 
 **For any icon work, use our `material-icons-theme` skill first**
@@ -10,7 +23,7 @@ Instructions for AI coding agents working in this repo.
 - [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
   (MIT) is the only source for **file-type and folder icons**.
 - **Generic UI glyphs** (chevrons, tree controls) come from Herdr's own
-  icon system — the shipped mods in `../herdr-app/defaults/mods/` —
+  icon system — the shipped mods in `herdr-app/defaults/mods/` —
   carried under Herdr's Apache-2.0 license. No other external resource.
 - Icons live in `mods/mide-files/icons/` — that folder is the single
   source of truth, hand-editable. File associations live in
@@ -37,8 +50,10 @@ Instructions for AI coding agents working in this repo.
 - Prefer small pure helpers and data-driven mappings over repeated logic or
   mod-specific forks; keep generated outputs reproducible and test their
   materialization.
-- Keep syntax colors in the host's `SyntaxHighlighter` palette and consume it
-  from every mod; do not mirror syntax color values in shared JS or themes.
+- Keep mIDE-owned syntax configuration and palette in one canonical module
+  under `shared/`; consume it from mods via generated copies. Use only public
+  Herdr highlighting APIs. If they do not expose a required capability, stop
+  and ask rather than depending on private host APIs.
 - Git reads in mods must run with `--no-optional-locks -c
   core.fsmonitor=false` or the folder watcher refresh loops forever.
 - Commits follow `type(scope): summary` and explain the why for users;
