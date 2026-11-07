@@ -10,6 +10,7 @@ import { gitColors } from "./palette.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
+const SPLIT_MIN_WIDTH = 900;
 const countLines = (text) => text ? text.split("\n").length - Number(text.endsWith("\n")) : 0;
 const typographySettings = () => {
   const current = settings(), uiSize = current.ui_font_size ?? 13;
@@ -386,6 +387,15 @@ export default class MideDiff extends View {
     const root = v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "r" && e.modifiers.platform) { this.load(cx); cx.stop_propagation(); }
+      })
+      .on_size_change((size, cx) => {
+        const mode = size.width < SPLIT_MIN_WIDTH ? "unified" : "split";
+        if (mode !== this.mode) {
+          this.mode = mode;
+          this.build();
+          if (this.selectedPath) this.scroll.scroll_to_item(this.fileRows.get(this.selectedPath) ?? 0);
+          cx.notify();
+        }
       });
     if (noDiff) return root.child(this.emptyState("No diff to display.", t, typography));
     return root
