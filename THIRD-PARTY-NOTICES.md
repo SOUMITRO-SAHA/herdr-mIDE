@@ -2,9 +2,9 @@
 
 ## Material Icon Theme icons (`mods/mide-files/icons/`)
 
-All icons in this project — the file-type icons
-(`mods/mide-files/icons/material/`) and the closed/open folder glyphs
-(`mods/mide-files/icons/folder.svg`, `folder-open.svg`) — are from
+The file-type icons (`mods/mide-files/icons/material/`) and the
+closed/open folder glyphs (`mods/mide-files/icons/folder.svg`,
+`folder-open.svg`) are from
 [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)
 by the Material Extensions team, used and redistributed under its MIT
 license:
@@ -79,3 +79,26 @@ and `changes` mods, and the tree chevron glyphs
 from Herdr's shipped `files` mod (`defaults/mods/files/` in the app
 repo, name-bearing class attributes stripped). All Apache-2.0 licensed.
 See https://github.com/herdrdev/herdr-app.
+
+## Lucide settings icon
+
+`mods/mide-files/icons/settings.svg` is copied unchanged from Herdr's shipped
+`defaults/mods/workspace-chrome/settings.svg`. The source is the Lucide
+Settings icon and is covered by the ISC license and copyright below (as
+listed in Herdr's `defaults/icons/LICENSE-Lucide.txt`).
+
+> ISC License
+>
+> Copyright (c) 2026 Lucide Icons and Contributors
+>
+> Permission to use, copy, modify, and/or distribute this software for any
+> purpose with or without fee is hereby granted, provided that the above
+> copyright notice and this permission notice appear in all copies.
+>
+> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+> WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+> MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+> ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+> WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+> ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+> OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.

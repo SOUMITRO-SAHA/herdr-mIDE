@@ -5,13 +5,14 @@
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
 // cursor or selection API, so modal editing arrives as a custom editor core
 // (ROADMAP Phase 1).
-import { View, div } from "gpui-kit";
-import { v_flex, h_flex, Editor, EditorState, TextView } from "gpui-base";
-import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
+import { View, div, svg } from "gpui-kit";
+import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
+import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand } from "herdr";
 import { ayuSyntax } from "./palette.js";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
+const WORD_WRAP_SETTING = "mide.editor.word_wrap";
 const languageFor = (file) => {
   const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
   return LANG[ext] ?? ext;
@@ -41,7 +42,7 @@ const editorTypography = () => {
 export default class MideEditor extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.editorMode = "raw";
+    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.editorMode = "raw"; this.settingsOpen = false; this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
@@ -55,7 +56,7 @@ export default class MideEditor extends View {
 
   createCode(value, file) {
     const code = EditorState.new({ language: languageFor(file), value,
-      syntax: syntaxFor(ayuSyntax) });
+      soft_wrap: this.wordWrap, syntax: syntaxFor(ayuSyntax) });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();
@@ -66,6 +67,7 @@ export default class MideEditor extends View {
   load(file, cx) {
     this.code?.release(); this.code = null;
     this.editorMode = "raw";
+    this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null;
     if (!file) return;
     cx.spawn(async cx => {
@@ -104,6 +106,34 @@ export default class MideEditor extends View {
     this.code?.release();
   }
 
+  setWordWrap(enabled, cx) {
+    enabled = Boolean(enabled);
+    if (enabled === this.wordWrap) return;
+    this.wordWrap = enabled;
+    setShared(WORD_WRAP_SETTING, enabled);
+    if (this.code && this.file) {
+      const previous = this.code;
+      this.code = this.createCode(previous.value(), this.file);
+      previous.release();
+    }
+    cx.notify();
+  }
+
+  wordWrapOption(t) {
+    const checked = this.wordWrap;
+    return h_flex().id("mide-editor-word-wrap-option").h(30).flex_none().px(8).gap(8).items_center().rounded(5)
+      .hover(s => s.bg(t.hover))
+      .child(Checkbox.new("mide-editor-word-wrap").w(14).h(14).flex_none().checked(checked)
+        .accessibility_label("Word wrap")
+        .on_click((_e, cx) => cx.stop_propagation())
+        .on_change((value, cx) => this.setWordWrap(value, cx))
+        .child(div().size(14).flex().items_center().justify_center().rounded(3).border_1()
+          .border_color(checked ? t.accent : t.border).bg(checked ? t.accent : t.background)
+          .text_size(10).font_semibold().text_color(t.background).child(checked ? "✓" : "")))
+      .child(div().flex_1().text_size(11).text_color(t.foreground).cursor_pointer()
+        .on_click((_e, cx) => this.setWordWrap(!this.wordWrap, cx)).child("Word wrap"));
+  }
+
   markdownTab(mode, label, t) {
     const active = this.editorMode === mode;
     return div().id(`mide-editor-${mode}`).h(22).px(8).flex().items_center().rounded(5).text_size(10)
@@ -122,7 +152,16 @@ export default class MideEditor extends View {
         .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(11).text_color(t.blocked).child("●")))
         .when(markdown, el => el.child(h_flex().h(24).flex_none().p(2).gap(2).rounded(6).bg(t.raised)
           .child(this.markdownTab("raw", "Raw", t))
-          .child(this.markdownTab("preview", "Preview", t)))))
+          .child(this.markdownTab("preview", "Preview", t))))
+        .child(Popover.new("mide-editor-settings-menu").open(this.settingsOpen).anchor("top_right")
+          .on_open_change((open, cx) => { this.settingsOpen = open; cx.notify(); })
+          .trigger(div().id("mide-editor-settings-trigger").size(24).flex_none().flex().items_center().justify_center().rounded(5)
+            .border_1().border_color(t.border).text_size(10).text_color(t.muted).cursor_pointer()
+            .hover(s => s.bg(t.hover).text_color(t.foreground)).accessibility_label("Editor settings")
+            .child(svg("mods/mide-files/icons/settings.svg").size(14).flex_none()))
+          .content(v_flex().w(190).p(6).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
+            .child(div().px(8).py(5).text_size(10).font_semibold().text_color(t.muted).child("EDITOR SETTINGS"))
+            .child(this.wordWrapOption(t)))))
       .child(this.file
         ? (this.code
             ? markdown && this.editorMode === "preview"
