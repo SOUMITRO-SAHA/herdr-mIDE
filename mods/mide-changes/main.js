@@ -41,7 +41,8 @@ export default class MideChanges extends View {
     this.handle = cx.focus_handle();
     this.view = "changes"; this.files = []; this.staged = 0; this.history = [];
     this.message = ""; this.typing = false; this.branches = []; this.branch = null; this.branchInput = null;
-    this.stageMenuOpen = false; this.commitMenuOpen = false;
+    this.stageMenuOpen = false; this.remoteMenuOpen = false;
+    this.ahead = 0; this.behind = 0; this.hasUpstream = false;
     this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
     this.input.set_auto_grow(2, 4);
     this.input.on("change", (_e, cx) => {
@@ -80,6 +81,7 @@ export default class MideChanges extends View {
     this.location = loc;
     if (context !== this.context) {
       this.context = context; this.root = null; this.files = []; this.history = []; this.open = null; this.branch = null;
+      this.ahead = 0; this.behind = 0; this.hasUpstream = false;
       this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
       this.watched = null; this.limited = false; this.view = "changes";
     }
@@ -94,6 +96,16 @@ export default class MideChanges extends View {
         const branch = await git(["branch", "--show-current"]);
         const status = await git(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"]);
         if (status.code !== 0) throw new Error(status.stderr);
+        let ahead = 0, behind = 0, hasUpstream = false;
+        const upstream = await git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
+        if (upstream.code === 0) {
+          const tracking = await git(["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]);
+          if (tracking.code !== 0) throw new Error(tracking.stderr);
+          const counts = tracking.stdout.trim().split(/\s+/).map(Number);
+          if (counts.length !== 2 || counts.some((count) => !Number.isFinite(count))) throw new Error("Could not read upstream commit counts");
+          [ahead, behind] = counts;
+          hasUpstream = true;
+        }
         // Keep staged and unstaged line counts separate, as files can appear
         // in both groups when only part of a change is staged.
         const stats = { index: {}, work: {} };
@@ -127,6 +139,7 @@ export default class MideChanges extends View {
         }
         if (this.currentKey() !== context) return;
         this.root = root; this.on = on; this.branch = branch.code === 0 ? branch.stdout.trim() : null;
+        this.ahead = ahead; this.behind = behind; this.hasUpstream = hasUpstream;
         this.files = files; this.staged = files.filter((f) => f.staged).length;
         this.limited = entries.length > 1000; this.error = null;
         this.watch(root, cx);
@@ -186,6 +199,8 @@ export default class MideChanges extends View {
     this.git(cx, stage ? ["add", "--", ...paths] : ["restore", "--staged", "--", ...paths]);
   }
   fetch(cx) { this.git(cx, ["fetch", "--prune"]); }
+  pull(cx) { this.git(cx, ["pull"]); }
+  push(cx) { this.git(cx, ["push"]); }
 
   selectTab(view, cx) {
     this.view = view;
@@ -277,7 +292,7 @@ export default class MideChanges extends View {
   menuItem(id, label, enabled, t, action) {
     return h_flex().id(id).h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
       .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
-      .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.commitMenuOpen = false; action(cx); cx.notify(); } })
+      .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.remoteMenuOpen = false; action(cx); cx.notify(); } })
       .child(label);
   }
 
@@ -286,26 +301,36 @@ export default class MideChanges extends View {
       .child(div().id("mide-stage-all").h_full().px(8).flex().items_center().rounded_l(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
         .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
         .on_click((_e, cx) => { if (enabled) action(cx); }).child(label))
-      .child(Popover.new("mide-stage-menu").open(this.stageMenuOpen).anchor("bottom_right")
+      .child(Popover.new("mide-stage-menu").open(this.stageMenuOpen).anchor("top_right")
         .on_open_change((open, cx) => { this.stageMenuOpen = open; cx.notify(); })
-        .trigger(div().id("mide-stage-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_size(10).text_color(t.muted).accessibility_label("Stage actions").cursor_pointer().child("More"))
+        .trigger(div().id("mide-stage-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_color(t.muted).accessibility_label("Stage actions").cursor_pointer().child(svg("mods/mide-files/icons/chevron-down.svg").size(11).flex_none()))
         .content(v_flex().min_w(150).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
           .child(this.menuItem("mide-menu-stage-all", "Stage All", !this.busy && this.files.some((file) => file.unstaged), t, (cx) => this.stageAll(cx)))
           .child(this.menuItem("mide-menu-unstage-all", "Unstage All", !this.busy && Boolean(this.staged), t, (cx) => this.unstageAll(cx)))))
-      .flex_none();
+       .flex_none();
   }
 
-  commitActions(t, label, enabled) {
-    return h_flex().h(30).flex_none().rounded(7).bg(enabled ? t.solid : t.raised)
-      .child(div().id("mide-commit").h_full().px(12).flex().items_center().rounded_l(6).text_size(11).text_color(enabled ? t.solid_foreground : t.dim)
-        .when(enabled, (e) => e.cursor_pointer())
-        .on_click((_e, cx) => this.commit(cx)).child(label))
-      .child(Popover.new("mide-commit-menu").open(this.commitMenuOpen).anchor("top_right")
-        .on_open_change((open, cx) => { this.commitMenuOpen = open; cx.notify(); })
-        .trigger(div().id("mide-commit-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_size(10).text_color(enabled ? t.solid_foreground : t.dim).accessibility_label("Commit options").cursor_pointer().child("More"))
-        .content(v_flex().min_w(180).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
-          .child(this.menuItem("mide-menu-commit-staged", "Commit Staged Changes", enabled && Boolean(this.staged), t, (cx) => this.commit(cx, "staged")))
-          .child(this.menuItem("mide-menu-commit-tracked", "Commit Tracked Changes", enabled && this.files.some((file) => !file.fresh), t, (cx) => this.commit(cx, "tracked")))))
+  remoteActions(t) {
+    const enabled = Boolean(this.root && !this.busy && !this.loading);
+    const action = this.behind ? "pull" : this.ahead ? "push" : "fetch";
+    const label = this.busy ? "Working…" : action === "pull" ? "Pull" : action === "push" ? "Push" : "Fetch";
+    return h_flex().h(23).flex_none().rounded(6).border_1().border_color(t.border)
+      .child(h_flex().id("mide-remote-action").h_full().px(7).gap(4).items_center().rounded_l(5).text_size(10).text_color(enabled ? t.muted : t.dim)
+        .when(enabled, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)))
+        .on_click((_e, cx) => { if (enabled) this[action](cx); })
+        .when(Boolean(this.behind), (e) => e.child(h_flex().gap(2).items_center()
+          .child(div().child("↓")).child(div().child(String(this.behind)))))
+        .when(Boolean(this.ahead), (e) => e.child(h_flex().gap(2).items_center()
+          .child(div().child("↑")).child(div().child(String(this.ahead)))))
+        .child(label))
+      .child(Popover.new("mide-remote-menu").open(this.remoteMenuOpen).anchor("bottom_right")
+        .on_open_change((open, cx) => { this.remoteMenuOpen = open; cx.notify(); })
+        .trigger(div().id("mide-remote-menu-trigger").h_full().w(20).flex().items_center().justify_center().border_l(1).border_color(t.border)
+          .accessibility_label("Remote actions").cursor_pointer().child(svg("mods/mide-files/icons/chevron-down.svg").size(11).flex_none()))
+        .content(v_flex().min_w(130).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
+          .child(this.menuItem("mide-menu-fetch", "Fetch", enabled, t, (cx) => this.fetch(cx)))
+          .child(this.menuItem("mide-menu-pull", "Pull", enabled && this.hasUpstream, t, (cx) => this.pull(cx)))
+          .child(this.menuItem("mide-menu-push", "Push", enabled && this.hasUpstream, t, (cx) => this.push(cx)))))
       .flex_none();
   }
 
@@ -355,7 +380,7 @@ export default class MideChanges extends View {
       .child(div().max_w(110).min_w(0).text_size(10).text_color(t.dim).truncate().child(repository))
       .child(div().text_size(10).text_color(t.dim).child("/"))
       .child(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
-      .child(div().id("mide-fetch").h(23).px(7).flex().items_center().rounded(5).border_1().border_color(t.border).text_size(10).text_color(this.busy ? t.dim : t.muted).when(!this.busy, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.fetch(cx))).child(this.busy ? "Working…" : "Fetch"));
+      .child(this.remoteActions(t));
   }
 
   historyRow(commit, t) {
@@ -375,9 +400,7 @@ export default class MideChanges extends View {
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;
-    const canCommit = Boolean(this.message.trim() && this.root && (this.staged || hasTrackedChanges) && !this.busy && !this.loading && this.context === this.currentKey());
     const stageLabel = this.files.some((file) => file.unstaged) ? "Stage All" : "Unstage All";
-    const commitLabel = this.staged ? "Commit" : "Commit Tracked";
     return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
@@ -425,9 +448,8 @@ export default class MideChanges extends View {
       .when(this.view !== "branches", (el) => el.child(this.branchFooter(t)))
       .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
         .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(host.background).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
-        .child(h_flex().h(30).flex_none().gap(8).items_center()
-          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "Stage changes to enable commit"))
-          .child(this.commitActions(t, this.busy ? "Working…" : commitLabel, canCommit)))))
+         .child(h_flex().h(20).flex_none().items_center()
+          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "No changes to commit")))))
       .when(this.view === "branches" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)));
   }
 }
