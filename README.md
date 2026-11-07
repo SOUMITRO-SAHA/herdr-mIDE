@@ -62,7 +62,7 @@ layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff tab · split/unified · hunk navigation
-mods/mide-editor/         editor pane · save · private Ayu syntax colors
+mods/mide-editor/         editor pane · save · host Syntect palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
@@ -82,6 +82,7 @@ Every command lives in the root `Makefile`:
 ```sh
 make dev        # live loop: sync on every save, Herdr hot-reloads in place
 make sync       # one-shot copy into ~/.config/herdr-app
+make test       # source tests for shared helpers and palette boundaries
 make check      # herdr-app check every mod (the runtime's own parser)
 make install    # first-time install (never overwrites; prints keys to merge)
 make status     # window state + errors from files and mods
@@ -93,7 +94,7 @@ The typical loop: `make dev` in one terminal, edit in your editor — each save 
 
 Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
-The self-contained mods keep Ayu syntax and Git colors in their respective `palette.js` files. When changing those colors, keep them in sync with `themes/ayu-dark.json`, which is a reference and is not loaded at runtime.
+The host Syntect API owns the single syntax palette and exposes it to both the editor and Diff; the generated mod helper contains only language aliases and text segmentation. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
 
 ## Status
 

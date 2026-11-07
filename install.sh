@@ -6,6 +6,8 @@ set -e
 
 HOME_DIR="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+HERDR_APP_HOME="$HOME_DIR"
+. "$REPO_DIR/scripts/common.sh"
 
 echo "Installing herdr-mIDE into $HOME_DIR"
 
@@ -20,10 +22,8 @@ install_mod() {
   fi
 }
 
-install_mod mide-files
-install_mod mide-changes
-install_mod mide-diff
-install_mod mide-editor
+for mod in $MODS; do install_mod "$mod"; done
+materialize_shared_modules "$HOME_DIR" missing $MODS
 
 if [ -e "$HOME_DIR/layouts/herdr-mide.json" ]; then
   echo "  ! layouts/herdr-mide.json already exists — skipping"
@@ -38,7 +38,7 @@ echo "Keys to merge into $HOME_DIR/keys.json (ask before replacing one you use):
 cat "$REPO_DIR/keys.json"
 echo
 echo "Checking mods…"
-for mod in mide-files mide-changes mide-diff mide-editor; do
+for mod in $MODS; do
   herdr-app check "$HOME_DIR/mods/$mod" && echo "  ok $mod"
 done
 

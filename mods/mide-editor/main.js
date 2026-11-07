@@ -7,33 +7,14 @@
 // (ROADMAP Phase 1).
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
+import * as base from "gpui-base";
 import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand } from "herdr";
-import { ayuSyntax } from "./palette.js";
+import { languageFor } from "./_shared/syntax.js";
 
-const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
 const MARKDOWN_PREVIEW_SETTING = "mide.editor.markdown_preview_default";
 const EDITOR_REQUEST = "mide.editor.request";
-const languageFor = (file) => {
-  const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
-  return LANG[ext] ?? ext;
-};
-// Syntax colors come only from our private Ayu palette. Why that theme's
-// variable token is the function orange: the host highlighter folds every
-// variable.* scope (call names, objects, params, this) into one "variable"
-// bucket and leaves properties unstyled, and call names dominate that bucket
-// in this repo's fluent style.
-const SYNTAX_KEYS = ["keyword", "string", "comment", "function", "type", "number", "constant", "boolean", "variable", "operator", "punctuation", "heading", "markup.raw", "markup.bold", "markup.italic", "link_uri"];
-const syntaxFor = (t) => {
-  const map = {};
-  for (const key of SYNTAX_KEYS) {
-    const token = `syntax_${key.replaceAll(".", "_")}`;
-    const color = t[token];
-    if (color) map[key] = color;
-  }
-  return map;
-};
 const editorTypography = () => {
   const current = settings();
   const uiSize = current.ui_font_size ?? 13;
@@ -63,7 +44,7 @@ export default class MideEditor extends View {
 
   createCode(value, file) {
     const code = EditorState.new({ language: languageFor(file), value,
-      soft_wrap: this.wordWrap, syntax: syntaxFor(ayuSyntax) });
+      soft_wrap: this.wordWrap, syntax: base.SyntaxHighlighter?.colors?.() ?? {} });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();

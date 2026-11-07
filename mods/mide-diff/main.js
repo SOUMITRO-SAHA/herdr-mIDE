@@ -5,13 +5,19 @@
 // watcher never sees the diff itself and starts a refresh loop.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
+import * as base from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
+import { languageFor, syntaxSegments } from "./_shared/syntax.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
+const MAX_SYNTAX_CHARS = 600000, MAX_SYNTAX_TOTAL_CHARS = 20000000, SYNTAX_BATCH = 8;
 const SPLIT_MIN_WIDTH = 900;
+const syntaxColors = base.SyntaxHighlighter?.colors?.() ?? {};
 const countLines = (text) => text ? text.split("\n").length - Number(text.endsWith("\n")) : 0;
+const lineNumbers = (hunks, key) => [...new Set(hunks.flatMap(hunk => hunk.lines.map(line => line[key]).filter(Number.isInteger)))].sort((a, b) => a - b);
+const syntaxLineMap = lines => new Map(lines.map(({ line, runs }) => [line, runs]));
 const typographySettings = () => {
   const current = settings(), uiSize = current.ui_font_size ?? 13;
   return {
@@ -215,7 +221,10 @@ export default class MideDiff extends View {
         });
       }
       if (this.request !== request) return;
-      this.files = files.map(file => ({ ...file, ...results.get(file.path) }));
+      const loadedFiles = files.map(file => ({ ...file, ...results.get(file.path) }));
+      const highlightedFiles = await this.highlightFiles(loadedFiles, request);
+      if (!highlightedFiles || this.request !== request) return;
+      this.files = highlightedFiles;
       this.limited = this.files.some(file => file.truncated);
       this.build();
       if (this.jumpToSelection) {
@@ -226,6 +235,46 @@ export default class MideDiff extends View {
     finally {
       if (this.request === request) { this.busy = false; cx.notify(); }
     }
+  }
+
+  async highlightFile(file, request, budget) {
+    if (file.error || file.combined || file.binary || !file.hunks?.length) return file;
+    if (!base.SyntaxHighlighter?.highlight_lines) return file;
+    const oldLines = lineNumbers(file.hunks, "old");
+    const newLines = lineNumbers(file.hunks, "new");
+    if (oldLines.length > MAX_LINES || newLines.length > MAX_LINES) return file;
+
+    try {
+      const oldSourcePromise = file.fresh
+        ? Promise.resolve("")
+        : exec("git", [...READ, "show", `HEAD:${file.path}`], { cwd: request.root, on: request.on })
+          .then(result => result.code === 0 ? result.stdout : "");
+      const newSourcePromise = readTextFile(`${request.root}/${file.path}`, { on: request.on })
+        .then(text => text ?? "");
+      const [oldSource, newSource] = await Promise.all([oldSourcePromise, newSourcePromise]);
+      if (this.request !== request) return file;
+      const sourceSize = oldSource.length + newSource.length;
+      if (sourceSize > MAX_SYNTAX_CHARS * 2 || budget.characters + sourceSize > MAX_SYNTAX_TOTAL_CHARS) return file;
+      budget.characters += sourceSize;
+      const language = languageFor(file.path);
+      const highlight = (source, requested) => source.length <= MAX_SYNTAX_CHARS && requested.length
+        ? syntaxLineMap(base.SyntaxHighlighter.highlight_lines(language, source, requested))
+        : new Map();
+      return { ...file, syntax: { old: highlight(oldSource, oldLines), new: highlight(newSource, newLines) } };
+    } catch {
+      return file;
+    }
+  }
+
+  async highlightFiles(files, request) {
+    const highlighted = [];
+    const budget = { characters: 0 };
+    for (let start = 0; start < files.length; start += SYNTAX_BATCH) {
+      const batch = await Promise.all(files.slice(start, start + SYNTAX_BATCH).map(file => this.highlightFile(file, request, budget)));
+      if (this.request !== request) return null;
+      highlighted.push(...batch);
+    }
+    return highlighted;
   }
 
   build() {
@@ -243,7 +292,7 @@ export default class MideDiff extends View {
         continue;
       }
       const built = this.mode === "split" ? splitRows(file.hunks) : unifiedRows(file.hunks);
-      rows.push(...built);
+      rows.push(...built.map(row => ({ ...row, sourceFile: file })));
     }
     this.rows = rows;
     this.fileRows = fileRows;
@@ -279,6 +328,12 @@ export default class MideDiff extends View {
     return null;
   }
 
+  codeCell(text, runs, fallback) {
+    const segments = syntaxSegments(text, runs, fallback, syntaxColors);
+    return h_flex().flex_1().min_w(0).h(LINE).items_center().overflow_hidden().whitespace_nowrap()
+      .children(segments.map(segment => div().flex_none().text_color(segment.color).child(segment.text)));
+  }
+
   fileHeader(file, t, typography, minWidth = null) {
     const status = file.status === "A" ? (t.git_added ?? t.ansi2)
       : file.status === "D" ? (t.git_deleted ?? t.ansi1)
@@ -306,7 +361,7 @@ export default class MideDiff extends View {
       .child(this.number(row.old, add ? t.dim : del ? t.diff_deleted : t.dim, typography))
       .child(this.number(row.new, add ? t.diff_added : del ? t.dim : t.dim, typography))
       .child(div().w(18).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
-      .child(div().flex_1().min_w(0).whitespace_nowrap().child(row.text));
+      .child(this.codeCell(row.text, row.sourceFile?.syntax?.[add ? "new" : del ? "old" : "new"]?.get(add ? row.new : del ? row.old : row.new ?? row.old), t.foreground));
   }
 
   splitPaneRow(row, side, t, typography) {
@@ -319,7 +374,7 @@ export default class MideDiff extends View {
       .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
       .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim, typography))
       .child(div().w(16).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
-      .child(div().flex_1().min_w(0).whitespace_nowrap().text_color(line.kind === " " ? t.muted : t.foreground).child(line.text));
+      .child(this.codeCell(line.text, row.sourceFile?.syntax?.[side]?.get(side === "left" ? line.old : line.new), line.kind === " " ? t.muted : t.foreground));
   }
 
   splitRow(row, t, typography) {

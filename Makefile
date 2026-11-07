@@ -19,12 +19,13 @@ INTERVAL ?= 1
 MODS ?= mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
-.PHONY: help dev sync check install status shot switch
+.PHONY: help dev sync test check install status shot switch
 
 help:
 	@echo "herdr-mIDE commands:"
 	@echo "  make dev      live sync + hot reload (Ctrl-C to stop)"
 	@echo "  make sync     one-shot copy into the Herdr app home"
+	@echo "  make test     source-tree tests"
 	@echo "  make check    herdr-app check every mod"
 	@echo "  make install  first-time install (install.sh)"
 	@echo "  make status   window state + mod errors"
@@ -37,8 +38,13 @@ dev:
 sync:
 	@./scripts/sync.sh
 
-check:
-	@for mod in $(MODS); do herdr-app check mods/$$mod || exit 1; done
+test:
+	@sh ./scripts/test-shared-modules.sh
+	@node ./scripts/test-syntax-config.mjs
+	@node ./scripts/test-file-icons.mjs
+
+check: test
+	@MODS="$(MODS)" sh ./scripts/check.sh
 
 install:
 	@./install.sh
