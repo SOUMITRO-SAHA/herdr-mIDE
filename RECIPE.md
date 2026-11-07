@@ -50,11 +50,11 @@ follow Herdr's theme, which is unchanged.
   "current" label, "delete" in red on hover for others), and a "branch
   name" input with a **New** button that creates and switches.
 - **The editor pane** (`mide-editor`, opened by clicking a file in Files or
-  `cmd-shift-e`): a 36px header with an `EDIT` mode chip, the file name, an
-  orange `●` while unsaved and a **Save** button; the code with syntax
-  highlighting (13px, the settings font); a 28px status bar with the full
-   path and an `⌘S save` hint. mIDE's controls follow Herdr, while syntax and
-   Git colors use private tokens from `themes/ayu-dark.json`; the layout does
+  `cmd-shift-e`): a 36px header with the file name and an orange `●` while
+  unsaved; the code with syntax highlighting at Herdr's active editor font and
+  size; a 28px status bar with the full path and an `⌘S save` hint. mIDE's
+   controls follow Herdr, while syntax and Git colors use private tokens from
+   `themes/ayu-dark.json`; the layout does
    not select a host theme. Native editor/input internals still use some host
    colors because Herdr does not expose per-widget overrides for them.
 
@@ -79,7 +79,7 @@ follow Herdr's theme, which is unchanged.
   changes view.
 - **The editor** loads `props().file`, marks dirty on any edit, uses Ayu syntax
   colors independently of Herdr's theme, and saves with
-  the **Save** button, `mide-editor.save` (bound to `cmd-s` in
+  `mide-editor.save` (bound to `cmd-s` in
   `keys.json`'s `mod:mide-editor` section) and shows `Save failed: …` on
   error.
 
@@ -117,8 +117,8 @@ follow Herdr's theme, which is unchanged.
 
 - **The built-in EditorState has no cursor or selection API** — only
   `value()`/`set_value()`/`on(change…)`. Modal (Vim) editing therefore
-  needs a custom editor core drawn from gpui-kit primitives; the `EDIT`
-  chip and the `mod:` key plumbing in `mide-editor` are its landing pad
+  needs a custom editor core drawn from gpui-kit primitives; the `mod:` key
+  plumbing in `mide-editor` is its landing pad
   (see ROADMAP Phase 1).
 - **`props()` can be null** — `herdr-app check` runs the mod with no props;
   read it as `props()?.file ?? null` or init crashes.

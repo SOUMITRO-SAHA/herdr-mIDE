@@ -105,13 +105,11 @@ export default class MideEditor extends View {
     const typography = editorTypography();
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().text_size(10).px(6).py(1).rounded(4).font_semibold().bg(t.raised).text_color(t.muted).child("EDIT"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(name ?? "No file"))
-        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(11).text_color(t.blocked).child("●")))
-        .child(div().id("mide-editor-save").h(24).px(10).flex().items_center().rounded(7).bg(this.code && !this.saving ? t.solid : t.raised).text_color(this.code && !this.saving ? t.solid_foreground : t.dim).text_size(12).cursor_pointer().on_click((_e, cx) => this.save(cx)).child(this.saving ? "Saving…" : "Save")))
+        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(11).text_color(t.blocked).child("●"))))
       .child(this.file
         ? (this.code
-            ? Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size).px(typography.size * 0.5)
+            ? Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
             : div().flex_1().min_h(0).p(12).text_color(t.dim).child(this.error || "Loading file…"))
         : div().flex_1().min_h(0).p(12).text_color(t.dim).child("No file open. Click a file in Files to edit it here."))
       .when(Boolean(this.note), el => el.child(h_flex().px(12).py(4).gap(10).text_size(11).text_color(t.ansi1)
