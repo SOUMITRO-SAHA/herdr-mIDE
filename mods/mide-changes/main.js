@@ -40,8 +40,8 @@ export default class MideChanges extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
     this.view = "changes"; this.files = []; this.staged = 0; this.history = [];
-    this.message = ""; this.typing = false; this.branches = []; this.branch = null; this.branchInput = null;
-    this.stageMenuOpen = false; this.remoteMenuOpen = false;
+    this.message = ""; this.typing = false; this.branches = []; this.branch = null;
+    this.stageMenuOpen = false; this.remoteMenuOpen = false; this.branchMenuOpen = false;
     this.ahead = 0; this.behind = 0; this.hasUpstream = false;
     this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
     this.input.set_auto_grow(2, 4);
@@ -53,7 +53,9 @@ export default class MideChanges extends View {
     this.input.on("submit", (_e, cx) => this.commit(cx));
     this.input.on("focus", (_e, cx) => { this.typing = true; cx.notify(); });
     this.input.on("blur", (_e, cx) => { this.typing = false; cx.notify(); });
-    this.newBranch = InputState.new({ placeholder: "branch name" });
+    this.branchQuery = InputState.new({ placeholder: "Switch or type to create a branch…" });
+    this.branchQuery.on("change", (_e, cx) => cx.notify());
+    this.branchQuery.on("submit", (_e, cx) => this.createBranch(cx));
     this.refresh(cx);
     cx.timer.every(10000, (cx) => this.refresh(cx));
   }
@@ -82,6 +84,8 @@ export default class MideChanges extends View {
     if (context !== this.context) {
       this.context = context; this.root = null; this.files = []; this.history = []; this.open = null; this.branch = null;
       this.ahead = 0; this.behind = 0; this.hasUpstream = false;
+      this.branchMenuOpen = false; this.branches = []; this.branchLoading = false;
+      this.branchQuery.set_value("");
       this.message = ""; this.input.set_value(""); this.error = null; this.note = null;
       this.watched = null; this.limited = false; this.view = "changes";
     }
@@ -250,50 +254,87 @@ export default class MideChanges extends View {
     cx.notify();
   }
 
-  showBranches(cx) {
-    this.returnView = this.view === "history" ? "history" : "changes";
-    this.view = "branches"; this.branches = []; this.branchError = null;
+  loadBranches(cx) {
+    if (!this.root || this.branchLoading) return;
+    this.branchLoading = true; this.branches = []; this.branchError = null;
     const root = this.root, on = this.on, context = this.context;
     cx.spawn(async (cx) => {
       try {
         const r = await exec("git", [...READ, "branch", "--format=%(refname:short)"], { cwd: root, on });
         if (this.currentKey() !== context) return;
-        if (r.code !== 0) throw new Error(r.stderr);
+        if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim());
         this.branches = r.stdout.split("\n").map(s => s.trim()).filter(Boolean).slice(0, 200);
       } catch (e) { if (this.currentKey() === context) this.branchError = String(e); }
-      finally { cx.notify(); }
+      finally {
+        if (this.currentKey() === context) { this.branchLoading = false; cx.notify(); }
+      }
     });
     cx.notify();
   }
 
   switchBranch(name, cx) {
+    if (this.busy) return;
+    if (name === this.branch) { this.branchMenuOpen = false; cx.notify(); return; }
     this.git(cx, ["switch", name], () => {
-      this.view = this.returnView ?? "changes";
+      this.branchMenuOpen = false;
       if (this.view === "history") this.selectTab("history", cx);
     });
     cx.notify();
   }
 
   createBranch(cx) {
-    const name = this.newBranch.value().trim();
-    if (!name) return;
-    this.newBranch.set_value("");
+    const name = this.branchQuery.value().trim().replace(/\s+/g, "-");
+    if (!name || this.busy) return;
+    if (this.branches.includes(name)) { this.switchBranch(name, cx); return; }
     this.git(cx, ["switch", "-c", name], () => {
-      this.view = this.returnView ?? "changes";
+      this.branchMenuOpen = false;
+      this.branchQuery.set_value("");
       if (this.view === "history") this.selectTab("history", cx);
     });
   }
 
   deleteBranch(name, cx) {
-    this.git(cx, ["branch", "-d", name]);
-    cx.notify();
+    if (this.busy || name === this.branch) return;
+    this.git(cx, ["branch", "-d", name], () => { this.branchMenuOpen = false; });
   }
 
   menuItem(id, label, enabled, t, action) {
     return h_flex().id(id).h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
       .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
-      .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.remoteMenuOpen = false; action(cx); cx.notify(); } })
+      .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.remoteMenuOpen = false; this.branchMenuOpen = false; action(cx); cx.notify(); } })
       .child(label);
+  }
+
+  branchPicker(t) {
+    const query = this.branchQuery.value().trim();
+    const normalizedQuery = query.toLowerCase();
+    const branches = this.branches.filter((name) => name.toLowerCase().includes(normalizedQuery));
+    const createName = query.replace(/\s+/g, "-");
+    const canCreate = Boolean(createName && !this.branches.includes(createName));
+    const enabled = Boolean(this.root && !this.busy);
+    const branchListHeight = Math.min(220, Math.max(36, branches.length * 28));
+    return v_flex().id("mide-branch-picker").w(260).p(6).gap(5)
+      .child(v_flex().id("mide-branch-list").h(branchListHeight).flex_none().min_h(0).max_h(220).overflow_y_scrollbar().gap(2)
+        .when(this.branchLoading, (e) => e.child(div().p(8).text_size(11).text_color(t.dim).child("Loading branches…")))
+        .children(branches.map((name) => h_flex().id(`branch-${name}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7)
+          .when(name === this.branch, (e) => e.bg(t.selected))
+          .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
+          .on_click((_e, cx) => this.switchBranch(name, cx))
+          .child(div().w(12).text_color(t.accent).child(name === this.branch ? "✓" : ""))
+          .child(div().flex_1().min_w(0).truncate().child(name))
+          .when(name === this.branch, (e) => e.child(div().text_size(10).text_color(t.dim).child("current")))
+          .when(name !== this.branch, (e) => e.child(div().id(`branch-del-${name}`).text_size(10).text_color(t.muted).hover((s) => s.text_color(t.ansi1))
+            .on_click((_e, cx) => { cx.stop_propagation(); this.deleteBranch(name, cx); }).child("delete")))))
+        .when(!this.branchLoading && !branches.length, (e) => e.child(div().p(8).text_size(11).text_color(t.dim)
+          .child(query ? "No matching branches" : this.root ? "No local branches" : "No repository"))))
+      .when(canCreate, (e) => e.child(h_flex().id("mide-branch-create").h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+        .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
+        .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) this.createBranch(cx); })
+        .child(`Create branch “${createName}”`)))
+      .child(div().w_full().h(30).px(8).flex().items_center().rounded(6).border_1().border_color(t.border)
+        .child(Input.new(this.branchQuery).h_full().text_size(12).text_color(t.foreground)))
+      .when(Boolean(this.branchError), (e) => e.child(div().px(8).text_size(11).text_color(t.ansi1).child(this.branchError)))
+      .when(Boolean(this.note), (e) => e.child(div().px(8).text_size(11).text_color(t.ansi1).child(this.note)));
   }
 
   stageActions(t, label, enabled, action) {
@@ -379,7 +420,16 @@ export default class MideChanges extends View {
       .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
       .child(div().max_w(110).min_w(0).text_size(10).text_color(t.dim).truncate().child(repository))
       .child(div().text_size(10).text_color(t.dim).child("/"))
-      .child(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.showBranches(cx)).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
+      .child(Popover.new("mide-branch-picker-menu").open(this.branchMenuOpen).anchor("bottom_left")
+        .on_open_change((open, cx) => {
+          this.branchMenuOpen = open;
+          if (open) { this.note = null; this.branchQuery.set_value(""); this.branchQuery.focus(); this.loadBranches(cx); }
+          cx.notify();
+        })
+        .trigger(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover))
+          .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
+        .content(this.branchPicker(t)))
+      .child(div().flex_1())
       .child(this.remoteActions(t));
   }
 
@@ -404,32 +454,16 @@ export default class MideChanges extends View {
     return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
-        if (e.key === "escape" && this.view === "branches") { this.view = this.returnView ?? "changes"; cx.notify(); }
       })
-      .when(this.view === "branches", (el) => el.child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().font_semibold().flex_1().child("Branches"))
-        .child(div().id("mide-branch-back").h(24).px(8).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => { this.view = this.returnView ?? "changes"; cx.notify(); }).child("Back"))))
-      .when(this.view !== "branches", (el) => el.child(h_flex().h(36).flex_none().border_b(1).border_color(t.border)
+      .child(h_flex().h(36).flex_none().border_b(1).border_color(t.border)
         .child(div().id("mide-tab-changes").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "changes" ? t.accent : t.background).text_size(12).text_color(this.view === "changes" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child(`Changes (${fileCount})`))
-        .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(12).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History"))))
+        .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(12).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History")))
       .when(this.view === "changes", (el) => el.child(h_flex().h(30).flex_none().px(8).gap(6).items_center().border_b(1).border_color(t.border)
         .child(div().id("mide-view-diff").text_size(11).text_color(this.files.length ? t.muted : t.dim).when(Boolean(this.files.length), (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.openDiff(this.files[0], cx))).child("View Diff"))
          .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
          .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
         .child(div().flex_1())
         .child(this.stageActions(t, stageLabel, Boolean(this.files.length && !this.busy), (cx) => this.primaryStage(cx)))))
-      .when(this.view === "branches", (el) => el
-        .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(6).gap(2)
-          .children(this.branches.map((name) => h_flex().id(`branch-${name}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(name === this.branch, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.switchBranch(name, cx))
-            .child(div().flex_1().min_w(0).truncate().child(name))
-            .when(name === this.branch, (e) => e.child(div().text_size(10).text_color(t.dim).child("current")))
-            .when(name !== this.branch, (e) => e.child(div().id(`branch-del-${name}`).text_size(11).text_color(t.muted).hover((s) => s.text_color(t.ansi1)).on_click((_e, cx) => { cx.stop_propagation(); this.deleteBranch(name, cx); }).child("delete")))))
-           .child(h_flex().h(32).flex_none().px(8).mt(6).gap(8).items_center()
-             .child(div().flex_1().min_w(0).h(28).px(8).flex().items_center().rounded(7).border_1().border_color(t.border).child(Input.new(this.newBranch).h_full().text_size(12).text_color(t.foreground).on("submit", (_e, cx) => this.createBranch(cx))))
-             .child(div().id("mide-branch-new").h(28).px(10).flex().items_center().rounded(7).bg(t.solid).text_color(t.solid_foreground).text_size(12).cursor_pointer().on_click((_e, cx) => this.createBranch(cx)).child("New")))
-           .when(Boolean(this.branchError), (e) => e.child(div().p(8).text_size(11).text_color(t.ansi1).child(this.branchError)))
-           .when(!this.branches.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading branches…" : "No local branches")))))
-         .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
       .when(this.view === "changes", (el) => el
         .child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
           .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
@@ -445,11 +479,11 @@ export default class MideChanges extends View {
           .children(this.history.map((commit) => this.historyRow(commit, t)))
           .when(!this.history.length, (e) => e.child(div().p(10).text_size(12).text_color(t.muted).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
          .child(Scrollbar.vertical("mide-history-list").absolute().inset_0())))
-      .when(this.view !== "branches", (el) => el.child(this.branchFooter(t)))
+      .child(this.branchFooter(t))
       .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
         .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(host.background).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
          .child(h_flex().h(20).flex_none().items_center()
           .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "No changes to commit")))))
-      .when(this.view === "branches" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)));
+      .when(this.view === "history" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)));
   }
 }
