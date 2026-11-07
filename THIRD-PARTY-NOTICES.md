@@ -41,7 +41,8 @@ change-colored underneath. The association map
 `fileIcons.ts` mapping (exact names and longest dotted suffixes;
 filename-pattern and icon-pack-gated entries skipped). Sourcing rule:
 Material Icon Theme is the only source for file-type and folder icons;
-generic UI glyphs come from Herdr's own mods (next section; see also
+generic UI glyphs come from Herdr's own mods (the "Herdr shipped mods"
+section below; see also
 `.opencode/skills/material-icons-theme/SKILL.md`, local agent config).
 
 ## Ayu Dark theme (`themes/ayu-dark.json`)
@@ -50,7 +51,8 @@ The Ayu Dark palette is adapted from the Ayu editor theme, version 1.6.0:
 [ayu-theme/vscode-ayu](https://github.com/ayu-theme/vscode-ayu), by Ike
 Kurghinyan. It is licensed under the MIT License. The adopted syntax colors
 are kept once in mIDE's `shared/syntax.js`; Git UI color mappings remain in
-the mIDE mods. The reference JSON omits syntax values so they cannot drift
+the mIDE mods, and the git status values themselves are Zed One Dark's
+(next section). The reference JSON omits syntax values so they cannot drift
 from the shared palette;
 no reference-IDE theme file, code, or assets are included.
 
@@ -76,6 +78,20 @@ no reference-IDE theme file, code, or assets are included.
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
 
+## Zed One Dark git-status colors
+
+The git status colors — `git_added` `#a1c181`, `git_deleted` `#d07277`,
+and `git_modified`/`git_conflict` `#dec184`, defined in
+`themes/ayu-dark.json` and the `palette.js` shipped with `mide-files`,
+`mide-changes` and `mide-diff` — are taken from the One Dark theme of the
+[zed editor](https://github.com/zed-industries/zed)
+(`assets/themes/one/one.json`: `created` `#a1c181ff`, `deleted`
+`#d07277ff`, `modified`/`conflict` `#dec184ff`). The zed repository is
+licensed under
+[GPL-3.0](https://github.com/zed-industries/zed/blob/main/LICENSE);
+only these color values were adopted — no zed code, theme files, or
+icons are included in this repository.
+
 ## Herdr shipped mods (Apache-2.0)
 
 Parts of `mods/mide-files/main.js` (folder listing) and
@@ -86,12 +102,18 @@ from Herdr's shipped `files` mod (`defaults/mods/files/` in the app
 repo, name-bearing class attributes stripped). All Apache-2.0 licensed.
 See https://github.com/herdrdev/herdr-app.
 
-## Lucide settings icon
+## Lucide icons (`settings.svg`, `git-branch.svg`)
 
 `mods/mide-files/icons/settings.svg` is copied unchanged from Herdr's shipped
 `defaults/mods/workspace-chrome/settings.svg`. The source is the Lucide
 Settings icon and is covered by the ISC license and copyright below (as
 listed in Herdr's `defaults/icons/LICENSE-Lucide.txt`).
+
+`mods/mide-files/icons/git-branch.svg` is a redraw of the Lucide Git
+Branch icon: it first shipped as the verbatim 24×24 Lucide glyph and was
+then restyled onto a 16×16 grid (1.2 stroke, geometry re-anchored) to
+match the tree's tinted-stroke chevrons. It is covered by the same ISC
+license and copyright below.
 
 > ISC License
 >
