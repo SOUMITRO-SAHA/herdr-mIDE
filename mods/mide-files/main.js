@@ -6,7 +6,7 @@
 // same sh/PowerShell helpers, same lazy expansion, same bounded reads.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
 import { gitColors } from "./palette.js";
 
@@ -205,28 +205,22 @@ export default class MideFiles extends View {
     const file = `${this.root}/${path}`;
     const focus = focused(), tab = focus?.tab;
     const inTab = panes().filter(p => p.tab === tab);
-    const editors = inTab.filter(p => p.mod === "mide-editor");
+    const request = { file };
+    setShared("mide.editor.request", request);
+
+    const existing = inTab.find(p => p.mod === "mide-editor");
+    if (existing) {
+      run("mide-editor.open");
+      return;
+    }
+
+    const diff = inTab.find(p => p.mod === "mide-diff");
     const terminalTarget = inTab.find(p => p.terminal && p.cwd === this.root)
       ?? inTab.find(p => p.terminal && p.focused)
       ?? inTab.find(p => p.terminal);
-    const otherTarget = terminalTarget ?? inTab.find(p => p.mod !== "mide-editor");
-    if (editors.length) {
-      // Replace any existing editor pane(s), keeping the new one beside the
-      // terminal that owns this folder. Close them before splitting the
-      // terminal so its width is restored before the replacement takes half.
-      if (otherTarget) {
-        for (const editor of editors) run("pane.close", { pane: editor.pane });
-        run("pane.split", { direction: "right", pane: otherTarget.pane, mod: "mide-editor", props: { file } });
-      } else {
-        // If this tab contains only editor panes, keep a live pane as the
-        // split target, then close the old editor copies.
-        run("pane.split", { direction: "right", pane: editors[0].pane, mod: "mide-editor", props: { file } });
-        for (const editor of editors) run("pane.close", { pane: editor.pane });
-      }
-      return;
-    }
-    const target = otherTarget ?? inTab[0];
-    if (target) run("pane.split", { direction: "right", pane: target.pane, mod: "mide-editor", props: { file } });
+    const target = diff ?? terminalTarget ?? inTab.find(p => p.pane === focus?.pane) ?? inTab[0];
+    const direction = diff ? "down" : "right";
+    if (target) run("pane.split", { direction, pane: target.pane, mod: "mide-editor", props: request });
     else {
       const space = spaces().find(s => s.id === focus?.space) ?? spaces().find(s => s.active);
       run("tab.new", { name: `Editor · ${path.split("/").pop()}`, ...(space ? { space: space.id } : {}), mod: "mide-editor", props: { file } });

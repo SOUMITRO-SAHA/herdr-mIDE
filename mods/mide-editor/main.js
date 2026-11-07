@@ -14,6 +14,7 @@ const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", 
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
 const MARKDOWN_PREVIEW_SETTING = "mide.editor.markdown_preview_default";
+const EDITOR_REQUEST = "mide.editor.request";
 const languageFor = (file) => {
   const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
   return LANG[ext] ?? ext;
@@ -47,13 +48,14 @@ const editorTypography = () => {
 export default class MideEditor extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true; this.editorMode = this.markdownPreviewDefault ? "preview" : "raw"; this.settingsOpen = false; this.wordWrap = shared(WORD_WRAP_SETTING) === true;
+    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.drafts = new Map(); this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true; this.editorMode = this.markdownPreviewDefault ? "preview" : "raw"; this.settingsOpen = false; this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
         const command = await nextCommand();
         const name = typeof command === "string" ? command : command?.name;
         if (name === "save") this.save(cx);
+        else if (name === "open") this.openFile(shared(EDITOR_REQUEST)?.file ?? null, cx);
         cx.notify();
       }
     });
@@ -76,6 +78,13 @@ export default class MideEditor extends View {
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null;
     if (!file) return;
+    const draft = this.drafts.get(file);
+    if (draft) {
+      this.baseline = draft.baseline; this.truncated = draft.truncated; this.dirty = true;
+      this.code = this.createCode(draft.value, file);
+      cx.notify();
+      return;
+    }
     cx.spawn(async cx => {
       try {
         const text = await readTextFile(file);
@@ -91,6 +100,14 @@ export default class MideEditor extends View {
     });
   }
 
+  openFile(file, cx) {
+    if (!file || file === this.file) return;
+    if (this.dirty && this.code && this.file) {
+      this.drafts.set(this.file, { value: this.code.value(), baseline: this.baseline, truncated: this.truncated });
+    }
+    this.load(file, cx);
+  }
+
   save(cx) {
     if (!this.code || !this.file || this.saving) return;
     if (this.truncated) { this.note = "Too large to save here (>400 KB) — editing would drop the rest of the file"; cx.notify(); return; }
@@ -101,7 +118,7 @@ export default class MideEditor extends View {
         // The host only writes when the disk still matches the snapshot we
         // loaded; on success our draft becomes the new baseline.
         await writeTextFile(file, value, expected);
-        if (this.file === file) { this.dirty = false; this.baseline = value; }
+        if (this.file === file) { this.dirty = false; this.baseline = value; this.drafts.delete(file); }
       } catch (e) { if (this.file === file) this.note = `Save failed: ${e}`; }
       finally { this.saving = false; cx.notify(); }
     });
@@ -202,9 +219,18 @@ export default class MideEditor extends View {
               : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
             : div().flex_1().min_h(0).p(12).text_color(t.dim).child(this.error || "Loading file…"))
         : div().flex_1().min_h(0).p(12).text_color(t.dim).child("No file open. Click a file in Files to edit it here."))
-      .when(Boolean(this.note), el => el.child(h_flex().px(12).py(4).gap(10).text_size(typography.text(11)).text_color(t.ansi1)
-        .child(div().flex_1().min_w(0).truncate().child(this.note))
-        .when(this.file && !this.saving, el => el.child(div().id("mide-editor-reload").flex_none().cursor_pointer().underline().child("Reload (discard draft)").on_click((_e, cx) => this.load(this.file, cx))))))
+      .when(Boolean(this.note), el => el.child(
+        h_flex().px(12).py(4).gap(10).text_size(typography.text(11)).text_color(t.ansi1)
+          .child(div().flex_1().min_w(0).truncate().child(this.note))
+          .when(this.file && !this.saving, row => row.child(
+            div().id("mide-editor-reload").flex_none().cursor_pointer().underline()
+              .child("Reload (discard draft)")
+              .on_click((_e, cx) => {
+                this.drafts.delete(this.file);
+                this.load(this.file, cx);
+              }),
+          )),
+      ))
       .child(h_flex().h(28).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(11)).text_color(t.dim)
         .child(div().flex_1().min_w(0).truncate().child(this.file ?? ""))
         .child(div().child("⌘S save")));

@@ -50,7 +50,10 @@ follow Herdr's theme, which is unchanged.
   "current" label, "delete" in red on hover for others), and a "branch
   name" input with a **New** button that creates and switches.
 - **The editor pane** (`mide-editor`, opened by clicking a file in Files or
-  `cmd-shift-e`): a 36px header with the file name and an orange `●` while
+  `cmd-shift-e`): file selections reuse the same pane, keeping modified drafts
+  available as you switch files; the first editor opens below an existing Diff
+  pane, or to the right of the matching terminal. It has a 36px header with the
+  file name and an orange `●` while
   unsaved, a global Settings menu with persistent Word wrap and a default
   Markdown Preview option (off by default, so files open in Raw), plus
   Raw/Preview tabs; the code with Herdr's active terminal font and size;

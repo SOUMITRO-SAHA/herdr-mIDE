@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Opening files from the Files panel now reuses the editor pane; the first editor opens below an existing Diff pane, or to the right of the matching terminal, and modified drafts remain available when switching files.
 - mIDE panel UI typography now follows Herdr's active interface font and size; editor and diff content follows its active terminal font and size.
 - The editor Settings menu now includes persistent Word wrap and a Markdown Preview-by-default option, off by default so Markdown files open in Raw mode.
 - Markdown Preview uses Herdr's active interface font family and editor font size, with more generous line spacing and a centered reading column; the renderer retains its built-in heading and inline emphasis hierarchy.
