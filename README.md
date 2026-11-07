@@ -62,7 +62,7 @@ layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff tab · split/unified · hunk navigation
-mods/mide-editor/         editor pane · save · host Syntect palette
+mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
@@ -94,7 +94,7 @@ The typical loop: `make dev` in one terminal, edit in your editor — each save 
 
 Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
-The host Syntect API owns the single syntax palette and exposes it to both the editor and Diff; the generated mod helper contains only language aliases and text segmentation. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
+`shared/syntax.js` owns mIDE's single syntax palette and lightweight tokenizer; the editor and Diff consume it through generated mod-local copies. It uses the documented `EditorState` syntax option and tokenizes Diff lines locally, without depending on extra host APIs. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
 
 ## Status
 

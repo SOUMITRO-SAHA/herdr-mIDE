@@ -5,16 +5,15 @@
 // watcher never sees the diff itself and starts a refresh loop.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
-import * as base from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
-import { languageFor, syntaxSegments } from "./_shared/syntax.js";
+import { highlightLines, languageFor, syntaxPalette, syntaxSegments } from "./_shared/syntax.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
 const MAX_SYNTAX_CHARS = 600000, MAX_SYNTAX_TOTAL_CHARS = 20000000, SYNTAX_BATCH = 8;
 const SPLIT_MIN_WIDTH = 900;
-const syntaxColors = base.SyntaxHighlighter?.colors?.() ?? {};
+const syntaxColors = syntaxPalette();
 const countLines = (text) => text ? text.split("\n").length - Number(text.endsWith("\n")) : 0;
 const lineNumbers = (hunks, key) => [...new Set(hunks.flatMap(hunk => hunk.lines.map(line => line[key]).filter(Number.isInteger)))].sort((a, b) => a - b);
 const syntaxLineMap = lines => new Map(lines.map(({ line, runs }) => [line, runs]));
@@ -239,7 +238,6 @@ export default class MideDiff extends View {
 
   async highlightFile(file, request, budget) {
     if (file.error || file.combined || file.binary || !file.hunks?.length) return file;
-    if (!base.SyntaxHighlighter?.highlight_lines) return file;
     const oldLines = lineNumbers(file.hunks, "old");
     const newLines = lineNumbers(file.hunks, "new");
     if (oldLines.length > MAX_LINES || newLines.length > MAX_LINES) return file;
@@ -258,7 +256,7 @@ export default class MideDiff extends View {
       budget.characters += sourceSize;
       const language = languageFor(file.path);
       const highlight = (source, requested) => source.length <= MAX_SYNTAX_CHARS && requested.length
-        ? syntaxLineMap(base.SyntaxHighlighter.highlight_lines(language, source, requested))
+        ? syntaxLineMap(highlightLines(source, language, requested))
         : new Map();
       return { ...file, syntax: { old: highlight(oldSource, oldLines), new: highlight(newSource, newLines) } };
     } catch {

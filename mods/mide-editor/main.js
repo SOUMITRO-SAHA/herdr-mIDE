@@ -7,9 +7,8 @@
 // (ROADMAP Phase 1).
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
-import * as base from "gpui-base";
 import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand } from "herdr";
-import { languageFor } from "./_shared/syntax.js";
+import { languageFor, syntaxPalette } from "./_shared/syntax.js";
 
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
@@ -44,7 +43,7 @@ export default class MideEditor extends View {
 
   createCode(value, file) {
     const code = EditorState.new({ language: languageFor(file), value,
-      soft_wrap: this.wordWrap, syntax: base.SyntaxHighlighter?.colors?.() ?? {} });
+      soft_wrap: this.wordWrap, syntax: syntaxPalette() });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();

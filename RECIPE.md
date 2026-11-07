@@ -63,8 +63,9 @@ follow Herdr's theme, which is unchanged.
   bar with the full path and an `⌘S save`
   hint. Panel UI uses Herdr's active interface font and size, while editor and
   diff text use its terminal font and size. mIDE's
-   controls follow Herdr, while the editor and Diff share the host's canonical
-   Syntect syntax palette; Git colors use mod-specific tokens. The layout does
+   controls follow Herdr, while the editor and Diff share the mIDE-owned
+   palette and tokenizer in `shared/syntax.js`; Git colors use mod-specific
+   tokens. The layout does
    not select a host theme. Native editor/input internals still use some host
    colors because Herdr does not expose per-widget overrides for them.
 
