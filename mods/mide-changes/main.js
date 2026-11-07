@@ -167,7 +167,7 @@ export default class MideChanges extends View {
     if (!this.root) return;
     const focus = focused(), tab = focus?.tab;
     const inTab = panes().filter((pane) => pane.tab === tab);
-    const title = `Diff · ${file.path.split("/").pop()}`;
+    const title = file.path.split("/").pop();
     const request = {
       root: this.root, files: [{ ...file }], selectedPath: file.path,
       status: file.status, fresh: file.fresh, on: this.on, branch: this.branch,

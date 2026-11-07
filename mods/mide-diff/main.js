@@ -3,7 +3,7 @@
 //
 // Reads use the same no-write git flags as the Changes panel, so the folder
 // watcher never sees the diff itself and starts a refresh loop.
-import { View, div } from "gpui-kit";
+import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
@@ -57,22 +57,20 @@ function diffSections(text) {
 // Every hunk is one excerpt: a dim ⋯ band before it, then its rows. the reference IDE has no
 // GitHub-style @@ band; the band is only a visual break between excerpts.
 function unifiedRows(hunks) {
-  const rows = [], hunkRows = [];
+  const rows = [];
   hunks.forEach((hunk, index) => {
     if (index) rows.push({ type: "gap" });
-    hunkRows.push(rows.length);
     for (const line of hunk.lines) rows.push({ type: "line", ...line });
   });
-  return { rows, hunkRows };
+  return rows;
 }
 
 // Pair a run of deletions with additions, the reference IDE's split view. The shorter side
 // gets raised spacer rows so both halves stay aligned.
 function splitRows(hunks) {
-  const rows = [], hunkRows = [];
+  const rows = [];
   hunks.forEach((hunk, index) => {
     if (index) rows.push({ type: "gap" });
-    hunkRows.push(rows.length);
     for (let i = 0; i < hunk.lines.length;) {
       const line = hunk.lines[i];
       if (line.kind === " ") { rows.push({ type: "both", left: line, right: line }); i++; continue; }
@@ -84,14 +82,14 @@ function splitRows(hunks) {
       for (let j = 0; j < Math.max(dels.length, adds.length); j++) rows.push({ type: "change", left: dels[j] ?? null, right: adds[j] ?? null });
     }
   });
-  return { rows, hunkRows };
+  return rows;
 }
 
 export default class MideDiff extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
     this.scroll = VirtualListScrollHandle.new();
-    this.request = null; this.files = []; this.rows = []; this.hunkRows = []; this.fileRows = new Map(); this.hunk = 0;
+    this.request = null; this.files = []; this.rows = []; this.fileRows = new Map();
     this.diffWidth = 0; this.splitWidth = 0; this.selectedPath = null; this.jumpToSelection = false;
     this.mode = "split"; this.busy = false; this.error = null; this.watching = false; this.limited = false;
     this.open(props() ?? shared("mide.diff.request"), cx);
@@ -115,7 +113,7 @@ export default class MideDiff extends View {
       ? request.files
       : request.path ? [{ path: request.path, status: request.status, fresh: request.fresh }] : [];
     this.request = { ...request, files };
-    this.files = []; this.rows = []; this.hunkRows = []; this.fileRows = new Map(); this.hunk = 0;
+    this.files = []; this.rows = []; this.fileRows = new Map();
     this.selectedPath = request.selectedPath ?? request.path ?? files[0]?.path ?? null;
     this.jumpToSelection = Boolean(this.selectedPath);
     if (request.mode === "split" || request.mode === "unified") this.mode = request.mode;
@@ -228,7 +226,7 @@ export default class MideDiff extends View {
   }
 
   build() {
-    const rows = [], hunkRows = [], fileRows = new Map();
+    const rows = [], fileRows = new Map();
     for (const [index, file] of this.files.entries()) {
       if (index) rows.push({ type: "file-gap" });
       fileRows.set(file.path, rows.length);
@@ -242,13 +240,10 @@ export default class MideDiff extends View {
         continue;
       }
       const built = this.mode === "split" ? splitRows(file.hunks) : unifiedRows(file.hunks);
-      for (const row of built.hunkRows) hunkRows.push(rows.length + row);
-      rows.push(...built.rows);
+      rows.push(...built);
     }
     this.rows = rows;
-    this.hunkRows = hunkRows;
     this.fileRows = fileRows;
-    this.hunk = Math.max(0, Math.min(this.hunk, this.hunkRows.length - 1));
     const longest = rows.reduce((length, row) => Math.max(length,
       (row.text ?? "").length, (row.file?.path ?? "").length,
       (row.left?.text ?? "").length, (row.right?.text ?? "").length), 0);
@@ -259,13 +254,6 @@ export default class MideDiff extends View {
   setMode(mode, cx) {
     if (this.mode === mode) return;
     this.mode = mode; this.build(); this.scroll.scroll_to_item(this.fileRows.get(this.selectedPath) ?? 0); cx.notify();
-  }
-
-  goHunk(delta, cx) {
-    if (!this.hunkRows.length) return;
-    this.hunk = (this.hunk + delta + this.hunkRows.length) % this.hunkRows.length;
-    this.scroll.scroll_to_item(this.hunkRows[this.hunk], "top");
-    cx.notify();
   }
 
   modeButton(mode, label, t, typography) {
@@ -374,22 +362,19 @@ export default class MideDiff extends View {
     const added = this.files.reduce((total, file) => total + (file.add ?? 0), 0);
     const deleted = this.files.reduce((total, file) => total + (file.del ?? 0), 0);
     const rootName = request?.root?.split(/[\\/]/).filter(Boolean).pop() ?? "Project";
+    const fileTitle = request?.title ?? (request ? String(request.selectedPath ?? request.path ?? request.files?.[0]?.path ?? rootName).split(/[\\/]/).pop() : "Project Diff");
     return v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .on_key_down((e, cx) => {
-        if (e.key === "f8" && e.modifiers.platform) { this.goHunk(e.modifiers.shift ? -1 : 1, cx); cx.stop_propagation(); }
         if (e.key === "r" && e.modifiers.platform) { this.load(cx); cx.stop_propagation(); }
       })
       .child(h_flex().h(40).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().text_size(typography.text(9)).px(6).py(1).rounded(4).font_semibold().bg(t.raised).text_color(t.muted).child("GIT DIFF"))
-        .child(div().font_semibold().truncate().child(request?.title ?? (request ? `Git Diff · ${rootName}` : "Project Diff")))
+        .child(div().min_w(0).truncate().font_semibold().child(fileTitle))
+        .child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${added}`))
+        .child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${deleted}`))
         .child(div().flex_1().min_w(0))
         .child(h_flex().h(24).flex_none().gap(1).p(1).rounded(6).border_1().border_color(t.border)
           .child(this.modeButton("split", "Split", t, typography)).child(this.modeButton("unified", "Unified", t, typography)))
-        .child(div().id("mide-diff-refresh").h(22).px(7).flex_none().flex().items_center().rounded(5).text_size(typography.text(10)).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.load(cx)).child("Refresh"))
-         .when(Boolean(request?.branch), e => e.child(div().max_w(180).truncate().text_size(typography.text(10)).text_color(t.dim).child(request.branch)))
-           .when(Boolean(request), e => e.child(div().text_size(typography.text(10)).text_color(t.muted).child(`${this.files.length || request.files.length} files`)))
-           .child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${added}`))
-           .child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${deleted}`)))
+        .child(div().id("mide-diff-refresh").size(24).flex_none().flex().items_center().justify_center().rounded(5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground)).tooltip("Refresh diff").accessibility_label("Refresh diff").on_click((_e, cx) => this.load(cx)).child(svg("frame/settings/refresh.svg").size(14))))
          .when(!request, (e) => e.child(this.emptyState("Open a changed file from Changes to view the project diff.", t, typography)))
         .when(Boolean(request), (e) => e
           .child(div().flex_1().min_h(0).relative().font_family(typography.codeFont).text_size(typography.codeSize)
@@ -398,9 +383,8 @@ export default class MideDiff extends View {
            .when(!this.busy && !this.error && !this.files.length, el => el.child(this.emptyState("No changed files to compare.", t, typography)))
            .when(!this.error && this.rows.length > 0, el => el.child(this.mode === "split" ? this.splitView(t, typography) : this.unifiedView(t, typography))))
         .when(this.limited, (e) => e.child(div().px(12).py(3).text_size(typography.text(10)).text_color(t.dim).child("Diff truncated for speed")))
-       .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(10)).text_color(t.dim)
-        .child(div().flex_1().min_w(0).truncate().child(this.selectedPath ?? request?.root ?? "mIDE Diff"))
-        .when(this.hunkRows.length > 1, (e) => e.child("⌘F8 next hunk"))));
+        .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(10)).text_color(t.dim)
+         .child(div().flex_1().min_w(0).truncate().child(this.selectedPath ?? request?.root ?? "mIDE Diff"))));
   }
 
   async close(_cx) {
