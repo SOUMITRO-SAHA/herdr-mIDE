@@ -6,7 +6,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, focused, run, nextCommand } from "herdr";
-import { mideTheme } from "./palette.js";
+import { mideColors } from "./palette.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
@@ -370,7 +370,7 @@ export default class MideDiff extends View {
   }
 
   render(cx) {
-    const t = { ...mideTheme, background: theme().background }, request = this.request;
+    const t = mideColors(theme()), request = this.request;
     const added = this.files.reduce((total, file) => total + (file.add ?? 0), 0);
     const deleted = this.files.reduce((total, file) => total + (file.del ?? 0), 0);
     const rootName = request?.root?.split(/[\\/]/).filter(Boolean).pop() ?? "Project";

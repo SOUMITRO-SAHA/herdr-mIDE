@@ -1,4 +1,4 @@
-// Generated from themes/ayu-dark.json by make palette; do not edit.
+// Ayu colors adapted from themes/ayu-dark.json; maintained in each mod.
 // Private to this mod; never registered as a Herdr theme.
 export const mideTheme = {
   "background": "#10141c",
@@ -65,3 +65,10 @@ export const mideTheme = {
   "ansi14": "#95e6cb",
   "ansi15": "#ffffff"
 };
+
+// Match Herdr's sidebar surfaces without changing its theme.
+export const mideColors = (host) => ({ ...mideTheme,
+  background: host.chrome, chrome: host.chrome, raised: host.raised,
+  hover: host.hover, selected: host.selected, solid: host.solid,
+  solid_foreground: host.solid_foreground, ansi1: host.ansi1, ansi2: host.ansi2,
+});

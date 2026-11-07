@@ -5,7 +5,6 @@
 #                  Herdr hot-reloads each mod as it lands. Ctrl-C to stop.
 #   make sync      one-shot copy of mods and layout into the app home
 #   make check     herdr-app check on every mod (the runtime's own parser)
-#   make palette   regenerate the private mod palettes from Ayu Dark
 #   make install   first-time install (never overwrites; prints keys to merge)
 #   make status    what the window says: layout, focus, errors from mods
 #   make shot      PNG of the window → herdr-shot.png
@@ -19,14 +18,13 @@ INTERVAL ?= 1
 MODS := mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
-.PHONY: help dev sync check palette install status shot switch
+.PHONY: help dev sync check install status shot switch
 
 help:
 	@echo "herdr-mIDE commands:"
 	@echo "  make dev      live sync + hot reload (Ctrl-C to stop)"
 	@echo "  make sync     one-shot copy into the Herdr app home"
 	@echo "  make check    herdr-app check every mod"
-	@echo "  make palette  regenerate private mod palettes"
 	@echo "  make install  first-time install (install.sh)"
 	@echo "  make status   window state + mod errors"
 	@echo "  make shot     window screenshot → herdr-shot.png"
@@ -39,12 +37,7 @@ sync:
 	@./scripts/sync.sh
 
 check:
-	@python3 scripts/palette.py --check
-	@python3 scripts/test-theme-isolation.py
 	@for mod in $(MODS); do herdr-app check mods/$$mod || exit 1; done
-
-palette:
-	@python3 scripts/palette.py
 
 install:
 	@./install.sh

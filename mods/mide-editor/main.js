@@ -8,7 +8,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
 import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
-import { mideTheme } from "./palette.js";
+import { mideTheme, mideColors } from "./palette.js";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
@@ -114,7 +114,7 @@ export default class MideEditor extends View {
   }
 
   render(cx) {
-    const t = { ...mideTheme, background: theme().background }, name = this.file?.split(/[\\/]/).pop();
+    const t = mideColors(theme()), name = this.file?.split(/[\\/]/).pop();
     this.syncTheme(cx, t);
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)

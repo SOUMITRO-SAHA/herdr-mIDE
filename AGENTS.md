@@ -13,8 +13,8 @@ Instructions for AI coding agents working in this repo.
   icon system — the shipped mods in `../herdr-app/defaults/mods/` —
   carried under Herdr's Apache-2.0 license. No other external resource.
 - Icons live in `mods/mide-files/icons/` — that folder is the single
-  source of truth, hand-editable; `scripts/update-icons.sh` regenerates
-  the file-icon set from upstream.
+  source of truth, hand-editable. File associations live in
+  `mods/mide-files/icons.js`.
 - **Every adopted icon must be credited in
   [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) before commit** —
   license text, copyright holder, and any modifications noted. Notices

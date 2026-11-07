@@ -34,8 +34,8 @@ Taken from the MIT npm package `material-icon-theme` (the theme's built
 16×16 SVGs), with one modification: the baked fill (`#90a4ae`) is
 rewritten to `currentColor` so Herdr's theme tints the glyphs — muted
 when clean, change-colored underneath. The association map
-(`mods/mide-files/icons.js`) is generated from the theme's own
-`fileIcons.ts` mapping by `scripts/update-icons.sh`. Sourcing rule:
+(`mods/mide-files/icons.js`) was generated from the theme's own
+`fileIcons.ts` mapping. Sourcing rule:
 Material Icon Theme is the only source for file-type and folder icons;
 generic UI glyphs come from Herdr's own mods (next section; see also
 `.opencode/skills/material-icons-theme/SKILL.md`, local agent config).
@@ -45,7 +45,7 @@ generic UI glyphs come from Herdr's own mods (next section; see also
 The Ayu Dark palette is adapted from the Ayu editor theme, version 1.6.0:
 [ayu-theme/vscode-ayu](https://github.com/ayu-theme/vscode-ayu), by Ike
 Kurghinyan. It is licensed under the MIT License. Upstream color and
-token values are mapped to Herdr's theme format and generated into the mods'
+token values are mapped to Herdr's theme format and included in the mods'
 private `palette.js` files; no reference-IDE theme file, code, or assets are included.
 
 > MIT License

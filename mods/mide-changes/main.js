@@ -5,7 +5,7 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
-import { mideTheme } from "./palette.js";
+import { mideColors } from "./palette.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -371,7 +371,7 @@ export default class MideChanges extends View {
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const t = { ...mideTheme, background: theme().background }, tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
+    const t = mideColors(theme()), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;
@@ -424,7 +424,7 @@ export default class MideChanges extends View {
          .child(Scrollbar.vertical("mide-history-list").absolute().inset_0())))
       .when(this.view !== "branches", (el) => el.child(this.branchFooter(t)))
       .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
-        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
+        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(t.raised).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
         .child(h_flex().h(30).flex_none().gap(8).items_center()
           .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "Stage changes to enable commit"))
           .child(this.commitActions(t, this.busy ? "Working…" : commitLabel, canCommit)))))
