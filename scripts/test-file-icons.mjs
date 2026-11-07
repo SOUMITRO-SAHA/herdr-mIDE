@@ -20,6 +20,10 @@ assert.equal(resolveIcon(".env.staging.local.example"), "tune");
 // …while env-adjacent names keep their own glyphs.
 assert.equal(resolveIcon(".envrc"), "console");
 assert.equal(resolveIcon(".dev.vars"), "tune");
+// A bare `env` file (the dot-less dotenv convention) is env config too,
+// and sudoers is a credentials file.
+assert.equal(resolveIcon("env"), "tune");
+assert.equal(resolveIcon("sudoers"), "key");
 
 // Resolution order stays: exact name first, then longest dotted suffix.
 assert.equal(resolveIcon("readme.txt"), "readme");
