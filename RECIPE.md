@@ -51,10 +51,15 @@ follow Herdr's theme, which is unchanged.
   name" input with a **New** button that creates and switches.
 - **The editor pane** (`mide-editor`, opened by clicking a file in Files or
   `cmd-shift-e`): a 36px header with the file name and an orange `●` while
-  unsaved, a global Settings menu with persistent Word wrap, plus Raw/Preview
-  tabs for Markdown files; the code with syntax highlighting at Herdr's active
-  editor font and size; a 28px status bar with the full path and an `⌘S save`
-  hint. mIDE's
+  unsaved, a global Settings menu with persistent Word wrap and a default
+  Markdown Preview option (off by default, so files open in Raw), plus
+  Raw/Preview tabs; the code with Herdr's active terminal font and size;
+  Preview uses the active interface font family at the editor font size, with
+  generous leading and a centered reading column while retaining Markdown
+  heading and emphasis hierarchy; a 28px status
+  bar with the full path and an `⌘S save`
+  hint. Panel UI uses Herdr's active interface font and size, while editor and
+  diff text use its terminal font and size. mIDE's
    controls follow Herdr, while syntax and Git colors use private tokens from
    `themes/ayu-dark.json`; the layout does
    not select a host theme. Native editor/input internals still use some host

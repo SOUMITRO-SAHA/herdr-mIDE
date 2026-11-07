@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- The editor header now has a global Settings menu with a persistent Word wrap option.
-- Markdown files now have Raw and Preview tabs; Preview renders the live buffer with Herdr's Markdown text view.
+- mIDE panel UI typography now follows Herdr's active interface font and size; editor and diff content follows its active terminal font and size.
+- The editor Settings menu now includes persistent Word wrap and a Markdown Preview-by-default option, off by default so Markdown files open in Raw mode.
+- Markdown Preview uses Herdr's active interface font family and editor font size, with more generous line spacing and a centered reading column; the renderer retains its built-in heading and inline emphasis hierarchy.
 - The editor header now shows just the file name and unsaved indicator; saving stays on ⌘S without the EDIT or Save controls.
 - Removed the palette, theme-test and icon-generation scripts; the existing mod palettes, icons and associations remain bundled and can be maintained directly.
 - Editor syntax and Git status/diff colors use Ayu Dark; mIDE controls, focus colors and panel backgrounds follow Herdr's active theme. Switching the layout leaves host and CLI theme settings untouched.

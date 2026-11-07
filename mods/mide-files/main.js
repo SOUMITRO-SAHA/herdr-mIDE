@@ -6,7 +6,7 @@
 // same sh/PowerShell helpers, same lazy expansion, same bounded reads.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
 import { gitColors } from "./palette.js";
 
@@ -40,6 +40,10 @@ function statusMark(xy) {
 
 const ICONS = "mods/mide-files/icons";
 const MATERIAL = "mods/mide-files/icons/material";
+const interfaceTypography = () => {
+  const current = settings(), size = current.ui_font_size ?? 13;
+  return { font: current.ui_font_family ?? "Geist", size, text: base => base * size / 13 };
+};
 
 // Material Icon Theme icons, full-color SVGs. icons.js maps suffixes and
 // whole names to icon names;
@@ -229,7 +233,7 @@ export default class MideFiles extends View {
     }
   }
 
-  rows(prefix, depth, out, t) {
+  rows(prefix, depth, out, t, typography) {
     if (out.length >= TOTAL || depth > 40) return out;
     for (const entry of this.entries.get(prefix) ?? []) {
       if (out.length >= TOTAL) break;
@@ -247,21 +251,21 @@ export default class MideFiles extends View {
           ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? statusColor : t.dim)
           : image(`${MATERIAL}/${fileIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
         .child(div().flex_1().min_w(0).truncate().font_normal().text_color(nameColor).child(entry.name))
-        .when(Boolean(mark), el => el.child(div().text_size(11).font_semibold().text_color(statusColor).child(mark))));
-      if (entry.dir && open) this.rows(path, depth + 1, out, t);
+         .when(Boolean(mark), el => el.child(div().text_size(typography.text(11)).font_semibold().text_color(statusColor).child(mark))));
+      if (entry.dir && open) this.rows(path, depth + 1, out, t, typography);
     }
     return out;
   }
 
   render(cx) {
     if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
-    const host = theme(), t = { ...host, ...gitColors, background: host.chrome };
-    return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, typography = interfaceTypography();
+    return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.font).text_size(typography.size)
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().font_semibold().child("Files"))
-        .child(div().flex_1().min_w(0).truncate().text_right().text_size(12).text_color(t.dim).child(this.root?.split(/[\\/]/).pop() ?? "")))
-      .child(v_flex().id("mide-files-tree").flex_1().min_h(0).overflow_y_scrollbar().p(6).children(this.rows("", 0, [], t))
-        .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
-        .when(this.limited, el => el.child(div().p(8).text_size(11).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total"))));
+        .child(div().flex_1().min_w(0).truncate().text_right().text_size(typography.text(12)).text_color(t.dim).child(this.root?.split(/[\\/]/).pop() ?? "")))
+      .child(v_flex().id("mide-files-tree").flex_1().min_h(0).overflow_y_scrollbar().p(6).children(this.rows("", 0, [], t, typography))
+        .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(typography.text(12)).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
+        .when(this.limited, el => el.child(div().p(8).text_size(typography.text(11)).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total"))));
   }
 }

@@ -5,12 +5,22 @@
 // watcher never sees the diff itself and starts a refresh loop.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
-import { props, shared, exec, readTextFile, watchFolder, theme, settings, focused, run, nextCommand } from "herdr";
+import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
 const countLines = (text) => text ? text.split("\n").length - Number(text.endsWith("\n")) : 0;
+const typographySettings = () => {
+  const current = settings(), uiSize = current.ui_font_size ?? 13;
+  return {
+    uiFont: current.ui_font_family ?? "Geist",
+    uiSize,
+    text: base => base * uiSize / 13,
+    codeFont: current.font_family ?? "JetBrains Mono",
+    codeSize: current.font_size ?? 14,
+  };
+};
 
 // Unified diff text → hunks with old/new numbers. Header noise (diff --git,
 // index, ---, +++) is skipped; the view supplies its own file header.
@@ -83,7 +93,7 @@ export default class MideDiff extends View {
     this.scroll = VirtualListScrollHandle.new();
     this.request = null; this.files = []; this.rows = []; this.hunkRows = []; this.fileRows = new Map(); this.hunk = 0;
     this.diffWidth = 0; this.splitWidth = 0; this.selectedPath = null; this.jumpToSelection = false;
-    this.mode = "split"; this.busy = false; this.error = null; this.watching = false; this.limited = false; this.viewHidden = false;
+    this.mode = "split"; this.busy = false; this.error = null; this.watching = false; this.limited = false;
     this.open(props() ?? shared("mide.diff.request"), cx);
     cx.spawn(async (cx) => {
       for (;;) {
@@ -108,7 +118,6 @@ export default class MideDiff extends View {
     this.files = []; this.rows = []; this.hunkRows = []; this.fileRows = new Map(); this.hunk = 0;
     this.selectedPath = request.selectedPath ?? request.path ?? files[0]?.path ?? null;
     this.jumpToSelection = Boolean(this.selectedPath);
-    this.viewHidden = false;
     if (request.mode === "split" || request.mode === "unified") this.mode = request.mode;
     this.error = null; this.limited = false; this.busy = false;
     this.watch(cx);
@@ -259,26 +268,17 @@ export default class MideDiff extends View {
     cx.notify();
   }
 
-  closeTab() {
-    run("tab.close", { id: focused()?.tab });
-  }
-
-  toggleView(cx) {
-    this.viewHidden = !this.viewHidden;
-    cx.notify();
-  }
-
-  modeButton(mode, label, t) {
+  modeButton(mode, label, t, typography) {
     const active = this.mode === mode;
-    return div().id(`mide-diff-mode-${mode}`).h(22).px(8).flex().items_center().rounded(5).text_size(10)
+    return div().id(`mide-diff-mode-${mode}`).h(22).px(8).flex().items_center().rounded(5).text_size(typography.text(10))
       .text_color(active ? t.foreground : t.muted)
       .when(active, (e) => e.bg(t.selected))
       .when(!active, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.setMode(mode, cx)))
       .child(label);
   }
 
-  number(value, color) {
-    return div().w(42).flex_none().pr(6).text_right().text_size(10).text_color(color).child(value === null || value === undefined ? "" : String(value));
+  number(value, color, typography) {
+    return div().w(42).flex_none().pr(6).text_right().text_size(typography.codeSize).text_color(color).child(value === null || value === undefined ? "" : String(value));
   }
 
   tint(kind, t) {
@@ -287,7 +287,7 @@ export default class MideDiff extends View {
     return null;
   }
 
-  fileHeader(file, t) {
+  fileHeader(file, t, typography) {
     const status = file.status === "A" ? (t.git_added ?? t.ansi2)
       : file.status === "D" ? (t.git_deleted ?? t.ansi1)
         : file.status === "U" ? (t.git_conflict ?? t.ansi3)
@@ -296,44 +296,44 @@ export default class MideDiff extends View {
     return h_flex().h(LINE).w_full().min_w(width).flex_none().px(10).gap(8).items_center()
       .bg(file.path === this.selectedPath ? t.selected : t.raised).border_b(1).border_color(t.border)
       .child(div().flex_1().min_w(0).truncate().font_semibold().child(file.path))
-      .when(Boolean(file.fresh), e => e.child(div().text_size(9).px(5).py(1).rounded(4).border_1().border_color(t.border).text_color(t.dim).child("untracked")))
-      .child(div().text_size(10).font_semibold().text_color(status).child(file.status ?? "M"))
-      .child(div().text_size(10).text_color(t.git_added ?? t.ansi2).child(`+${file.add ?? 0}`))
-      .child(div().text_size(10).text_color(t.git_deleted ?? t.ansi1).child(`−${file.del ?? 0}`));
+      .when(Boolean(file.fresh), e => e.child(div().text_size(typography.codeSize).px(5).py(1).rounded(4).border_1().border_color(t.border).text_color(t.dim).child("untracked")))
+      .child(div().text_size(typography.codeSize).font_semibold().text_color(status).child(file.status ?? "M"))
+      .child(div().text_size(typography.codeSize).text_color(t.git_added ?? t.ansi2).child(`+${file.add ?? 0}`))
+      .child(div().text_size(typography.codeSize).text_color(t.git_deleted ?? t.ansi1).child(`−${file.del ?? 0}`));
   }
 
-  unifiedRow(row, t) {
-    if (row.type === "file") return this.fileHeader(row.file, t);
+  unifiedRow(row, t, typography) {
+    if (row.type === "file") return this.fileHeader(row.file, t, typography);
     if (row.type === "file-gap") return div().h(LINE).w_full().min_w(this.diffWidth).flex_none().bg(t.background);
     if (row.type === "message") return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
-    if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(10).text_color(t.dim).child("···"));
+    if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(typography.codeSize).text_color(t.dim).child("···"));
     const add = row.kind === "+", del = row.kind === "-", color = add ? t.diff_added : del ? t.diff_deleted : t.dim;
     return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none()
       .when(Boolean(this.tint(row.kind, t)), (e) => e.bg(this.tint(row.kind, t)))
       .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
-      .child(this.number(row.old, add ? t.dim : del ? t.diff_deleted : t.dim))
-      .child(this.number(row.new, add ? t.diff_added : del ? t.dim : t.dim))
+      .child(this.number(row.old, add ? t.dim : del ? t.diff_deleted : t.dim, typography))
+      .child(this.number(row.new, add ? t.diff_added : del ? t.dim : t.dim, typography))
       .child(div().w(18).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
       .child(div().flex_1().min_w(0).whitespace_nowrap().child(row.text));
   }
 
-  splitPaneRow(row, side, t) {
-    if (row.type === "file") return this.fileHeader(row.file, t);
+  splitPaneRow(row, side, t, typography) {
+    if (row.type === "file") return this.fileHeader(row.file, t, typography);
     if (row.type === "file-gap") return div().h(LINE).w_full().min_w(this.splitWidth).flex_none().bg(t.background);
     if (row.type === "message") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
-    if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(10).text_color(t.dim).child("···"));
+    if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(typography.codeSize).text_color(t.dim).child("···"));
     const line = row[side];
     if (!line) return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().bg(t.raised);
     const add = line.kind === "+", del = line.kind === "-", color = add ? t.diff_added : del ? t.diff_deleted : t.dim;
     return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none()
       .when(Boolean(this.tint(line.kind, t)), (e) => e.bg(this.tint(line.kind, t)))
       .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
-      .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim))
+      .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim, typography))
       .child(div().w(16).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
       .child(div().flex_1().min_w(0).whitespace_nowrap().text_color(line.kind === " " ? t.muted : t.foreground).child(line.text));
   }
 
-  splitView(t) {
+  splitView(t, typography) {
     const count = this.rows.length;
     const rowKey = index => `${index}:${this.rows[index]?.type ?? "line"}`;
     return h_flex().size_full().min_h(0).items_stretch()
@@ -341,74 +341,64 @@ export default class MideDiff extends View {
         .child(div().id("mide-diff-left-x").size_full().overflow_x_scrollbar().mode("hover")
           .child(div().w_full().min_w(this.splitWidth).h_full()
             .child(v_virtual_list("mide-diff-left", count, LINE, rowKey,
-              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "left", t)))
+              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "left", t, typography)))
               .track_scroll(this.scroll).size_full()))))
       .child(div().w(1).flex_none().bg(t.border))
       .child(v_flex().id("mide-diff-right-pane").flex_1().min_w(0).min_h(0).relative()
         .child(div().id("mide-diff-right-x").size_full().overflow_x_scrollbar().mode("hover")
           .child(div().w_full().min_w(this.splitWidth).h_full()
             .child(v_virtual_list("mide-diff-right", count, LINE, rowKey,
-              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "right", t)))
+              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "right", t, typography)))
               .track_scroll(this.scroll).size_full())))
         .child(Scrollbar.vertical("mide-diff-right").viewport_from_layout().absolute().top(0).right(0).bottom(12).w(12)));
   }
 
-  unifiedView(t) {
+  unifiedView(t, typography) {
     const count = this.rows.length;
     return v_flex().size_full().min_h(0).items_stretch().relative()
       .child(div().id("mide-diff-unified-x").size_full().overflow_x_scrollbar().mode("hover")
         .child(div().w_full().min_w(this.diffWidth).h_full()
           .child(v_virtual_list("mide-diff-unified", count, LINE, index => `${index}:${this.rows[index]?.type ?? "line"}`,
-            range => this.rows.slice(range.start, range.end).map(row => this.unifiedRow(row, t)))
+            range => this.rows.slice(range.start, range.end).map(row => this.unifiedRow(row, t, typography)))
             .track_scroll(this.scroll).size_full())))
       .child(Scrollbar.vertical("mide-diff-unified").viewport_from_layout().absolute().top(0).right(0).bottom(12).w(12));
   }
 
-  emptyState(label, t) {
+  emptyState(label, t, typography) {
     return v_flex().size_full().items_center().justify_center().gap(8)
-      .child(div().text_color(t.muted).child(label))
-      .child(div().id("mide-diff-close").h(26).px(12).flex().items_center().rounded(6).border_1().border_color(t.border).text_size(11).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click(() => this.closeTab()).child("Close"));
+      .child(div().font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.muted).child(label));
   }
 
   render(cx) {
-    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, request = this.request;
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, typography = typographySettings(), request = this.request;
     const added = this.files.reduce((total, file) => total + (file.add ?? 0), 0);
     const deleted = this.files.reduce((total, file) => total + (file.del ?? 0), 0);
     const rootName = request?.root?.split(/[\\/]/).filter(Boolean).pop() ?? "Project";
-    return v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
+    return v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "f8" && e.modifiers.platform) { this.goHunk(e.modifiers.shift ? -1 : 1, cx); cx.stop_propagation(); }
         if (e.key === "r" && e.modifiers.platform) { this.load(cx); cx.stop_propagation(); }
       })
       .child(h_flex().h(40).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
-        .child(div().text_size(9).px(6).py(1).rounded(4).font_semibold().bg(t.raised).text_color(t.muted).child("GIT DIFF"))
+        .child(div().text_size(typography.text(9)).px(6).py(1).rounded(4).font_semibold().bg(t.raised).text_color(t.muted).child("GIT DIFF"))
         .child(div().font_semibold().truncate().child(request?.title ?? (request ? `Git Diff · ${rootName}` : "Project Diff")))
         .child(div().flex_1().min_w(0))
-         .when(Boolean(request?.branch), e => e.child(div().max_w(180).truncate().text_size(10).text_color(t.dim).child(request.branch)))
-         .when(Boolean(request), e => e.child(div().text_size(10).text_color(t.muted).child(`${this.files.length || request.files.length} files`)))
-         .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${added}`))
-         .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${deleted}`))
-         .when(Boolean(request), e => e.child(div().id("mide-diff-toggle-view").h(22).px(7).flex().items_center().rounded(5).text_size(10).text_color(t.dim).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.toggleView(cx)).child(this.viewHidden ? "Show Diff" : "Hide Diff")))
-         .child(div().id("mide-diff-close-top").h(22).px(7).flex().items_center().rounded(5).text_size(10).text_color(t.dim).cursor_pointer().hover((s) => s.bg(t.hover)).on_click(() => this.closeTab()).child("Close")))
-       .when(!this.viewHidden, e => e.child(h_flex().h(32).flex_none().px(8).gap(8).items_center().border_b(1).border_color(t.border)
-         .child(div().flex_1())
-         .when(this.hunkRows.length > 1, (e) => e.child(h_flex().flex_none().items_center().gap(2)
-           .child(div().text_size(10).text_color(t.dim).child(`${this.hunk + 1}/${this.hunkRows.length}`))
-           .child(div().id("mide-diff-prev").h(22).px(7).flex().items_center().rounded(5).text_size(10).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.goHunk(-1, cx)).child("Prev"))
-           .child(div().id("mide-diff-next").h(22).px(7).flex().items_center().rounded(5).text_size(10).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.goHunk(1, cx)).child("Next"))))
-         .child(h_flex().h(24).flex_none().gap(1).p(1).rounded(6).border_1().border_color(t.border)
-           .child(this.modeButton("split", "Split", t)).child(this.modeButton("unified", "Unified", t)))
-         .child(div().id("mide-diff-refresh").h(22).px(7).flex().items_center().rounded(5).text_size(10).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.load(cx)).child("Refresh"))))
-       .when(!request, (e) => e.child(this.emptyState("Open a changed file from Changes to view the project diff.", t)))
-       .when(Boolean(request && this.viewHidden), e => e.child(v_flex().flex_1().min_h(0).items_center().justify_center().text_color(t.dim).child("Diff view hidden")))
-       .when(Boolean(request && !this.viewHidden), (e) => e
-         .child(div().flex_1().min_h(0).relative().font_family(settings().font_family ?? "JetBrains Mono").text_size(12)
-          .when(this.busy && !this.rows.length, (el) => el.child(v_flex().size_full().items_center().justify_center().text_color(t.dim).child("Loading diff…")))
-          .when(!this.busy && Boolean(this.error), (el) => el.child(v_flex().size_full().p(12).gap(6).text_color(t.ansi1).child("Cannot read this diff").child(div().text_size(11).text_color(t.dim).child(this.error))))
-          .when(!this.busy && !this.error && !this.files.length, el => el.child(this.emptyState("No changed files to compare.", t)))
-          .when(!this.error && this.rows.length > 0, el => el.child(this.mode === "split" ? this.splitView(t) : this.unifiedView(t))))
-       .when(this.limited && !this.viewHidden, (e) => e.child(div().px(12).py(3).text_size(10).text_color(t.dim).child("Diff truncated for speed")))
-      .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(10).text_color(t.dim)
+        .child(h_flex().h(24).flex_none().gap(1).p(1).rounded(6).border_1().border_color(t.border)
+          .child(this.modeButton("split", "Split", t, typography)).child(this.modeButton("unified", "Unified", t, typography)))
+        .child(div().id("mide-diff-refresh").h(22).px(7).flex_none().flex().items_center().rounded(5).text_size(typography.text(10)).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.load(cx)).child("Refresh"))
+         .when(Boolean(request?.branch), e => e.child(div().max_w(180).truncate().text_size(typography.text(10)).text_color(t.dim).child(request.branch)))
+           .when(Boolean(request), e => e.child(div().text_size(typography.text(10)).text_color(t.muted).child(`${this.files.length || request.files.length} files`)))
+           .child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${added}`))
+           .child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${deleted}`)))
+         .when(!request, (e) => e.child(this.emptyState("Open a changed file from Changes to view the project diff.", t, typography)))
+        .when(Boolean(request), (e) => e
+          .child(div().flex_1().min_h(0).relative().font_family(typography.codeFont).text_size(typography.codeSize)
+           .when(this.busy && !this.rows.length, (el) => el.child(v_flex().size_full().items_center().justify_center().font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.dim).child("Loading diff…")))
+           .when(!this.busy && Boolean(this.error), (el) => el.child(v_flex().size_full().p(12).gap(6).font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.ansi1).child("Cannot read this diff").child(div().text_size(typography.text(11)).text_color(t.dim).child(this.error))))
+           .when(!this.busy && !this.error && !this.files.length, el => el.child(this.emptyState("No changed files to compare.", t, typography)))
+           .when(!this.error && this.rows.length > 0, el => el.child(this.mode === "split" ? this.splitView(t, typography) : this.unifiedView(t, typography))))
+        .when(this.limited, (e) => e.child(div().px(12).py(3).text_size(typography.text(10)).text_color(t.dim).child("Diff truncated for speed")))
+       .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(10)).text_color(t.dim)
         .child(div().flex_1().min_w(0).truncate().child(this.selectedPath ?? request?.root ?? "mIDE Diff"))
         .when(this.hunkRows.length > 1, (e) => e.child("⌘F8 next hunk"))));
   }

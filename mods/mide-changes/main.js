@@ -1,10 +1,10 @@
 // mIDE Changes — a git panel for the review-and-commit loop: staged,
 // tracked and untracked files as separate groups with per-file staging,
 // staged and tracked-only commits, and an inline branch switcher.
-// Clicking a file opens its diff in the dedicated mIDE Diff tab.
+// Clicking a file opens its diff in a full-size pane beside the editor.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
 import { gitColors } from "./palette.js";
 
 function location(previous) {
@@ -27,6 +27,16 @@ const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space }
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
+const typographySettings = () => {
+  const current = settings(), uiSize = current.ui_font_size ?? 13;
+  return {
+    uiFont: current.ui_font_family ?? "Geist",
+    uiSize,
+    text: base => base * uiSize / 13,
+    codeFont: current.font_family ?? "JetBrains Mono",
+    codeSize: current.font_size ?? 14,
+  };
+};
 
 function gitStatusColor(status, t) {
   if (status === "A") return t.git_added ?? t.ansi2;
@@ -145,29 +155,40 @@ export default class MideChanges extends View {
         this.ahead = ahead; this.behind = behind; this.hasUpstream = hasUpstream;
         this.files = files; this.staged = files.filter((f) => f.staged).length;
         this.limited = entries.length > 1000; this.error = null;
+        if (this.open && !files.some((file) => file.path === this.open)) this.open = null;
         this.watch(root, cx);
       } catch (e) { if (this.currentKey() === context) this.error = String(e); }
       finally { this.loading = false; cx.notify(); }
     });
   }
 
-  // Reuse the diff tab so browsing files does not leave a trail of tabs.
+  // Open the review diff beside the editor in this tab, reusing its diff pane.
   openDiff(file, cx) {
     if (!this.root) return;
+    const focus = focused(), tab = focus?.tab;
+    const inTab = panes().filter((pane) => pane.tab === tab);
     const title = `Diff · ${file.path.split("/").pop()}`;
-    const side = file.unstaged || file.fresh ? "work" : "index";
-    const request = { root: this.root, path: file.path, side, status: file.status, fresh: file.fresh, on: this.on, branch: this.branch, title };
+    const request = {
+      root: this.root, files: [{ ...file }], selectedPath: file.path,
+      status: file.status, fresh: file.fresh, on: this.on, branch: this.branch,
+      title, inPane: true,
+    };
     this.open = file.path; this.note = null;
     setShared("mide.diff.request", request);
-    const focus = focused(), allSpaces = spaces();
-    const space = allSpaces.find(s => s.id === focus?.space) ?? allSpaces.find(s => s.active);
-    const all = panes();
-    const existing = space?.tabs.find((tab) => all.some((p) => p.tab === tab.id && p.mod === "mide-diff"));
+
+    const existing = inTab.find((pane) => pane.mod === "mide-diff");
     if (existing) {
-      run("tab.rename", { id: existing.id, name: title });
-      run("tab.select", { id: existing.id });
       run("mide-diff.open");
-    } else run("tab.new", { name: title, ...(space ? { space: space.id } : {}), mod: "mide-diff", props: request });
+    } else {
+      const target = inTab.find((pane) => pane.mod === "mide-editor")
+        ?? inTab.find((pane) => pane.terminal && pane.cwd === this.root)
+        ?? inTab.find((pane) => pane.terminal)
+        ?? inTab.find((pane) => pane.pane === focus?.pane)
+        ?? inTab[0];
+      const direction = inTab.length > 1 ? "down" : "right";
+      if (target) run("pane.split", { direction, pane: target.pane, mod: "mide-diff", props: request });
+      else this.note = "Could not find a pane to open the diff beside.";
+    }
     cx.notify();
   }
 
@@ -297,14 +318,14 @@ export default class MideChanges extends View {
     this.git(cx, ["branch", "-d", name], () => { this.branchMenuOpen = false; });
   }
 
-  menuItem(id, label, enabled, t, action) {
-    return h_flex().id(id).h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+  menuItem(id, label, enabled, t, typography, action) {
+    return h_flex().id(id).h(28).flex_none().px(9).items_center().rounded(5).text_size(typography.text(11)).text_color(enabled ? t.foreground : t.dim)
       .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
       .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) { this.stageMenuOpen = false; this.remoteMenuOpen = false; this.branchMenuOpen = false; action(cx); cx.notify(); } })
       .child(label);
   }
 
-  branchPicker(t) {
+  branchPicker(t, typography) {
     const query = this.branchQuery.value().trim();
     const normalizedQuery = query.toLowerCase();
     const branches = this.branches.filter((name) => name.toLowerCase().includes(normalizedQuery));
@@ -314,48 +335,48 @@ export default class MideChanges extends View {
     const branchListHeight = Math.min(220, Math.max(36, branches.length * 28));
     return v_flex().id("mide-branch-picker").w(260).p(6).gap(5)
       .child(v_flex().id("mide-branch-list").h(branchListHeight).flex_none().min_h(0).max_h(220).overflow_y_scrollbar().gap(2)
-        .when(this.branchLoading, (e) => e.child(div().p(8).text_size(11).text_color(t.dim).child("Loading branches…")))
+        .when(this.branchLoading, (e) => e.child(div().p(8).text_size(typography.text(11)).text_color(t.dim).child("Loading branches…")))
         .children(branches.map((name) => h_flex().id(`branch-${name}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7)
           .when(name === this.branch, (e) => e.bg(t.selected))
           .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
           .on_click((_e, cx) => this.switchBranch(name, cx))
           .child(div().w(12).text_color(t.accent).child(name === this.branch ? "✓" : ""))
           .child(div().flex_1().min_w(0).truncate().child(name))
-          .when(name === this.branch, (e) => e.child(div().text_size(10).text_color(t.dim).child("current")))
-          .when(name !== this.branch, (e) => e.child(div().id(`branch-del-${name}`).text_size(10).text_color(t.muted).hover((s) => s.text_color(t.ansi1))
+          .when(name === this.branch, (e) => e.child(div().text_size(typography.text(10)).text_color(t.dim).child("current")))
+          .when(name !== this.branch, (e) => e.child(div().id(`branch-del-${name}`).text_size(typography.text(10)).text_color(t.muted).hover((s) => s.text_color(t.ansi1))
             .on_click((_e, cx) => { cx.stop_propagation(); this.deleteBranch(name, cx); }).child("delete")))))
-        .when(!this.branchLoading && !branches.length, (e) => e.child(div().p(8).text_size(11).text_color(t.dim)
+        .when(!this.branchLoading && !branches.length, (e) => e.child(div().p(8).text_size(typography.text(11)).text_color(t.dim)
           .child(query ? "No matching branches" : this.root ? "No local branches" : "No repository"))))
-      .when(canCreate, (e) => e.child(h_flex().id("mide-branch-create").h(28).flex_none().px(9).items_center().rounded(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+      .when(canCreate, (e) => e.child(h_flex().id("mide-branch-create").h(28).flex_none().px(9).items_center().rounded(5).text_size(typography.text(11)).text_color(enabled ? t.foreground : t.dim)
         .when(enabled, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)))
         .on_click((_e, cx) => { cx.stop_propagation(); if (enabled) this.createBranch(cx); })
         .child(`Create branch “${createName}”`)))
       .child(div().w_full().h(30).px(8).flex().items_center().rounded(6).border_1().border_color(t.border)
-        .child(Input.new(this.branchQuery).h_full().text_size(12).text_color(t.foreground)))
-      .when(Boolean(this.branchError), (e) => e.child(div().px(8).text_size(11).text_color(t.ansi1).child(this.branchError)))
-      .when(Boolean(this.note), (e) => e.child(div().px(8).text_size(11).text_color(t.ansi1).child(this.note)));
+        .child(Input.new(this.branchQuery).h_full().text_size(typography.text(12)).text_color(t.foreground)))
+      .when(Boolean(this.branchError), (e) => e.child(div().px(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.branchError)))
+      .when(Boolean(this.note), (e) => e.child(div().px(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note)));
   }
 
-  stageActions(t, label, enabled, action) {
+  stageActions(t, label, enabled, action, typography) {
     return h_flex().h(24).flex_none().rounded(6).border_1().border_color(t.border)
-      .child(div().id("mide-stage-all").h_full().px(8).flex().items_center().rounded_l(5).text_size(11).text_color(enabled ? t.foreground : t.dim)
+      .child(div().id("mide-stage-all").h_full().px(8).flex().items_center().rounded_l(5).text_size(typography.text(11)).text_color(enabled ? t.foreground : t.dim)
         .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(t.hover)))
         .on_click((_e, cx) => { if (enabled) action(cx); }).child(label))
       .child(Popover.new("mide-stage-menu").open(this.stageMenuOpen).anchor("top_right")
         .on_open_change((open, cx) => { this.stageMenuOpen = open; cx.notify(); })
         .trigger(div().id("mide-stage-menu-trigger").h_full().w(26).flex().items_center().justify_center().border_l(1).border_color(t.border).text_color(t.muted).accessibility_label("Stage actions").cursor_pointer().child(svg("mods/mide-files/icons/chevron-down.svg").size(11).flex_none()))
         .content(v_flex().min_w(150).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
-          .child(this.menuItem("mide-menu-stage-all", "Stage All", !this.busy && this.files.some((file) => file.unstaged), t, (cx) => this.stageAll(cx)))
-          .child(this.menuItem("mide-menu-unstage-all", "Unstage All", !this.busy && Boolean(this.staged), t, (cx) => this.unstageAll(cx)))))
+          .child(this.menuItem("mide-menu-stage-all", "Stage All", !this.busy && this.files.some((file) => file.unstaged), t, typography, (cx) => this.stageAll(cx)))
+          .child(this.menuItem("mide-menu-unstage-all", "Unstage All", !this.busy && Boolean(this.staged), t, typography, (cx) => this.unstageAll(cx)))))
        .flex_none();
   }
 
-  remoteActions(t) {
+  remoteActions(t, typography) {
     const enabled = Boolean(this.root && !this.busy && !this.loading);
     const action = this.behind ? "pull" : this.ahead ? "push" : "fetch";
     const label = this.busy ? "Working…" : action === "pull" ? "Pull" : action === "push" ? "Push" : "Fetch";
     return h_flex().h(23).flex_none().rounded(6).border_1().border_color(t.border)
-      .child(h_flex().id("mide-remote-action").h_full().px(7).gap(4).items_center().rounded_l(5).text_size(10).text_color(enabled ? t.muted : t.dim)
+      .child(h_flex().id("mide-remote-action").h_full().px(7).gap(4).items_center().rounded_l(5).text_size(typography.text(10)).text_color(enabled ? t.muted : t.dim)
         .when(enabled, (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)))
         .on_click((_e, cx) => { if (enabled) this[action](cx); })
         .when(Boolean(this.behind), (e) => e.child(h_flex().gap(2).items_center()
@@ -368,13 +389,13 @@ export default class MideChanges extends View {
         .trigger(div().id("mide-remote-menu-trigger").h_full().w(20).flex().items_center().justify_center().border_l(1).border_color(t.border)
           .accessibility_label("Remote actions").cursor_pointer().child(svg("mods/mide-files/icons/chevron-down.svg").size(11).flex_none()))
         .content(v_flex().min_w(130).p(4).gap(2).rounded(7).border_1().border_color(t.border).bg(t.chrome)
-          .child(this.menuItem("mide-menu-fetch", "Fetch", enabled, t, (cx) => this.fetch(cx)))
-          .child(this.menuItem("mide-menu-pull", "Pull", enabled && this.hasUpstream, t, (cx) => this.pull(cx)))
-          .child(this.menuItem("mide-menu-push", "Push", enabled && this.hasUpstream, t, (cx) => this.push(cx)))))
+          .child(this.menuItem("mide-menu-fetch", "Fetch", enabled, t, typography, (cx) => this.fetch(cx)))
+          .child(this.menuItem("mide-menu-pull", "Pull", enabled && this.hasUpstream, t, typography, (cx) => this.pull(cx)))
+          .child(this.menuItem("mide-menu-push", "Push", enabled && this.hasUpstream, t, typography, (cx) => this.push(cx)))))
       .flex_none();
   }
 
-  stageCheckbox(id, label, checked, indeterminate, t, onChange) {
+  stageCheckbox(id, label, checked, indeterminate, t, typography, onChange) {
     const active = checked || indeterminate;
     return Checkbox.new(id).w(14).h(14).flex_none().disabled(this.busy).checked(checked).indeterminate(indeterminate)
       .accessibility_label(label)
@@ -382,108 +403,108 @@ export default class MideChanges extends View {
       .on_change(onChange)
       .child(div().size(14).flex().items_center().justify_center().rounded(3).border_1()
         .border_color(active ? t.accent : t.border).bg(checked ? t.accent : t.background)
-        .text_size(10).font_semibold().text_color(checked ? t.background : t.accent)
+        .text_size(typography.text(10)).font_semibold().text_color(checked ? t.background : t.accent)
         .child(checked ? "✓" : indeterminate ? "−" : ""));
   }
 
-  fileRow(f, t) {
+  fileRow(f, t, typography) {
     const parts = f.path.split("/"), name = parts.pop(), directory = parts.join("/");
     const selected = this.open === f.path;
     const color = gitStatusColor(f.status, t);
     return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
-      .child(div().w(10).text_size(10).font_semibold().text_color(color).child(f.status))
+      .child(div().w(10).text_size(typography.text(10)).font_semibold().text_color(color).child(f.status))
       .child(h_flex().flex_1().min_w(0).overflow_hidden()
         .child(div().max_w(200).min_w(0).flex_none().truncate().child(name + (directory ? " " : "")))
         .when(Boolean(directory), (e) => e.child(div().flex_1().min_w(0).text_color(t.dim).text_ellipsis_start().child(directory))))
-      .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`)))
-      .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t,
+      .when(f.add > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`)))
+      .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t, typography,
         (checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
   }
 
-  group(label, files, t) {
+  group(label, files, t, typography) {
     const fullyStaged = files.filter((file) => file.staged && !file.unstaged).length;
     const allStaged = fullyStaged === files.length;
     const partlyStaged = files.some((file) => file.staged && file.unstaged) || (fullyStaged > 0 && !allStaged);
     return v_flex().flex_none()
       .child(h_flex().h(24).px(8).gap(6).items_center()
-        .child(div().text_size(11).font_semibold().text_color(t.muted).child(label))
-        .child(div().text_size(10).text_color(t.dim).child(String(files.length)))
+        .child(div().text_size(typography.text(11)).font_semibold().text_color(t.muted).child(label))
+        .child(div().text_size(typography.text(10)).text_color(t.dim).child(String(files.length)))
         .child(div().flex_1())
-        .child(this.stageCheckbox(`stage-group-${label.toLowerCase()}`, `${allStaged ? "Unstage" : "Stage"} all ${label.toLowerCase()} files`, allStaged, partlyStaged, t,
+        .child(this.stageCheckbox(`stage-group-${label.toLowerCase()}`, `${allStaged ? "Unstage" : "Stage"} all ${label.toLowerCase()} files`, allStaged, partlyStaged, t, typography,
           (checked, cx) => this.stageGroup(files, checked, cx))))
-      .children(files.map((f) => this.fileRow(f, t)));
+      .children(files.map((f) => this.fileRow(f, t, typography)));
   }
 
-  branchFooter(t) {
+  branchFooter(t, typography) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
     return h_flex().h(30).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
       .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
-      .child(div().max_w(110).min_w(0).text_size(10).text_color(t.dim).truncate().child(repository))
-      .child(div().text_size(10).text_color(t.dim).child("/"))
+      .child(div().max_w(110).min_w(0).text_size(typography.text(10)).text_color(t.dim).truncate().child(repository))
+      .child(div().text_size(typography.text(10)).text_color(t.dim).child("/"))
       .child(Popover.new("mide-branch-picker-menu").open(this.branchMenuOpen).anchor("bottom_left")
         .on_open_change((open, cx) => {
           this.branchMenuOpen = open;
           if (open) { this.note = null; this.branchQuery.set_value(""); this.branchQuery.focus(); this.loadBranches(cx); }
           cx.notify();
         })
-        .trigger(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(10).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover))
+        .trigger(div().id("mide-branch").flex_1().min_w(0).h(23).px(4).flex().items_center().rounded(5).text_size(typography.text(10)).text_color(this.branch ? t.foreground : t.dim).truncate().cursor_pointer().hover((s) => s.bg(t.hover))
           .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`).child(this.branch ?? (this.root ? "Detached HEAD" : "—")))
-        .content(this.branchPicker(t)))
+        .content(this.branchPicker(t, typography)))
       .child(div().flex_1())
-      .child(this.remoteActions(t));
+      .child(this.remoteActions(t, typography));
   }
 
-  historyRow(commit, t) {
+  historyRow(commit, t, typography) {
     return v_flex().id(`history-${commit.hash}`).w_full().h(48).flex_none().px(10).py(5).gap(3).rounded(6).hover((s) => s.bg(t.hover))
-      .child(div().w_full().min_w(0).truncate().text_size(13).font_semibold().text_color(t.foreground).child(commit.subject || "(no subject)"))
+      .child(div().w_full().min_w(0).truncate().text_size(typography.text(13)).font_semibold().text_color(t.foreground).child(commit.subject || "(no subject)"))
       .child(h_flex().w_full().min_w(0).items_center().gap(5)
-        .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.muted).child(commit.author || "Unknown author"))
-        .child(div().flex_none().text_size(10).text_color(t.dim).child("•"))
-        .child(div().flex_none().text_size(11).text_color(t.muted).child(commit.age || ""))
-        .child(div().flex_none().text_size(10).text_color(t.dim).child("•"))
-        .child(div().flex_none().text_size(11).text_color(t.muted).child(commit.hash)));
+        .child(div().flex_1().min_w(0).truncate().text_size(typography.text(11)).text_color(t.muted).child(commit.author || "Unknown author"))
+        .child(div().flex_none().text_size(typography.text(10)).text_color(t.dim).child("•"))
+        .child(div().flex_none().text_size(typography.text(11)).text_color(t.muted).child(commit.age || ""))
+        .child(div().flex_none().text_size(typography.text(10)).text_color(t.dim).child("•"))
+        .child(div().flex_none().text_size(typography.text(11)).text_color(t.muted).child(commit.hash)));
   }
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, typography = typographySettings(), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;
     const stageLabel = this.files.some((file) => file.unstaged) ? "Stage All" : "Unstage All";
-    return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
+    return v_flex().id("mide-changes").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
       })
       .child(h_flex().h(36).flex_none().border_b(1).border_color(t.border)
-        .child(div().id("mide-tab-changes").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "changes" ? t.accent : t.background).text_size(12).text_color(this.view === "changes" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child(`Changes (${fileCount})`))
-        .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(12).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History")))
+        .child(div().id("mide-tab-changes").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "changes" ? t.accent : t.background).text_size(typography.text(12)).text_color(this.view === "changes" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => { this.view = "changes"; cx.notify(); }).child(`Changes (${fileCount})`))
+        .child(div().id("mide-tab-history").h_full().flex_1().flex().items_center().justify_center().border_b(2).border_color(this.view === "history" ? t.accent : t.background).text_size(typography.text(12)).text_color(this.view === "history" ? t.foreground : t.muted).cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.selectTab("history", cx)).child("History")))
       .when(this.view === "changes", (el) => el.child(h_flex().h(30).flex_none().px(8).gap(6).items_center().border_b(1).border_color(t.border)
-        .child(div().id("mide-view-diff").text_size(11).text_color(this.files.length ? t.muted : t.dim).when(Boolean(this.files.length), (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.openDiff(this.files[0], cx))).child("View Diff"))
-         .child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
-         .child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
+         .child(div().id("mide-view-diff").text_size(typography.text(11)).text_color(this.files.length ? t.muted : t.dim).when(Boolean(this.files.length), (e) => e.cursor_pointer().hover((s) => s.text_color(t.foreground)).on_click((_e, cx) => this.openDiff(this.files[0], cx))).child("View Diff"))
+          .child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${add}`))
+          .child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${del}`))
         .child(div().flex_1())
-        .child(this.stageActions(t, stageLabel, Boolean(this.files.length && !this.busy), (cx) => this.primaryStage(cx)))))
-      .when(this.view === "changes", (el) => el
-        .child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
-          .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
-            .when(Boolean(tracked.length), (e) => e.child(this.group("Tracked", tracked, t)))
-            .when(Boolean(tracked.length && untracked.length), (e) => e.child(div().h(6).flex_none()))
-            .when(Boolean(untracked.length), (e) => e.child(this.group("Untracked", untracked, t)))
-            .when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder"))))
-            .when(this.limited, (e) => e.child(div().p(8).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files"))))
-          .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
-        .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note))))
+         .child(this.stageActions(t, stageLabel, Boolean(this.files.length && !this.busy), (cx) => this.primaryStage(cx), typography))))
+        .when(this.view === "changes", (el) => el
+         .child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
+           .child(v_flex().id("mide-changes-list").absolute().inset_0().overflow_y_scroll().p(6)
+              .when(Boolean(tracked.length), (item) => item.child(this.group("Tracked", tracked, t, typography)))
+             .when(Boolean(tracked.length && untracked.length), (item) => item.child(div().h(6).flex_none()))
+              .when(Boolean(untracked.length), (item) => item.child(this.group("Untracked", untracked, t, typography)))
+             .when(!this.files.length, (item) => item.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder"))))
+              .when(this.limited, (item) => item.child(div().p(8).text_size(typography.text(11)).text_color(t.dim).child("Showing the first 1,000 changed files"))))
+           .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
+          .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note))))
       .when(this.view === "history", (el) => el.child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
         .child(v_flex().id("mide-history-list").absolute().inset_0().overflow_y_scroll().p(6)
-          .children(this.history.map((commit) => this.historyRow(commit, t)))
-          .when(!this.history.length, (e) => e.child(div().p(10).text_size(12).text_color(t.muted).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
+           .children(this.history.map((commit) => this.historyRow(commit, t, typography)))
+           .when(!this.history.length, (e) => e.child(div().p(10).text_size(typography.text(12)).text_color(t.muted).child(this.historyError || (this.historyLoading ? "Loading history…" : "No commits yet")))))
          .child(Scrollbar.vertical("mide-history-list").absolute().inset_0())))
-      .child(this.branchFooter(t))
+       .child(this.branchFooter(t, typography))
       .when(this.view === "changes", (el) => el.child(v_flex().flex_none().p(8).gap(7)
-        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(host.background).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(13).text_color(t.muted)))
+        .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(host.background).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(typography.uiSize).text_color(t.muted)))
          .child(h_flex().h(20).flex_none().items_center()
-          .child(div().flex_1().text_size(10).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "No changes to commit")))))
-      .when(this.view === "history" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)));
+           .child(div().flex_1().text_size(typography.text(10)).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "No changes to commit")))))
+       .when(this.view === "history" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note)));
   }
 }
