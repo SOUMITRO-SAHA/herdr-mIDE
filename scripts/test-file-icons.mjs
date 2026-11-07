@@ -5,6 +5,10 @@ import { resolveIcon } from "../mods/mide-files/icons.js";
 assert.equal(resolveIcon("shared-modules.list"), "settings");
 assert.equal(resolveIcon("sources.list"), "settings");
 
+// systemd unit files are declarative service config — gear glyph too.
+assert.equal(resolveIcon("herdr.service"), "settings");
+assert.equal(resolveIcon("ssh.service"), "settings");
+
 // Resolution order stays: exact name first, then longest dotted suffix.
 assert.equal(resolveIcon("readme.txt"), "readme");
 assert.equal(resolveIcon("LICENSE.txt"), "license");

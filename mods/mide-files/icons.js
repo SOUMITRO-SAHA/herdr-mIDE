@@ -571,6 +571,7 @@ export const SUFFIX = {
   "env":"tune",
   "log":"log",
   "list":"settings",
+  "service":"settings",
   "mk":"makefile",
   "svg":"svg",
   "scala":"scala",
