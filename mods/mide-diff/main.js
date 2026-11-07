@@ -90,7 +90,8 @@ export default class MideDiff extends View {
     this.handle = cx.focus_handle();
     this.scroll = VirtualListScrollHandle.new();
     this.request = null; this.files = []; this.rows = []; this.fileRows = new Map();
-    this.diffWidth = 0; this.splitWidth = 0; this.selectedPath = null; this.jumpToSelection = false;
+    this.diffWidth = 0; this.selectedPath = null; this.jumpToSelection = false;
+    this.splitContentWidth = 400; this.splitViewportWidth = 0; this.splitOffset = 0;
     this.mode = "split"; this.busy = false; this.error = null; this.watching = false; this.limited = false;
     this.open(props() ?? shared("mide.diff.request"), cx);
     cx.spawn(async (cx) => {
@@ -116,6 +117,7 @@ export default class MideDiff extends View {
     this.files = []; this.rows = []; this.fileRows = new Map();
     this.selectedPath = request.selectedPath ?? request.path ?? files[0]?.path ?? null;
     this.jumpToSelection = Boolean(this.selectedPath);
+    this.splitOffset = 0;
     if (request.mode === "split" || request.mode === "unified") this.mode = request.mode;
     this.error = null; this.limited = false; this.busy = false;
     this.watch(cx);
@@ -248,7 +250,8 @@ export default class MideDiff extends View {
       (row.text ?? "").length, (row.file?.path ?? "").length,
       (row.left?.text ?? "").length, (row.right?.text ?? "").length), 0);
     this.diffWidth = Math.max(400, Math.min(32000, longest * 8 + 150));
-    this.splitWidth = Math.max(400, Math.min(32000, longest * 8 + 100));
+    this.splitContentWidth = Math.max(400, Math.min(32000, longest * 8 + 100));
+    this.splitOffset = Math.min(this.splitOffset, Math.max(0, this.splitContentWidth - this.splitViewportWidth));
   }
 
   setMode(mode, cx) {
@@ -280,7 +283,7 @@ export default class MideDiff extends View {
       : file.status === "D" ? (t.git_deleted ?? t.ansi1)
         : file.status === "U" ? (t.git_conflict ?? t.ansi3)
         : (t.git_modified ?? t.ansi3);
-    const width = minWidth ?? (this.mode === "split" ? this.splitWidth : this.diffWidth);
+    const width = minWidth ?? this.diffWidth;
     return h_flex().h(LINE).w_full().min_w(width).flex_none().px(10).gap(8).items_center()
       .bg(file.path === this.selectedPath ? t.selected : t.raised).border_b(1).border_color(t.border)
       .child(div().flex_1().min_w(0).truncate().font_semibold().child(file.path))
@@ -306,14 +309,11 @@ export default class MideDiff extends View {
   }
 
   splitPaneRow(row, side, t, typography) {
-    if (row.type === "file") return this.fileHeader(row.file, t, typography);
-    if (row.type === "file-gap") return div().h(LINE).w_full().min_w(this.splitWidth).flex_none().bg(t.background);
-    if (row.type === "message") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
-    if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(typography.codeSize).text_color(t.dim).child("···"));
+    if (row.type === "gap") return h_flex().h(LINE).w_full().flex_none().px(8).items_center().bg(t.raised).child(div().text_size(typography.codeSize).text_color(t.dim).child("···"));
     const line = row[side];
-    if (!line) return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().bg(t.raised);
+    if (!line) return h_flex().h(LINE).w_full().flex_none().bg(t.raised);
     const add = line.kind === "+", del = line.kind === "-", color = add ? t.diff_added : del ? t.diff_deleted : t.dim;
-    return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none()
+    return h_flex().h(LINE).w_full().flex_none()
       .when(Boolean(this.tint(line.kind, t)), (e) => e.bg(this.tint(line.kind, t)))
       .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
       .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim, typography))
@@ -322,26 +322,40 @@ export default class MideDiff extends View {
   }
 
   splitRow(row, t, typography) {
-    const width = this.splitWidth * 2 + 1;
-    if (row.type === "file") return this.fileHeader(row.file, t, typography, width);
-    if (row.type === "file-gap") return div().h(LINE).w_full().min_w(width).flex_none().bg(t.background);
-    if (row.type === "message") return h_flex().h(LINE).w_full().min_w(width).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
-    return h_flex().h(LINE).w_full().min_w(width).flex_none().items_stretch()
-      .child(div().w(this.splitWidth).h(LINE).flex_none().overflow_hidden().child(this.splitPaneRow(row, "left", t, typography)))
-      .child(div().w(1).h(LINE).flex_none().bg(t.border))
-      .child(div().w(this.splitWidth).h(LINE).flex_none().overflow_hidden().child(this.splitPaneRow(row, "right", t, typography)));
+    if (row.type === "file") return this.fileHeader(row.file, t, typography, 0);
+    if (row.type === "file-gap") return div().h(LINE).w_full().flex_none().bg(t.background);
+    if (row.type === "message") return h_flex().h(LINE).w_full().flex_none().px(12).items_center().text_color(t.dim).child(row.text);
+    return h_flex().h(LINE).w_full().flex_none().items_stretch()
+      .child(div().flex_1().min_w(0).h(LINE).overflow_hidden()
+        .child(div().w(this.splitContentWidth).h(LINE).flex_none().relative().left(-this.splitOffset).child(this.splitPaneRow(row, "left", t, typography))))
+      .child(div().w(2).h(LINE).flex_none().bg(t.muted))
+      .child(div().flex_1().min_w(0).h(LINE).overflow_hidden()
+        .child(div().w(this.splitContentWidth).h(LINE).flex_none().relative().left(-this.splitOffset).child(this.splitPaneRow(row, "right", t, typography))));
   }
 
   splitView(t, typography) {
     const count = this.rows.length;
     const rowKey = index => `${index}:${this.rows[index]?.type ?? "line"}`;
-    const width = this.splitWidth * 2 + 1;
     return v_flex().size_full().min_h(0).relative()
-      .child(div().id("mide-diff-split-x").size_full().overflow_x_scrollbar().mode("hover")
-        .child(div().w_full().min_w(width).h_full()
-          .child(v_virtual_list("mide-diff-split", count, LINE, rowKey,
-            range => this.rows.slice(range.start, range.end).map(row => this.splitRow(row, t, typography)))
-            .track_scroll(this.scroll).size_full())))
+      .on_size_change((size, cx) => {
+        const width = size.width / 2;
+        if (Math.abs(width - this.splitViewportWidth) > 0.5) {
+          this.splitViewportWidth = width;
+          this.splitOffset = Math.min(this.splitOffset, Math.max(0, this.splitContentWidth - width));
+          cx.notify();
+        }
+      })
+      .on_scroll_wheel((event, cx) => {
+        if (!event.modifiers.shift) return;
+        const delta = event.delta.x !== 0 ? event.delta.x : -event.delta.y;
+        if (!delta) return;
+        this.splitOffset = Math.max(0, Math.min(this.splitOffset + delta, Math.max(0, this.splitContentWidth - this.splitViewportWidth)));
+        cx.stop_propagation();
+        cx.notify();
+      })
+      .child(v_virtual_list("mide-diff-split", count, LINE, rowKey,
+        range => this.rows.slice(range.start, range.end).map(row => this.splitRow(row, t, typography)))
+        .track_scroll(this.scroll).size_full())
       .child(Scrollbar.vertical("mide-diff-split").viewport_from_layout().absolute().top(0).right(0).bottom(12).w(12));
   }
 
