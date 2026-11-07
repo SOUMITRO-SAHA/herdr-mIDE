@@ -275,12 +275,12 @@ export default class MideDiff extends View {
     return null;
   }
 
-  fileHeader(file, t, typography) {
+  fileHeader(file, t, typography, minWidth = null) {
     const status = file.status === "A" ? (t.git_added ?? t.ansi2)
       : file.status === "D" ? (t.git_deleted ?? t.ansi1)
         : file.status === "U" ? (t.git_conflict ?? t.ansi3)
         : (t.git_modified ?? t.ansi3);
-    const width = this.mode === "split" ? this.splitWidth : this.diffWidth;
+    const width = minWidth ?? (this.mode === "split" ? this.splitWidth : this.diffWidth);
     return h_flex().h(LINE).w_full().min_w(width).flex_none().px(10).gap(8).items_center()
       .bg(file.path === this.selectedPath ? t.selected : t.raised).border_b(1).border_color(t.border)
       .child(div().flex_1().min_w(0).truncate().font_semibold().child(file.path))
@@ -321,24 +321,28 @@ export default class MideDiff extends View {
       .child(div().flex_1().min_w(0).whitespace_nowrap().text_color(line.kind === " " ? t.muted : t.foreground).child(line.text));
   }
 
+  splitRow(row, t, typography) {
+    const width = this.splitWidth * 2 + 1;
+    if (row.type === "file") return this.fileHeader(row.file, t, typography, width);
+    if (row.type === "file-gap") return div().h(LINE).w_full().min_w(width).flex_none().bg(t.background);
+    if (row.type === "message") return h_flex().h(LINE).w_full().min_w(width).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
+    return h_flex().h(LINE).w_full().min_w(width).flex_none().items_stretch()
+      .child(div().w(this.splitWidth).h(LINE).flex_none().overflow_hidden().child(this.splitPaneRow(row, "left", t, typography)))
+      .child(div().w(1).h(LINE).flex_none().bg(t.border))
+      .child(div().w(this.splitWidth).h(LINE).flex_none().overflow_hidden().child(this.splitPaneRow(row, "right", t, typography)));
+  }
+
   splitView(t, typography) {
     const count = this.rows.length;
     const rowKey = index => `${index}:${this.rows[index]?.type ?? "line"}`;
-    return h_flex().size_full().min_h(0).items_stretch()
-      .child(v_flex().id("mide-diff-left-pane").flex_1().min_w(0).min_h(0).relative()
-        .child(div().id("mide-diff-left-x").size_full().overflow_x_scrollbar().mode("hover")
-          .child(div().w_full().min_w(this.splitWidth).h_full()
-            .child(v_virtual_list("mide-diff-left", count, LINE, rowKey,
-              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "left", t, typography)))
-              .track_scroll(this.scroll).size_full()))))
-      .child(div().w(1).flex_none().bg(t.border))
-      .child(v_flex().id("mide-diff-right-pane").flex_1().min_w(0).min_h(0).relative()
-        .child(div().id("mide-diff-right-x").size_full().overflow_x_scrollbar().mode("hover")
-          .child(div().w_full().min_w(this.splitWidth).h_full()
-            .child(v_virtual_list("mide-diff-right", count, LINE, rowKey,
-              range => this.rows.slice(range.start, range.end).map(row => this.splitPaneRow(row, "right", t, typography)))
-              .track_scroll(this.scroll).size_full())))
-        .child(Scrollbar.vertical("mide-diff-right").viewport_from_layout().absolute().top(0).right(0).bottom(12).w(12)));
+    const width = this.splitWidth * 2 + 1;
+    return v_flex().size_full().min_h(0).relative()
+      .child(div().id("mide-diff-split-x").size_full().overflow_x_scrollbar().mode("hover")
+        .child(div().w_full().min_w(width).h_full()
+          .child(v_virtual_list("mide-diff-split", count, LINE, rowKey,
+            range => this.rows.slice(range.start, range.end).map(row => this.splitRow(row, t, typography)))
+            .track_scroll(this.scroll).size_full())))
+      .child(Scrollbar.vertical("mide-diff-split").viewport_from_layout().absolute().top(0).right(0).bottom(12).w(12));
   }
 
   unifiedView(t, typography) {
@@ -363,11 +367,15 @@ export default class MideDiff extends View {
     const deleted = this.files.reduce((total, file) => total + (file.del ?? 0), 0);
     const rootName = request?.root?.split(/[\\/]/).filter(Boolean).pop() ?? "Project";
     const fileTitle = request?.title ?? (request ? String(request.selectedPath ?? request.path ?? request.files?.[0]?.path ?? rootName).split(/[\\/]/).pop() : "Project Diff");
-    return v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
+    const noDiff = Boolean(request && !this.busy && !this.error
+      && !this.files.some(file => file.error || file.combined || file.binary || file.fresh || file.hunks?.length));
+    const root = v_flex().id("mide-diff").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "r" && e.modifiers.platform) { this.load(cx); cx.stop_propagation(); }
-      })
-      .child(h_flex().h(40).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
+      });
+    if (noDiff) return root.child(this.emptyState("No diff to display.", t, typography));
+    return root
+       .child(h_flex().h(40).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().min_w(0).truncate().font_semibold().child(fileTitle))
         .child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${added}`))
         .child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${deleted}`))
@@ -378,13 +386,13 @@ export default class MideDiff extends View {
          .when(!request, (e) => e.child(this.emptyState("Open a changed file from Changes to view the project diff.", t, typography)))
         .when(Boolean(request), (e) => e
           .child(div().flex_1().min_h(0).relative().font_family(typography.codeFont).text_size(typography.codeSize)
-           .when(this.busy && !this.rows.length, (el) => el.child(v_flex().size_full().items_center().justify_center().font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.dim).child("Loading diff…")))
-           .when(!this.busy && Boolean(this.error), (el) => el.child(v_flex().size_full().p(12).gap(6).font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.ansi1).child("Cannot read this diff").child(div().text_size(typography.text(11)).text_color(t.dim).child(this.error))))
-           .when(!this.busy && !this.error && !this.files.length, el => el.child(this.emptyState("No changed files to compare.", t, typography)))
-           .when(!this.error && this.rows.length > 0, el => el.child(this.mode === "split" ? this.splitView(t, typography) : this.unifiedView(t, typography))))
-        .when(this.limited, (e) => e.child(div().px(12).py(3).text_size(typography.text(10)).text_color(t.dim).child("Diff truncated for speed")))
-        .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(10)).text_color(t.dim)
-         .child(div().flex_1().min_w(0).truncate().child(this.selectedPath ?? request?.root ?? "mIDE Diff"))));
+            .when(this.busy && !this.rows.length, (el) => el.child(v_flex().size_full().items_center().justify_center().font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.dim).child("Loading diff…")))
+            .when(!this.busy && Boolean(this.error), (el) => el.child(v_flex().size_full().p(12).gap(6).font_family(typography.uiFont).text_size(typography.uiSize).text_color(t.ansi1).child("Cannot read this diff").child(div().text_size(typography.text(11)).text_color(t.dim).child(this.error))))
+            .when(!this.busy && !this.error && !this.files.length, el => el.child(this.emptyState("No changed files to compare.", t, typography)))
+            .when(!this.error && this.rows.length > 0, el => el.child(this.mode === "split" ? this.splitView(t, typography) : this.unifiedView(t, typography))))
+         .when(this.limited, (e) => e.child(div().px(12).py(3).text_size(typography.text(10)).text_color(t.dim).child("Diff truncated for speed")))
+         .child(h_flex().h(24).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(10)).text_color(t.dim)
+          .child(div().flex_1().min_w(0).truncate().child(this.selectedPath ?? request?.root ?? "mIDE Diff"))));
   }
 
   async close(_cx) {
