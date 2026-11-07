@@ -7,7 +7,7 @@
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
-import { SUFFIX, NAMES, PREFIX } from "./icons.js";
+import { resolveIcon } from "./icons.js";
 import { gitColors } from "./palette.js";
 
 function location(previous) {
@@ -45,22 +45,9 @@ const interfaceTypography = () => {
   return { font: current.ui_font_family ?? "Geist", size, text: base => base * size / 13 };
 };
 
-// Material Icon Theme icons, full-color SVGs. icons.js maps suffixes and
-// whole names to icon names;
-// resolution order: exact name, then longest dotted suffix, then the
-// theme's default file glyph.
-function fileIcon(name) {
-  const lower = name.toLowerCase();
-  if (NAMES[lower]) return NAMES[lower];
-  let rest = lower, dot;
-  while ((dot = rest.indexOf(".")) >= 0) {
-    rest = rest.slice(dot + 1);
-    if (SUFFIX[rest]) return SUFFIX[rest];
-  }
-  for (const [prefix, icon] of PREFIX) if (lower.startsWith(prefix)) return icon;
-  return null;
-}
-
+// Material Icon Theme icons, full-color SVGs; icons.js owns the mapping
+// and its resolution order (exact name, then longest dotted suffix, then
+// prefix, then the theme's plain file glyph).
 async function directory(path, on) {
   const windowsDirectory = async () => {
     const r = await exec("powershell", ["-NoProfile", "-Command", "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); & { param($p) @(Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop | Where-Object { $_.Name -ne '.git' -and $_.Name -ne '.DS_Store' } | Select-Object -First 501 | ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $_.LinkType -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } }) | ConvertTo-Json -Compress } '" + path.replace(/['‘’‚‛]/g, "$&$&") + "'"], { on });
@@ -243,7 +230,7 @@ export default class MideFiles extends View {
           : div().w(12).flex_none())
         .child(entry.dir
           ? svg(`${ICONS}/folder${open ? "-open" : ""}.svg`).size(16).flex_none().text_color(folderMark ? statusColor : t.dim)
-          : image(`${MATERIAL}/${fileIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
+          : image(`${MATERIAL}/${resolveIcon(entry.name) ?? "file"}.svg`).w(16).h(16).flex_none())
         .child(div().flex_1().min_w(0).truncate().font_normal().text_color(nameColor).child(entry.name))
          .when(Boolean(mark), el => el.child(div().text_size(typography.text(11)).font_semibold().text_color(statusColor).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t, typography);

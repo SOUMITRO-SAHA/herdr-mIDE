@@ -570,6 +570,7 @@ export const SUFFIX = {
   "lock":"lock",
   "env":"tune",
   "log":"log",
+  "list":"settings",
   "mk":"makefile",
   "svg":"svg",
   "scala":"scala",
@@ -887,3 +888,17 @@ export const NAMES = {
   "pom.xml":"maven"
 };
 export const PREFIX = [];
+// Icon resolution for mide-files, kept here so the data and its lookup
+// have one canonical, node-testable source. Order: exact name → longest
+// dotted suffix → prefix; null falls back to the plain file glyph.
+export function resolveIcon(name) {
+  const lower = name.toLowerCase();
+  if (NAMES[lower]) return NAMES[lower];
+  let rest = lower, dot;
+  while ((dot = rest.indexOf(".")) >= 0) {
+    rest = rest.slice(dot + 1);
+    if (SUFFIX[rest]) return SUFFIX[rest];
+  }
+  for (const [prefix, icon] of PREFIX) if (lower.startsWith(prefix)) return icon;
+  return null;
+}
