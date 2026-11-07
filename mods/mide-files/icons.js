@@ -550,6 +550,7 @@ export const SUFFIX = {
   "wpl":"audio",
   "wproj":"audio",
   "wv":"audio",
+  "txt":"document",
   "rs":"rust",
   "ron":"rust",
   "kt":"kotlin",

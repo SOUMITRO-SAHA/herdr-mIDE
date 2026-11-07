@@ -31,11 +31,15 @@ license:
 > WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Taken from the MIT npm package `material-icon-theme` (the theme's built
-16×16 SVGs), with one modification: the baked fill (`#90a4ae`) is
-rewritten to `currentColor` so Herdr's theme tints the glyphs — muted
-when clean, change-colored underneath. The association map
+16×16 SVGs). The file-type icons (`icons/material/`) ship verbatim with
+the theme's baked brand colors and render as plain images; the only
+modification is on the folder glyphs (`icons/folder.svg`,
+`icons/folder-open.svg`), whose baked fill (`#90a4ae`) is rewritten to
+`currentColor` so Herdr's theme tints them — muted when clean,
+change-colored underneath. The association map
 (`mods/mide-files/icons.js`) was generated from the theme's own
-`fileIcons.ts` mapping. Sourcing rule:
+`fileIcons.ts` mapping (exact names and longest dotted suffixes;
+filename-pattern and icon-pack-gated entries skipped). Sourcing rule:
 Material Icon Theme is the only source for file-type and folder icons;
 generic UI glyphs come from Herdr's own mods (next section; see also
 `.opencode/skills/material-icons-theme/SKILL.md`, local agent config).
