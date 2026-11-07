@@ -27,7 +27,6 @@ const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space }
 // Reads write nothing under .git (no index refresh or lock, no fsmonitor cookie):
 // the folder watch would see it, and every refresh would start the next one.
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
-const MATERIAL = "mods/mide-files/icons/material";
 
 function gitStatusColor(status, t) {
   if (status === "A") return t.git_added ?? t.ansi2;
@@ -388,13 +387,14 @@ export default class MideChanges extends View {
   }
 
   fileRow(f, t) {
-    const parts = f.path.split("/"), name = parts.pop();
+    const parts = f.path.split("/"), name = parts.pop(), directory = parts.join("/");
     const selected = this.open === f.path;
     const color = gitStatusColor(f.status, t);
     return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
-      .child(svg(`${MATERIAL}/file.svg`).size(16).flex_none())
       .child(div().w(10).text_size(10).font_semibold().text_color(color).child(f.status))
-      .child(h_flex().flex_1().min_w(0).child(div().text_color(t.dim).truncate().child(parts.length ? parts.join("/") + "/" : "")).child(div().max_w(200).min_w(0).truncate().child(name)))
+      .child(h_flex().flex_1().min_w(0).overflow_hidden()
+        .child(div().max_w(200).min_w(0).flex_none().truncate().child(name + (directory ? " " : "")))
+        .when(Boolean(directory), (e) => e.child(div().flex_1().min_w(0).text_color(t.dim).text_ellipsis_start().child(directory))))
       .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`)))
       .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t,
         (checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
