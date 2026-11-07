@@ -4,14 +4,18 @@
 //
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
 // cursor or selection API, so modal editing arrives as a custom editor core
-// (ROADMAP Phase 1). The mode chip and key plumbing below are its landing pad.
+// (ROADMAP Phase 1).
 import { View, div } from "gpui-kit";
-import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
+import { v_flex, h_flex, Editor, EditorState, TextView } from "gpui-base";
 import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
 import { ayuSyntax } from "./palette.js";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
+const languageFor = (file) => {
+  const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
+  return LANG[ext] ?? ext;
+};
 // Syntax colors come only from our private Ayu palette. Why that theme's
 // variable token is the function orange: the host highlighter folds every
 // variable.* scope (call names, objects, params, this) into one "variable"
@@ -37,7 +41,7 @@ const editorTypography = () => {
 export default class MideEditor extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null;
+    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.editorMode = "raw";
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
@@ -50,8 +54,7 @@ export default class MideEditor extends View {
   }
 
   createCode(value, file) {
-    const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
-    const code = EditorState.new({ language: LANG[ext] ?? ext, value,
+    const code = EditorState.new({ language: languageFor(file), value,
       syntax: syntaxFor(ayuSyntax) });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
@@ -62,6 +65,7 @@ export default class MideEditor extends View {
 
   load(file, cx) {
     this.code?.release(); this.code = null;
+    this.editorMode = "raw";
     this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null;
     if (!file) return;
     cx.spawn(async cx => {
@@ -100,16 +104,30 @@ export default class MideEditor extends View {
     this.code?.release();
   }
 
+  markdownTab(mode, label, t) {
+    const active = this.editorMode === mode;
+    return div().id(`mide-editor-${mode}`).h(22).px(8).flex().items_center().rounded(5).text_size(10)
+      .text_color(active ? t.foreground : t.muted)
+      .when(active, el => el.bg(t.selected))
+      .when(!active, el => el.cursor_pointer().hover(s => s.bg(t.hover)).on_click((_e, cx) => { this.editorMode = mode; cx.notify(); }))
+      .child(label);
+  }
+
   render(cx) {
     const host = theme(), t = { ...host, background: host.chrome }, name = this.file?.split(/[\\/]/).pop();
-    const typography = editorTypography();
+    const typography = editorTypography(), markdown = languageFor(this.file ?? "") === "markdown";
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(name ?? "No file"))
-        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(11).text_color(t.blocked).child("●"))))
+        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(11).text_color(t.blocked).child("●")))
+        .when(markdown, el => el.child(h_flex().h(24).flex_none().p(2).gap(2).rounded(6).bg(t.raised)
+          .child(this.markdownTab("raw", "Raw", t))
+          .child(this.markdownTab("preview", "Preview", t)))))
       .child(this.file
         ? (this.code
-            ? Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
+            ? markdown && this.editorMode === "preview"
+              ? TextView.markdown("mide-editor-markdown-preview", this.code.value()).selectable(true).scrollable(true).flex_1().min_h(0).min_w(0).p(12)
+              : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
             : div().flex_1().min_h(0).p(12).text_color(t.dim).child(this.error || "Loading file…"))
         : div().flex_1().min_h(0).p(12).text_color(t.dim).child("No file open. Click a file in Files to edit it here."))
       .when(Boolean(this.note), el => el.child(h_flex().px(12).py(4).gap(10).text_size(11).text_color(t.ansi1)

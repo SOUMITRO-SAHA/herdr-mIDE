@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Markdown files now have Raw and Preview tabs; Preview renders the live buffer with Herdr's Markdown text view.
 - The editor header now shows just the file name and unsaved indicator; saving stays on ⌘S without the EDIT or Save controls.
 - Removed the palette, theme-test and icon-generation scripts; the existing mod palettes, icons and associations remain bundled and can be maintained directly.
 - Editor syntax and Git status/diff colors use Ayu Dark; mIDE controls, focus colors and panel backgrounds follow Herdr's active theme. Switching the layout leaves host and CLI theme settings untouched.
