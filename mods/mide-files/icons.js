@@ -3,7 +3,7 @@
 // — https://github.com/material-extensions/vscode-material-icon-theme.
 // Resolution order in mide-files: NAMES (exact file name) → SUFFIX
 // (longest dotted suffix first: foo.d.ts tries "d.ts" then "ts") →
-// PREFIX (empty: Material has no prefix associations).
+// PREFIX (empty upstream; mIDE adds the .env. family — see below).
 export const SUFFIX = {
   "htm":"html",
   "xhtml":"html",
@@ -888,7 +888,10 @@ export const NAMES = {
   "jvm.config":"maven",
   "pom.xml":"maven"
 };
-export const PREFIX = [];
+// PREFIX (Material ships none; mIDE adds one: the whole .env.* family,
+// so combinations like .env.vault or .env.staging.local.example resolve
+// without enumerating them).
+export const PREFIX = [[".env.", "tune"]];
 // Icon resolution for mide-files, kept here so the data and its lookup
 // have one canonical, node-testable source. Order: exact name → longest
 // dotted suffix → prefix; null falls back to the plain file glyph.

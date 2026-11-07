@@ -9,6 +9,18 @@ assert.equal(resolveIcon("sources.list"), "settings");
 assert.equal(resolveIcon("herdr.service"), "settings");
 assert.equal(resolveIcon("ssh.service"), "settings");
 
+// The whole .env.* family reads as environment config, however it is
+// suffixed — covered by the prefix rule, not one-by-one names.
+assert.equal(resolveIcon(".env"), "tune");
+assert.equal(resolveIcon(".env.production.local"), "tune");
+assert.equal(resolveIcon(".env.vault"), "tune");
+assert.equal(resolveIcon(".env.keys"), "tune");
+assert.equal(resolveIcon(".env.shared"), "tune");
+assert.equal(resolveIcon(".env.staging.local.example"), "tune");
+// …while env-adjacent names keep their own glyphs.
+assert.equal(resolveIcon(".envrc"), "console");
+assert.equal(resolveIcon(".dev.vars"), "tune");
+
 // Resolution order stays: exact name first, then longest dotted suffix.
 assert.equal(resolveIcon("readme.txt"), "readme");
 assert.equal(resolveIcon("LICENSE.txt"), "license");
