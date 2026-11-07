@@ -13,9 +13,10 @@
 # Overrides:
 #   HERDR_APP_HOME   app home (default ~/.config/herdr-app)
 #   INTERVAL         dev loop poll seconds (default 1) — make dev INTERVAL=0.3
+#   MODS             mods for check/sync (default: all; e.g. mide-editor)
 
 INTERVAL ?= 1
-MODS := mide-files mide-changes mide-diff mide-editor
+MODS ?= mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
 .PHONY: help dev sync check install status shot switch

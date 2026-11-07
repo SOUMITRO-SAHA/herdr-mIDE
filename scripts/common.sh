@@ -11,7 +11,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 EXCLUDES="--exclude=.DS_Store --exclude=jsconfig.json --exclude=gpui-kit.d.ts"
 
 # Everything that installs into the app home.
-MODS="mide-files mide-changes mide-diff mide-editor"
+MODS="${MODS:-mide-files mide-changes mide-diff mide-editor}"
 
 # Copy only mIDE's mods and layout; never touch the host's theme registry.
 sync_targets() {
