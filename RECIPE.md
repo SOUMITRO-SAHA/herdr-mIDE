@@ -5,7 +5,8 @@ that shows file-type icons and colors each file by its git status, and a
 **Changes** panel with tracked and untracked groups, per-file staging, a
 detailed diff, a guided commit and an inline branch switcher. Clicking a file
 in Files opens it in an editor pane beside the terminal, with syntax
-highlighting, ⌘S save and a private Ayu palette. Herdr's own theme is unchanged.
+highlighting, ⌘S save and private Ayu accents and syntax. Panel backgrounds
+follow Herdr's theme, which is unchanged.
 
 ![herdr-mIDE](preview.png)
 
@@ -52,8 +53,8 @@ highlighting, ⌘S save and a private Ayu palette. Herdr's own theme is unchange
   `cmd-shift-e`): a 36px header with an `EDIT` mode chip, the file name, an
   orange `●` while unsaved and a **Save** button; the code with syntax
   highlighting (13px, the settings font); a 28px status bar with the full
-   path and an `⌘S save` hint. mIDE's surfaces and syntax colors use the
-   private Ayu palette generated from `themes/ayu-dark.json`; the layout does
+   path and an `⌘S save` hint. mIDE's backgrounds follow Herdr, while accents
+   and syntax use the private palette generated from `themes/ayu-dark.json`; the layout does
    not select a host theme. Native editor/input internals still use some host
    colors because Herdr does not expose per-widget overrides for them.
 
@@ -156,4 +157,4 @@ highlighting, ⌘S save and a private Ayu palette. Herdr's own theme is unchange
 - The branch chip lists branches; switching changes the chip and the tree's
   marks; New creates and switches; delete removes a merged branch.
 - Herdr retains its configured theme and terminal colors when the layout is
-  opened, while the mIDE-drawn panels and editor syntax use private Ayu colors.
+  opened; mIDE backgrounds match Herdr and its accents and syntax use Ayu.

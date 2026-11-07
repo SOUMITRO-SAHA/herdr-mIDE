@@ -9,6 +9,9 @@ from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 layout = json.loads((root / "layouts/herdr-mide.json").read_text(encoding="utf-8"))
 assert "theme" not in layout, "The layout must inherit Herdr's configured theme"
+for mod in ("mide-files", "mide-changes", "mide-diff", "mide-editor"):
+    main = (root / "mods" / mod / "main.js").read_text(encoding="utf-8")
+    assert "{ ...mideTheme, background: theme().background }" in main, f"{mod} must use Herdr's background"
 
 with tempfile.TemporaryDirectory(prefix="mide-theme-test-") as directory:
     home = Path(directory)

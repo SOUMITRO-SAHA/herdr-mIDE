@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- mIDE's panels and editor syntax use a private Ayu palette generated from `themes/ayu-dark.json`; switching the mIDE layout no longer changes Herdr's theme or terminal colors. Existing host and CLI settings and theme files are left untouched. Some native editor/input colors still follow the host theme because the mod API does not expose per-widget overrides.
+- mIDE's panel backgrounds now follow Herdr's current background, while accents and editor syntax use the private Ayu palette. Switching the mIDE layout does not change Herdr's theme or terminal colors. Existing host and CLI settings and theme files are left untouched. Native editor/input colors follow the host theme because the mod API does not expose per-widget overrides.
 - The project is now licensed under Apache-2.0 (was MIT), matching the Herdr app it extends.
 - Generic UI glyphs — the tree chevrons — are now sourced from Herdr's own shipped mods (Apache-2.0, credited in THIRD-PARTY-NOTICES.md); the previous external glyph source is retired from the notices. File-type and folder icons remain Material Icon Theme (MIT), the only source for those.
 - The Changes panel now follows the reference Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.

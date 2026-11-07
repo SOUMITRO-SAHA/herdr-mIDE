@@ -31,7 +31,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- mIDE panels and editor syntax use a private Ayu Dark palette; Herdr and its terminals keep their existing theme (for example, Graphite).
+- mIDE panels use Herdr's background, with private Ayu Dark accents and editor syntax; Herdr and its terminals keep their existing theme (for example, Graphite).
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -49,7 +49,7 @@ The installer copies the mods and layout into `~/.config/herdr-app` (never overw
 
 Upgrading from a version that installed `ayu-dark.json` or selected it in the layout? `make sync` updates the installed mIDE mods and layout, but leaves existing theme files and settings untouched. The no-clobber installer does not update an existing installation. If Ayu was separately selected in Herdr settings or through its theme picker, select Graphite there yourself; mIDE will not change that choice. You may remove the old app-home `themes/ayu-dark.json` yourself if nothing else uses it.
 
-Herdr's native editor and input controls still resolve some internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. mIDE's own surfaces and editor syntax stay Ayu without changing the host theme.
+Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. mIDE's main backgrounds also follow Herdr, while its accents and editor syntax stay Ayu without changing the host theme.
 
 Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
 

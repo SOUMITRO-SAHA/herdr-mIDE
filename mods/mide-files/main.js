@@ -6,7 +6,7 @@
 // same sh/PowerShell helpers, same lazy expansion, same bounded reads.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
 import { mideTheme } from "./palette.js";
 
@@ -258,7 +258,7 @@ export default class MideFiles extends View {
 
   render(cx) {
     if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
-    const t = mideTheme;
+    const t = { ...mideTheme, background: theme().background };
     return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().font_semibold().child("Files"))
