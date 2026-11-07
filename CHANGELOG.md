@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Removed the palette, theme-test and icon-generation scripts; the existing mod palettes, icons and associations remain bundled and can be maintained directly.
-- mIDE's panel backgrounds now match Herdr's sidebar, with raised and hover surfaces from the host theme, while accents and editor syntax use the private Ayu palette. Switching the mIDE layout does not change Herdr's theme or terminal colors. Existing host and CLI settings and theme files are left untouched. Native editor/input colors follow the host theme because the mod API does not expose per-widget overrides.
+- Editor syntax and Git status/diff colors use Ayu Dark; mIDE controls, focus colors and panel backgrounds follow Herdr's active theme. Switching the layout leaves host and CLI theme settings untouched.
 - The project is now licensed under Apache-2.0 (was MIT), matching the Herdr app it extends.
 - Generic UI glyphs — the tree chevrons — are now sourced from Herdr's own shipped mods (Apache-2.0, credited in THIRD-PARTY-NOTICES.md); the previous external glyph source is retired from the notices. File-type and folder icons remain Material Icon Theme (MIT), the only source for those.
 - The Changes panel now follows the reference Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.
@@ -18,19 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - The commit message box uses Herdr's regular background for a subtler contrast against the Changes panel than the raised surface.
-- Files panel labels now use regular weight and One Dark's readable muted and ignored colors; ignored folders themselves are correctly dimmed, and mixed Git statuses use the reference IDE's conflict/deletion/modification/addition precedence.
-- Git status colors in the bundled dark theme now match One Dark: modified files are golden yellow, deleted files are red, and added or untracked files are green, instead of showing modifications in blue.
+- Files panel labels now use regular weight and the host theme's muted and ignored colors; ignored folders themselves are correctly dimmed, and mixed Git statuses use the reference IDE's conflict/deletion/modification/addition precedence.
+- Git status colors use Ayu's modified, deleted and added colors consistently across Files, Changes and Diff.
 - Editor: saving always failed with "The file changed outside Herdr" — the mod never passed the snapshot the write API requires, so every save of an existing file was refused. Saves now carry the loaded baseline (external edits between load and save are still caught, with a `Reload (discard draft)` action on the failure note), oversized files refuse to save instead of silently truncating, and the ⌘S/`mide-editor.save` command actually fires now (the command arrived as a plain string and never matched).
 - Files panel: macOS `.DS_Store` files no longer appear in the tree (filtered in both the `sh` and PowerShell listings; other dotfiles still show).
 - Files panel: a file's *name prefix* no longer outranks its *type* in icon matching — `Dockerfile.rs` used to show the Docker glyph; the Rust type now wins, while `Dockerfile.prod` still reads as a Dockerfile.
 
 ### Changed
 - File-icon matching resolves like a full IDE: exact file name first (`package.json`, `docker-compose.yml`, `CMakeLists.txt`…), then the longest dotted suffix (`foo.d.ts` tries `d.ts` before `ts`), then name prefixes — and lockfiles (`Cargo.lock`, `poetry.lock`…) now get the lock glyph. Tree icons render at 16px, level with the row text.
-- Folder status colorization now works the way the reference IDE does it: the color of the most severe change underneath (conflict/deleted red, modified orange, new green) paints the folder's glyph **and its title**, propagating up every ancestor folder, so the path to a changed file lights up as a whole. The colors use dedicated Herdr theme tokens when available, with ANSI fallbacks for other themes.
+- Folder status colorization now works the way the reference IDE does it: the color of the most severe change underneath paints the folder's glyph **and its title**, propagating up every ancestor folder, so the path to a changed file lights up as a whole. The colors use the private Ayu Git status tokens.
 - File names render calm: muted against the foreground instead of full-bright, and git-ignored paths (dependencies, build output, local secrets) go one step deeper so they stop shouting; changed names keep their orange/red/green.
 
 ### Added
-- **Ayu Dark for mIDE**: the MIT-licensed palette covers mIDE-drawn panels and editor syntax, including markdown headings, inline code, bold and links, without changing Herdr's theme.
+- **Ayu Dark for mIDE**: the MIT-licensed palette covers editor syntax and Git change colors without changing Herdr's theme.
 - **A dedicated Git Diff tab.** Clicking a file in Changes opens `Diff · <file>` instead of squeezing the diff into the panel: file header with status and +/− stats, old/new line-number gutters, tinted additions and deletions, dim `···` excerpt bands, side-by-side Split view (default) with a Unified toggle, hunk navigation (`⌘F8` / `⇧⌘F8`), and staged/unstaged sides in one tab. Untracked files render as a full-file addition. The Changes panel keeps staging, Stage All, Fetch, branches and the commit composer, and now uses its full height for the file list.
 - Folders in the tree now switch between closed and open glyphs on expand/collapse (both glyphs follow the tree tint).
 - Root `Makefile` as the one entry point: `make dev` (live sync into the app home with Herdr hot-reloading every landed file), `make sync`, `make check`, `make install`, `make status`, `make shot` and `make switch`.

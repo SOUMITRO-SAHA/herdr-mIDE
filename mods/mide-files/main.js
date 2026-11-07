@@ -8,7 +8,7 @@ import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, run } from "herdr";
 import { SUFFIX, NAMES, PREFIX } from "./icons.js";
-import { mideColors } from "./palette.js";
+import { gitColors } from "./palette.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -167,10 +167,7 @@ export default class MideFiles extends View {
     });
   }
 
-  // Git status → color for the whole entry name, the way the reference
-  // IDE does it: dedicated theme tokens per status, falling back to ANSI slots on themes
-  // that don't define them — ansi slots exist in every Herdr theme and
-  // carry the right hues (orange-yellow, green, red).
+  // Git status → Ayu color for the whole entry name and folder glyph.
   markColor(mark, t) {
     if (mark === "A") return t.git_added ?? t.ansi2;
     if (mark === "D") return t.git_deleted ?? t.ansi1;
@@ -258,7 +255,7 @@ export default class MideFiles extends View {
 
   render(cx) {
     if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
-    const t = mideColors(theme());
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome };
     return v_flex().id("mide-files").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().font_semibold().child("Files"))

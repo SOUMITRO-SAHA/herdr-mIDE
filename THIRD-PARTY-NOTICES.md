@@ -45,8 +45,8 @@ generic UI glyphs come from Herdr's own mods (next section; see also
 The Ayu Dark palette is adapted from the Ayu editor theme, version 1.6.0:
 [ayu-theme/vscode-ayu](https://github.com/ayu-theme/vscode-ayu), by Ike
 Kurghinyan. It is licensed under the MIT License. Upstream color and
-token values are mapped to Herdr's theme format and included in the mods'
-private `palette.js` files; no reference-IDE theme file, code, or assets are included.
+syntax and Git token values are included in the mods' `palette.js` files; no
+reference-IDE theme file, code, or assets are included.
 
 > MIT License
 >

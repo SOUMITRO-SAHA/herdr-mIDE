@@ -6,7 +6,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, focused, run, nextCommand } from "herdr";
-import { mideColors } from "./palette.js";
+import { gitColors } from "./palette.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000, MAX_TEXT = 600000, PROJECT_DIFF_BATCH = 100, LINE = 20;
@@ -282,14 +282,15 @@ export default class MideDiff extends View {
   }
 
   tint(kind, t) {
-    if (kind === "+") return t.ansi2 + "1e";
-    if (kind === "-") return t.ansi1 + "1e";
+    if (kind === "+") return t.diff_added + "1e";
+    if (kind === "-") return t.diff_deleted + "1e";
     return null;
   }
 
   fileHeader(file, t) {
     const status = file.status === "A" ? (t.git_added ?? t.ansi2)
-      : file.status === "D" || file.status === "U" ? (t.git_deleted ?? t.ansi1)
+      : file.status === "D" ? (t.git_deleted ?? t.ansi1)
+        : file.status === "U" ? (t.git_conflict ?? t.ansi3)
         : (t.git_modified ?? t.ansi3);
     const width = this.mode === "split" ? this.splitWidth : this.diffWidth;
     return h_flex().h(LINE).w_full().min_w(width).flex_none().px(10).gap(8).items_center()
@@ -306,12 +307,12 @@ export default class MideDiff extends View {
     if (row.type === "file-gap") return div().h(LINE).w_full().min_w(this.diffWidth).flex_none().bg(t.background);
     if (row.type === "message") return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none().px(12).items_center().text_color(t.dim).child(row.text);
     if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(10).text_color(t.dim).child("···"));
-    const add = row.kind === "+", del = row.kind === "-", color = add ? t.ansi2 : del ? t.ansi1 : t.dim;
+    const add = row.kind === "+", del = row.kind === "-", color = add ? t.diff_added : del ? t.diff_deleted : t.dim;
     return h_flex().h(LINE).w_full().min_w(this.diffWidth).flex_none()
       .when(Boolean(this.tint(row.kind, t)), (e) => e.bg(this.tint(row.kind, t)))
-      .child(div().w(2).flex_none().bg(add ? t.ansi2 : del ? t.ansi1 : t.background))
-      .child(this.number(row.old, add ? t.dim : del ? t.ansi1 : t.dim))
-      .child(this.number(row.new, add ? t.ansi2 : del ? t.dim : t.dim))
+      .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
+      .child(this.number(row.old, add ? t.dim : del ? t.diff_deleted : t.dim))
+      .child(this.number(row.new, add ? t.diff_added : del ? t.dim : t.dim))
       .child(div().w(18).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
       .child(div().flex_1().min_w(0).whitespace_nowrap().child(row.text));
   }
@@ -323,11 +324,11 @@ export default class MideDiff extends View {
     if (row.type === "gap") return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().px(8).items_center().bg(t.raised).child(div().text_size(10).text_color(t.dim).child("···"));
     const line = row[side];
     if (!line) return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none().bg(t.raised);
-    const add = line.kind === "+", del = line.kind === "-", color = add ? t.ansi2 : del ? t.ansi1 : t.dim;
+    const add = line.kind === "+", del = line.kind === "-", color = add ? t.diff_added : del ? t.diff_deleted : t.dim;
     return h_flex().h(LINE).w_full().min_w(this.splitWidth).flex_none()
       .when(Boolean(this.tint(line.kind, t)), (e) => e.bg(this.tint(line.kind, t)))
-      .child(div().w(2).flex_none().bg(add ? t.ansi2 : del ? t.ansi1 : t.background))
-      .child(this.number(side === "left" ? line.old : line.new, add ? t.ansi2 : del ? t.ansi1 : t.dim))
+      .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
+      .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim))
       .child(div().w(16).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
       .child(div().flex_1().min_w(0).whitespace_nowrap().text_color(line.kind === " " ? t.muted : t.foreground).child(line.text));
   }
@@ -370,7 +371,7 @@ export default class MideDiff extends View {
   }
 
   render(cx) {
-    const t = mideColors(theme()), request = this.request;
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, request = this.request;
     const added = this.files.reduce((total, file) => total + (file.add ?? 0), 0);
     const deleted = this.files.reduce((total, file) => total + (file.del ?? 0), 0);
     const rootName = request?.root?.split(/[\\/]/).filter(Boolean).pop() ?? "Project";

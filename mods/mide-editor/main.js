@@ -1,6 +1,6 @@
 // mIDE Editor — the minimal editor pane. Opens a file (props: { file }),
 // edits it with syntax highlighting, saves with cmd-s (mide-editor.save)
-// and uses mIDE's private Ayu palette.
+// with Ayu syntax highlighting and Herdr's UI theme.
 //
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
 // cursor or selection API, so modal editing arrives as a custom editor core
@@ -8,7 +8,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
 import { props, theme, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
-import { mideTheme, mideColors } from "./palette.js";
+import { ayuSyntax } from "./palette.js";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
@@ -27,7 +27,7 @@ const syntaxFor = (t) => {
   }
   return map;
 };
-const codeStyle = (font, t) => JSON.stringify([font, syntaxFor(t)]);
+const codeStyle = (font) => JSON.stringify([font, syntaxFor(ayuSyntax)]);
 
 export default class MideEditor extends View {
   init(_props, cx) {
@@ -44,26 +44,26 @@ export default class MideEditor extends View {
     });
   }
 
-  createCode(value, file, t) {
+  createCode(value, file) {
     const font = settings().font_family, ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
     const code = EditorState.new({ language: LANG[ext] ?? ext, value,
-      font_family: font, font_size: 13, syntax: syntaxFor(t) });
+      font_family: font, font_size: 13, syntax: syntaxFor(ayuSyntax) });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
       this.dirty = true; cx.notify();
     });
-    return { code, style: codeStyle(font, t) };
+    return { code, style: codeStyle(font) };
   }
 
-  syncTheme(cx, t) {
-    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family, t)) return;
+  syncTheme(cx) {
+    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family)) return;
     const old = this.code, file = this.file;
     this.retheming = true;
     cx.spawn(async cx => {
       try {
         if (this.code !== old || this.file !== file) return;
         const value = old.value(), dirty = this.dirty;
-        const next = this.createCode(value, file, mideTheme);
+        const next = this.createCode(value, file);
         if (this.code !== old || this.file !== file) { next.code.release(); return; }
         this.code = next.code; this.codeStyle = next.style; this.dirty = dirty;
         old.release();
@@ -85,7 +85,7 @@ export default class MideEditor extends View {
         // Baseline = what's on disk right now; save() passes it as the write's
         // expected snapshot, so external edits between load and save are caught.
         this.baseline = text; this.truncated = text.length > MAX;
-        const next = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file, mideTheme);
+        const next = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file);
         this.code = next.code; this.codeStyle = next.style;
       } catch { if (this.file === file) this.error = "Cannot open this file (binary, too large, or unreadable)"; }
       finally { cx.notify(); }
@@ -114,8 +114,8 @@ export default class MideEditor extends View {
   }
 
   render(cx) {
-    const t = mideColors(theme()), name = this.file?.split(/[\\/]/).pop();
-    this.syncTheme(cx, t);
+    const host = theme(), t = { ...host, background: host.chrome }, name = this.file?.split(/[\\/]/).pop();
+    this.syncTheme(cx);
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().text_size(10).px(6).py(1).rounded(4).font_semibold().bg(t.raised).text_color(t.muted).child("EDIT"))

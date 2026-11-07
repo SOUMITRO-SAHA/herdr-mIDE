@@ -31,7 +31,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- mIDE panel backgrounds match Herdr's sidebar, with private Ayu Dark accents and editor syntax; Herdr and its terminals keep their existing theme (for example, Graphite).
+- Editor syntax, Git status colors and diff additions/deletions use Ayu Dark. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -49,7 +49,7 @@ The installer copies the mods and layout into `~/.config/herdr-app` (never overw
 
 Upgrading from a version that installed `ayu-dark.json` or selected it in the layout? `make sync` updates the installed mIDE mods and layout, but leaves existing theme files and settings untouched. The no-clobber installer does not update an existing installation. If Ayu was separately selected in Herdr settings or through its theme picker, select Graphite there yourself; mIDE will not change that choice. You may remove the old app-home `themes/ayu-dark.json` yourself if nothing else uses it.
 
-Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. mIDE's own surfaces follow Herdr, while its accents and editor syntax stay Ayu without changing the host theme.
+Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. Ayu is limited to editor syntax and Git change coloring; other UI colors follow Herdr.
 
 Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
 
@@ -93,7 +93,7 @@ The typical loop: `make dev` in one terminal, edit in your editor — each save 
 
 Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
-Each mod keeps a self-contained `palette.js`; update those files together when changing the private Ayu palette. `themes/ayu-dark.json` is a reference and is not loaded by the mods at runtime.
+The self-contained mods keep Ayu syntax and Git colors in their respective `palette.js` files. When changing those colors, keep them in sync with `themes/ayu-dark.json`, which is a reference and is not loaded at runtime.
 
 ## Status
 

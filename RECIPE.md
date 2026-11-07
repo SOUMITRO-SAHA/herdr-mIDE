@@ -5,7 +5,7 @@ that shows file-type icons and colors each file by its git status, and a
 **Changes** panel with tracked and untracked groups, per-file staging, a
 detailed diff, a guided commit and an inline branch switcher. Clicking a file
 in Files opens it in an editor pane beside the terminal, with syntax
-highlighting, ⌘S save and private Ayu accents and syntax. Panel backgrounds
+highlighting and ⌘S save. Syntax and Git change colors use Ayu; other UI colors
 follow Herdr's theme, which is unchanged.
 
 ![herdr-mIDE](preview.png)
@@ -36,9 +36,9 @@ follow Herdr's theme, which is unchanged.
    theme's default file glyph for unknown types. The **whole
    file name is colored by git status**: golden yellow modified or conflicted,
    green added/untracked, red deleted, with a small bold status
-   letter (`M`, `A`, `D`, `U`) on the right. The bundled dark theme uses
-   One Dark's status colors (`#dec184`, `#a1c181`, `#d07277`). Normal and ignored names use
-   `file_muted` and `git_ignored` (falling back to `muted` and `dim`).
+   letter (`M`, `A`, `D`, `U`) on the right. Status colors come from the Ayu
+   palette. Normal and ignored names
+   use `file_muted` and `git_ignored` (falling back to `muted` and `dim`).
 - **The Changes panel** (`mide-changes`): **Changes** and **History** tabs;
   a `View Diff` summary with aggregate `+`/`−` counts and a Stage All /
   Unstage All split action; **Tracked** and **Untracked** groups with counts,
@@ -53,8 +53,8 @@ follow Herdr's theme, which is unchanged.
   `cmd-shift-e`): a 36px header with an `EDIT` mode chip, the file name, an
   orange `●` while unsaved and a **Save** button; the code with syntax
   highlighting (13px, the settings font); a 28px status bar with the full
-   path and an `⌘S save` hint. mIDE's surfaces use Herdr's sidebar and raised colors, while accents
-   and syntax use the private palettes adapted from `themes/ayu-dark.json`; the layout does
+   path and an `⌘S save` hint. mIDE's controls follow Herdr, while syntax and
+   Git colors use private tokens from `themes/ayu-dark.json`; the layout does
    not select a host theme. Native editor/input internals still use some host
    colors because Herdr does not expose per-widget overrides for them.
 
@@ -154,4 +154,4 @@ follow Herdr's theme, which is unchanged.
 - The branch chip lists branches; switching changes the chip and the tree's
   marks; New creates and switches; delete removes a merged branch.
 - Herdr retains its configured theme and terminal colors when the layout is
-  opened; mIDE backgrounds match Herdr's sidebar and its accents and syntax use Ayu.
+  opened; mIDE controls follow Herdr while editor syntax and Git changes use Ayu.

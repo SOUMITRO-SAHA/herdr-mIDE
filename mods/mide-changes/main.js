@@ -5,7 +5,7 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
-import { mideColors } from "./palette.js";
+import { gitColors } from "./palette.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -371,7 +371,7 @@ export default class MideChanges extends View {
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const host = theme(), t = mideColors(host), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;
