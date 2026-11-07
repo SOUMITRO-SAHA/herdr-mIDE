@@ -31,7 +31,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, ⌘S save, unsaved indicator.
-- The layout selects the bundled Ayu Dark theme; editor syntax uses its `syntax_*` tokens and follows later Herdr theme changes.
+- mIDE panels and editor syntax use a private Ayu Dark palette; Herdr and its terminals keep their existing theme (for example, Graphite).
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
@@ -45,7 +45,11 @@ cd herdr-mIDE
 herdr-app do layout.switch --name herdr-mide
 ```
 
-The installer copies the mods, layout and theme into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+The installer copies the mods and layout into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. It does not install or switch a Herdr or CLI theme. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+
+Upgrading from a version that installed `ayu-dark.json` or selected it in the layout? `make sync` updates the installed mIDE mods and layout, but leaves existing theme files and settings untouched. The no-clobber installer does not update an existing installation. If Ayu was separately selected in Herdr settings or through its theme picker, select Graphite there yourself; mIDE will not change that choice. You may remove the old app-home `themes/ayu-dark.json` yourself if nothing else uses it.
+
+Herdr's native editor and input controls still resolve some internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. mIDE's own surfaces and editor syntax stay Ayu without changing the host theme.
 
 Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
 
@@ -58,8 +62,8 @@ layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff tab · split/unified · hunk navigation
-mods/mide-editor/         editor pane · save · theme-driven syntax colors
-themes/ayu-dark.json      Ayu Dark theme and syntax palette (MIT)
+mods/mide-editor/         editor pane · save · private Ayu syntax colors
+themes/ayu-dark.json      source palette for mIDE only (MIT; not installed as a host theme)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
 Makefile                  the entry point: dev · sync · assets · check · install · status · shot · switch
@@ -79,6 +83,7 @@ Every command lives in the root `Makefile`:
 make dev        # live loop: sync on every save, Herdr hot-reloads in place
 make sync       # one-shot copy into ~/.config/herdr-app
 make check      # herdr-app check every mod (the runtime's own parser)
+make palette    # regenerate each mod's private palette after editing Ayu
 make install    # first-time install (never overwrites; prints keys to merge)
 make status     # window state + errors from files and mods
 make shot       # screenshot of the window → herdr-shot.png
@@ -88,6 +93,8 @@ make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
 Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
+
+After editing `themes/ayu-dark.json`, run `make palette` to regenerate the self-contained `palette.js` in each mod; `make check` detects stale copies. `make dev` syncs these generated files when they change.
 
 ## Status
 

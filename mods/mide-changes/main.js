@@ -4,7 +4,8 @@
 // Clicking a file opens its diff in the dedicated mIDE Diff tab.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, setShared, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, setShared, run } from "herdr";
+import { mideTheme } from "./palette.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -370,7 +371,7 @@ export default class MideChanges extends View {
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const t = theme(), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
+    const t = mideTheme, tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;

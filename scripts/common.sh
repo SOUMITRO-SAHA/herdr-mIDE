@@ -13,14 +13,11 @@ EXCLUDES="--exclude=.DS_Store --exclude=jsconfig.json --exclude=gpui-kit.d.ts"
 # Everything that installs into the app home.
 MODS="mide-files mide-changes mide-diff mide-editor"
 
-# Copy mods, layout and project themes into the app home (overwrites installed
-# copies; preserve unrelated themes; install.sh is the no-clobber installer).
+# Copy only mIDE's mods and layout; never touch the host's theme registry.
 sync_targets() {
-  mkdir -p "$HERDR_APP_HOME/mods" "$HERDR_APP_HOME/layouts" "$HERDR_APP_HOME/themes"
+  mkdir -p "$HERDR_APP_HOME/mods" "$HERDR_APP_HOME/layouts"
   for mod in $MODS; do
     rsync -a --delete $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/"
   done
   rsync -a "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json"
-  rsync -a --exclude=.DS_Store "$REPO_DIR/themes/" "$HERDR_APP_HOME/themes/"
-  rm -f "$HERDR_APP_HOME/themes/mide-night.json"
 }

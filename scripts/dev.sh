@@ -27,7 +27,6 @@ while :; do
       rsync -a --delete --itemize-changes $EXCLUDES "$REPO_DIR/mods/$mod/" "$HERDR_APP_HOME/mods/$mod/" || true
     done
     rsync -a --itemize-changes "$REPO_DIR/layouts/herdr-mide.json" "$HERDR_APP_HOME/layouts/herdr-mide.json" || true
-    rsync -a --itemize-changes --exclude=.DS_Store "$REPO_DIR/themes/" "$HERDR_APP_HOME/themes/" || true
   )"
   if [ -n "$changed" ]; then
     echo ""

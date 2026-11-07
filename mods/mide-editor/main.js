@@ -1,34 +1,28 @@
 // mIDE Editor — the minimal editor pane. Opens a file (props: { file }),
 // edits it with syntax highlighting, saves with cmd-s (mide-editor.save)
-// and follows Herdr's active theme.
+// and uses mIDE's private Ayu palette.
 //
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
 // cursor or selection API, so modal editing arrives as a custom editor core
 // (ROADMAP Phase 1). The mode chip and key plumbing below are its landing pad.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
-import { props, theme, themes, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
+import { props, settings, readTextFile, writeTextFile, nextCommand } from "herdr";
+import { mideTheme } from "./palette.js";
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", jsonc: "json", md: "markdown", markdown: "markdown", mdown: "markdown", mkd: "markdown", svelte: "html", vue: "html", yaml: "toml" };
 const MAX = 400000;
-// Syntax colors come from the active theme's syntax_* tokens. Any token the
-// active theme leaves unset falls back to our shipped ayu-dark theme, read
-// through themes() at runtime — themes/ayu-dark.json is the single source of
-// truth; no palette copy lives here. Tokens still missing (theme not
-// installed) are omitted, so the host's own defaults apply. Why that theme's
+// Syntax colors come only from our private Ayu palette. Why that theme's
 // variable token is the function orange: the host highlighter folds every
 // variable.* scope (call names, objects, params, this) into one "variable"
 // bucket and leaves properties unstyled, and call names dominate that bucket
 // in this repo's fluent style.
 const SYNTAX_KEYS = ["keyword", "string", "comment", "function", "type", "number", "constant", "boolean", "variable", "operator", "punctuation", "heading", "markup.raw", "markup.bold", "markup.italic", "link_uri"];
-const FALLBACK_THEME = "ayu-dark";
-const syntaxFallback = () => themes().find((th) => th.name === FALLBACK_THEME)?.colors ?? {};
 const syntaxFor = (t) => {
-  let fallback; // resolved lazily — skipped when the theme defines every token.
   const map = {};
   for (const key of SYNTAX_KEYS) {
     const token = `syntax_${key.replaceAll(".", "_")}`;
-    const color = t[token] ?? (fallback === undefined ? (fallback = syntaxFallback()) : fallback)[token];
+    const color = t[token];
     if (color) map[key] = color;
   }
   return map;
@@ -62,14 +56,14 @@ export default class MideEditor extends View {
   }
 
   syncTheme(cx, t) {
-    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family, theme())) return;
+    if (!this.code || this.retheming || this.codeStyle === codeStyle(settings().font_family, t)) return;
     const old = this.code, file = this.file;
     this.retheming = true;
     cx.spawn(async cx => {
       try {
         if (this.code !== old || this.file !== file) return;
         const value = old.value(), dirty = this.dirty;
-        const next = this.createCode(value, file, theme());
+        const next = this.createCode(value, file, mideTheme);
         if (this.code !== old || this.file !== file) { next.code.release(); return; }
         this.code = next.code; this.codeStyle = next.style; this.dirty = dirty;
         old.release();
@@ -91,7 +85,7 @@ export default class MideEditor extends View {
         // Baseline = what's on disk right now; save() passes it as the write's
         // expected snapshot, so external edits between load and save are caught.
         this.baseline = text; this.truncated = text.length > MAX;
-        const next = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file, theme());
+        const next = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file, mideTheme);
         this.code = next.code; this.codeStyle = next.style;
       } catch { if (this.file === file) this.error = "Cannot open this file (binary, too large, or unreadable)"; }
       finally { cx.notify(); }
@@ -120,7 +114,7 @@ export default class MideEditor extends View {
   }
 
   render(cx) {
-    const t = theme(), name = this.file?.split(/[\\/]/).pop();
+    const t = mideTheme, name = this.file?.split(/[\\/]/).pop();
     this.syncTheme(cx, t);
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- The editor no longer keeps a second copy of the syntax palette in code: tokens the active theme leaves unset now fall back to the shipped ayu-dark theme, read at runtime through the host's theme registry — `themes/ayu-dark.json` is the single source of truth for code colors.
+- mIDE's panels and editor syntax use a private Ayu palette generated from `themes/ayu-dark.json`; switching the mIDE layout no longer changes Herdr's theme or terminal colors. Existing host and CLI settings and theme files are left untouched. Some native editor/input colors still follow the host theme because the mod API does not expose per-widget overrides.
 - The project is now licensed under Apache-2.0 (was MIT), matching the Herdr app it extends.
 - Generic UI glyphs — the tree chevrons — are now sourced from Herdr's own shipped mods (Apache-2.0, credited in THIRD-PARTY-NOTICES.md); the previous external glyph source is retired from the notices. File-type and folder icons remain Material Icon Theme (MIT), the only source for those.
 - The Changes panel now follows the reference Git-panel layout: Changes/History tabs, tracked/untracked groups with tri-state staging checkboxes, a Stage All/Unstage All split action, and a repository/branch footer. Commit defaults to staged changes, or tracked changes when nothing is staged.
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - File names render calm: muted against the foreground instead of full-bright, and git-ignored paths (dependencies, build output, local secrets) go one step deeper so they stop shouting; changed names keep their orange/red/green.
 
 ### Added
-- **Ayu Dark is now the mIDE layout theme**: the MIT-licensed Ayu palette covers the app, Git panels, terminal and editor. Code rendering follows the active theme's `syntax_*` tokens, with Ayu Dark defaults for missing tokens; the bundled theme defines the full syntax set, including markdown headings, inline code, bold and links.
+- **Ayu Dark for mIDE**: the MIT-licensed palette covers mIDE-drawn panels and editor syntax, including markdown headings, inline code, bold and links, without changing Herdr's theme.
 - **A dedicated Git Diff tab.** Clicking a file in Changes opens `Diff · <file>` instead of squeezing the diff into the panel: file header with status and +/− stats, old/new line-number gutters, tinted additions and deletions, dim `···` excerpt bands, side-by-side Split view (default) with a Unified toggle, hunk navigation (`⌘F8` / `⇧⌘F8`), and staged/unstaged sides in one tab. Untracked files render as a full-file addition. The Changes panel keeps staging, Stage All, Fetch, branches and the commit composer, and now uses its full height for the file list.
 - Folders in the tree now switch between closed and open glyphs on expand/collapse (both glyphs follow the tree tint).
 - Root `Makefile` as the one entry point: `make dev` (live sync into the app home with Herdr hot-reloading every landed file), `make sync`, `make check`, `make install`, `make status`, `make shot` and `make switch`.
