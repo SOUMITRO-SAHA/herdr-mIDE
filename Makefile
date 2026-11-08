@@ -41,6 +41,7 @@ sync:
 test:
 	@sh ./scripts/test-shared-modules.sh
 	@node ./scripts/test-syntax-config.mjs
+	@node ./scripts/test-changes-stage-review.mjs
 	@node ./scripts/test-file-icons.mjs
 
 check: test

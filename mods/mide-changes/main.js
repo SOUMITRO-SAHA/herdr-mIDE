@@ -6,6 +6,7 @@ import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
 import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
 import { gitColors } from "./palette.js";
+import { toggleStage } from "./stage-action.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -411,14 +412,15 @@ export default class MideChanges extends View {
     const parts = f.path.split("/"), name = parts.pop(), directory = parts.join("/");
     const selected = this.open === f.path;
     const color = gitStatusColor(f.status, t);
-    return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.openDiff(f, cx))
-      .child(div().w(10).text_size(typography.text(10)).font_semibold().text_color(color).child(f.status))
-      .child(h_flex().flex_1().min_w(0).overflow_hidden()
-        .child(div().max_w(200).min_w(0).flex_none().truncate().child(name + (directory ? " " : "")))
-        .when(Boolean(directory), (e) => e.child(div().flex_1().min_w(0).text_color(t.dim).text_ellipsis_start().child(directory))))
-      .when(f.add > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`)))
+    return h_flex().id(`change-${f.path}`).h(28).flex_none().px(8).gap(8).items_center().rounded(7).when(selected, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover))
+      .child(h_flex().id(`change-content-${f.path}`).flex_1().min_w(0).h_full().gap(8).items_center().cursor_pointer().on_click((_e, cx) => this.openDiff(f, cx))
+        .child(div().w(10).text_size(typography.text(10)).font_semibold().text_color(color).child(f.status))
+        .child(h_flex().flex_1().min_w(0).overflow_hidden()
+          .child(div().max_w(200).min_w(0).flex_none().truncate().child(name + (directory ? " " : "")))
+          .when(Boolean(directory), (e) => e.child(div().flex_1().min_w(0).text_color(t.dim).text_ellipsis_start().child(directory))))
+        .when(f.add > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_added ?? t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(typography.text(11)).text_color(t.git_deleted ?? t.ansi1).child(`−${f.del}`))))
       .child(this.stageCheckbox(`stage-${f.path}`, `${f.staged ? "Unstage" : "Stage"} ${f.path}`, f.staged && !f.unstaged, f.staged && f.unstaged, t, typography,
-        (checked, cx) => checked ? this.stage(f, cx) : this.unstage(f, cx)));
+        (checked, cx) => toggleStage(f, checked, cx, this)));
   }
 
   group(label, files, t, typography) {
