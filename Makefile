@@ -39,10 +39,11 @@ sync:
 	@./scripts/sync.sh
 
 test:
-	@sh ./scripts/test-shared-modules.sh
-	@node ./scripts/test-syntax-config.mjs
-	@node ./scripts/test-changes-stage-review.mjs
-	@node ./scripts/test-file-icons.mjs
+	@sh ./tests/test-shared-modules.sh
+	@node ./tests/test-syntax-config.mjs
+	@node ./tests/test-changes-stage-review.mjs
+	@node ./tests/test-changes-tracking.mjs
+	@node ./tests/test-file-icons.mjs
 
 check: test
 	@MODS="$(MODS)" sh ./scripts/check.sh

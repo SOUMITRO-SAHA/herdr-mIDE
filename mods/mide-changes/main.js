@@ -7,6 +7,7 @@ import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, S
 import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
 import { gitColors } from "./palette.js";
 import { toggleStage } from "./stage-action.js";
+import { groupChanges } from "./change-groups.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -88,7 +89,8 @@ export default class MideChanges extends View {
   }
 
   refresh(cx) {
-    if (this.loading || this.busy) return;
+    if (this.loading || this.busy) { this.refreshPending = true; return; }
+    this.refreshPending = false;
     const loc = location(this.location), { cwd, on } = loc, context = key(loc);
     this.location = loc;
     if (context !== this.context) {
@@ -141,13 +143,14 @@ export default class MideChanges extends View {
           const xy = entry.slice(0, 2), path = entry.slice(3);
           const conflict = xy.includes("U") || xy === "AA" || xy === "DD";
           const fresh = xy === "??";
+          const created = fresh || xy.includes("A");
           const staged = !fresh && xy[0] !== " ";
           const unstaged = fresh || xy[1] !== " ";
           const indexStat = stats.index[path] ?? { add: 0, del: 0 };
           const workStat = stats.work[path] ?? { add: 0, del: 0 };
           const statusCode = conflict ? "U" : fresh || xy.includes("A") ? "A" : xy.includes("D") ? "D" : "M";
           files.push({
-            path, conflict, fresh, staged, unstaged, status: statusCode,
+            path, conflict, fresh, created, staged, unstaged, status: statusCode,
             add: indexStat.add + workStat.add, del: indexStat.del + workStat.del,
           });
         }
@@ -159,7 +162,11 @@ export default class MideChanges extends View {
         if (this.open && !files.some((file) => file.path === this.open)) this.open = null;
         this.watch(root, cx);
       } catch (e) { if (this.currentKey() === context) this.error = String(e); }
-      finally { this.loading = false; cx.notify(); }
+      finally {
+        this.loading = false;
+        if (this.refreshPending && !this.busy) this.refresh(cx);
+        cx.notify();
+      }
     });
   }
 
@@ -469,7 +476,7 @@ export default class MideChanges extends View {
 
   render(cx) {
     if (this.currentKey() !== this.context) this.refresh(cx);
-    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, typography = typographySettings(), tracked = this.files.filter((f) => !f.fresh), untracked = this.files.filter((f) => f.fresh);
+    const host = theme(), t = { ...host, ...gitColors, background: host.chrome }, typography = typographySettings(), { tracked, untracked } = groupChanges(this.files);
     const add = this.files.reduce((n, f) => n + f.add, 0), del = this.files.reduce((n, f) => n + f.del, 0);
     const fileCount = this.files.length;
     const hasTrackedChanges = tracked.length > 0;

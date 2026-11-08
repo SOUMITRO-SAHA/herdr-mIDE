@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is adapted from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
+- Changes keeps newly added files in the Untracked section when staged or unstaged, and refreshes their status after overlapping Git operations.
 - Staging or unstaging an individual file no longer opens a Diff pane from the checkbox; clicking the file row remains the explicit review action.
 - The commit message box uses Herdr's regular background for a subtler contrast against the Changes panel than the raised surface.
 - Files panel labels now use regular weight and the host theme's muted and ignored colors; ignored folders themselves are correctly dimmed, and mixed Git statuses use the reference IDE's conflict/deletion/modification/addition precedence.
