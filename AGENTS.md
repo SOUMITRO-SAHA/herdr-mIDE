@@ -15,6 +15,20 @@ Instructions for AI coding agents working in this repo.
 - Running the installed `herdr-app check` command to validate mIDE mods is
   allowed; building or modifying the Herdr app is not.
 
+## Third-party software — everything credited
+
+- **Any third-party program, software, or service used in this project
+  must be properly mentioned in
+  [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) before commit** —
+  source project and link, license, copyright holder, exactly what was
+  adopted or used, and any modifications noted. Notices list only what
+  is actually shipped.
+- The rule covers it all: libraries, tools, icons, themes, palettes,
+  fonts, color values, snippets, and generated outputs derived from
+  someone else's work. Merely studying a project for patterns needs no
+  notice; anything copied or derived does. When unsure, credit it or
+  stop and ask.
+
 ## Icons — two sources, nothing else
 
 **For any icon work, use our `material-icons-theme` skill first**
