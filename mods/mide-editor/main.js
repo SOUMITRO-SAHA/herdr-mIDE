@@ -28,7 +28,7 @@ const editorTypography = () => {
 export default class MideEditor extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
-    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.note = null; this.drafts = new Map(); this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true; this.editorMode = this.markdownPreviewDefault ? "preview" : "raw"; this.settingsOpen = false; this.wordWrap = shared(WORD_WRAP_SETTING) === true;
+    this.code = null; this.file = null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.saving = false; this.saved = false; this.saveSequence = 0; this.note = null; this.drafts = new Map(); this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true; this.editorMode = this.markdownPreviewDefault ? "preview" : "raw"; this.settingsOpen = false; this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
@@ -46,7 +46,7 @@ export default class MideEditor extends View {
       soft_wrap: this.wordWrap, syntax: syntaxPalette() });
     code.on("change", (_e, cx) => {
       if (this.code !== code) return;
-      this.dirty = true; cx.notify();
+      this.dirty = true; this.saved = false; cx.notify();
     });
     return code;
   }
@@ -56,7 +56,7 @@ export default class MideEditor extends View {
     this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true;
     this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
-    this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null;
+    this.file = file ?? null; this.baseline = null; this.truncated = false; this.dirty = false; this.error = null; this.note = null; this.saved = false;
     if (!file) return;
     const draft = this.drafts.get(file);
     if (draft) {
@@ -91,14 +91,31 @@ export default class MideEditor extends View {
   save(cx) {
     if (!this.code || !this.file || this.saving) return;
     if (this.truncated) { this.note = "Too large to save here (>400 KB) — editing would drop the rest of the file"; cx.notify(); return; }
-    this.saving = true; this.note = null;
+    this.saving = true; this.note = null; this.saved = false;
+    const sequence = this.saveSequence = (this.saveSequence ?? 0) + 1;
     const file = this.file, value = this.code.value(), expected = this.baseline;
     cx.spawn(async cx => {
       try {
         // The host only writes when the disk still matches the snapshot we
         // loaded; on success our draft becomes the new baseline.
         await writeTextFile(file, value, expected);
-        if (this.file === file) { this.dirty = false; this.baseline = value; this.drafts.delete(file); }
+        if (this.file === file) {
+          this.baseline = value;
+          this.dirty = !this.code || this.code.value() !== value;
+          this.drafts.delete(file);
+          if (!this.dirty) {
+            this.saved = sequence;
+            cx.timer.after(1500, cx => {
+              if (this.saved === sequence) { this.saved = false; cx.notify(); }
+            });
+          }
+        } else {
+          const draft = this.drafts.get(file);
+          if (draft) {
+            if (draft.value === value) this.drafts.delete(file);
+            else draft.baseline = value;
+          }
+        }
       } catch (e) { if (this.file === file) this.note = `Save failed: ${e}`; }
       finally { this.saving = false; cx.notify(); }
     });
@@ -175,7 +192,7 @@ export default class MideEditor extends View {
     return v_flex().id("mide-editor").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).font_family(typography.uiFont).text_size(typography.uiSize).track_focus(this.handle)
       .child(h_flex().h(36).flex_none().px(12).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(name ?? "No file"))
-        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(typography.text(11)).text_color(t.blocked).child("●")))
+        .when(this.dirty, el => el.child(div().id("mide-editor-dirty").text_size(typography.text(11)).text_color(t.accent).child("●")))
         .when(markdown, el => el.child(h_flex().h(24).flex_none().p(2).gap(2).rounded(6).bg(t.raised)
           .child(this.markdownTab("raw", "Raw", t, typography))
           .child(this.markdownTab("preview", "Preview", t, typography))))
@@ -213,6 +230,10 @@ export default class MideEditor extends View {
       ))
       .child(h_flex().h(28).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(11)).text_color(t.dim)
         .child(div().flex_1().min_w(0).truncate().child(this.file ?? ""))
-        .child(div().child("⌘S save")));
+        .when(this.code && this.file, el => el.child(div().id("mide-editor-save-status").flex_none()
+          .child(this.saving ? "Saving…" : this.saved ? "Saved" : "⌘S save")))
+        .when(this.code && this.file, el => el.child(div().id("mide-editor-save").flex_none().cursor_pointer()
+          .accessibility_label("Save file").text_color(t.foreground).child("Save")
+          .on_click((_e, cx) => this.save(cx)))));
   }
 }

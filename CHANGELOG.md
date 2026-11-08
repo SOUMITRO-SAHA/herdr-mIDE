@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mIDE panel UI typography now follows Herdr's active interface font and size; editor and diff content follows its active terminal font and size.
 - The editor Settings menu now includes persistent Word wrap and a Markdown Preview-by-default option, off by default so Markdown files open in Raw mode.
 - Markdown Preview uses Herdr's active interface font family and editor font size, with more generous line spacing and a centered reading column; the renderer retains its built-in heading and inline emphasis hierarchy.
-- The editor header now shows just the file name and unsaved indicator; saving stays on ⌘S without the EDIT or Save controls.
+- The editor header now shows just the file name and unsaved indicator; saving is available in the footer or via the optional ⌘S binding.
 - Removed the palette, theme-test and icon-generation scripts; the existing mod palettes, icons and associations remain bundled and can be maintained directly.
 - Editor syntax and Git status/diff colors use Ayu Dark — syntax colors are owned once in `shared/syntax.js` and shared by the editor and Diff; mIDE controls, focus colors and panel backgrounds follow Herdr's active theme. Switching the layout leaves host and CLI theme settings untouched.
 - The project is now licensed under Apache-2.0 (was MIT), matching the Herdr app it extends.
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The commit message box uses Herdr's regular background for a subtler contrast against the Changes panel than the raised surface.
 - Files panel labels now use regular weight and the host theme's muted and ignored colors; ignored folders themselves are correctly dimmed, and mixed Git statuses use the reference IDE's conflict/deletion/modification/addition precedence.
 - Git status colors use Ayu's modified, deleted and added colors consistently across Files, Changes and Diff.
-- Editor: saving always failed with "The file changed outside Herdr" — the mod never passed the snapshot the write API requires, so every save of an existing file was refused. Saves now carry the loaded baseline (external edits between load and save are still caught, with a `Reload (discard draft)` action on the failure note), oversized files refuse to save instead of silently truncating, and the ⌘S/`mide-editor.save` command actually fires now (the command arrived as a plain string and never matched).
+- Editor: a visible Save button writes files even when the optional ⌘S key binding has not been installed. The unsaved dot uses the app accent, and the footer briefly confirms a successful save before showing the shortcut again. Edits made during a save remain marked unsaved, and drafts retain the correct disk baseline when switching files. Saves carry the loaded baseline so external edits are caught, with a `Reload (discard draft)` action on failure; oversized files refuse to save instead of silently truncating. The `mide-editor.save` command handles both plain strings and named command objects.
 - Files panel: macOS `.DS_Store` files no longer appear in the tree (filtered in both the `sh` and PowerShell listings; other dotfiles still show).
 - Files panel: a file's *name prefix* no longer outranks its *type* in icon matching — `Dockerfile.rs` used to show the Docker glyph; the Rust type now wins, while `Dockerfile.prod` still reads as a Dockerfile.
 

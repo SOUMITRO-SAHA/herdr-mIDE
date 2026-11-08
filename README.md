@@ -30,7 +30,7 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 ### ⌨️ Editor — a minimal editor pane
 
-- Syntax highlighting, ⌘S save, unsaved indicator.
+- Syntax highlighting, a Save button, optional ⌘S shortcut, and an unsaved indicator.
 - Editor syntax, Git status colors and diff additions/deletions use Ayu Dark. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
@@ -46,6 +46,8 @@ herdr-app do layout.switch --name herdr-mide
 ```
 
 The installer copies the mods and layout into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. It does not install or switch a Herdr or CLI theme. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+
+Use **Save** in the editor to write changes to disk. The footer briefly shows **Saved** after the current contents are written, and the unsaved dot disappears. To also use ⌘S, merge the printed `mod:mide-editor` binding into your Herdr `keys.json`; the installer does not change your existing keys.
 
 Upgrading from a version that installed `ayu-dark.json` or selected it in the layout? `make sync` updates the installed mIDE mods and layout, but leaves existing theme files and settings untouched. The no-clobber installer does not update an existing installation. If Ayu was separately selected in Herdr settings or through its theme picker, select Graphite there yourself; mIDE will not change that choice. You may remove the old app-home `themes/ayu-dark.json` yourself if nothing else uses it.
 

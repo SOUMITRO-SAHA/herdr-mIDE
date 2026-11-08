@@ -44,6 +44,7 @@ test:
 	@node ./tests/test-changes-stage-review.mjs
 	@node ./tests/test-changes-tracking.mjs
 	@node ./tests/test-file-icons.mjs
+	@node ./tests/test-editor-save.mjs
 
 check: test
 	@MODS="$(MODS)" sh ./scripts/check.sh

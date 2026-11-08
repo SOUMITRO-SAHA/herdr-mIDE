@@ -90,7 +90,7 @@ follow Herdr's theme, which is unchanged.
   changes view.
 - **The editor** loads `props().file`, marks dirty on any edit, uses Ayu syntax
   colors independently of Herdr's theme, and saves with
-  `mide-editor.save` (bound to `cmd-s` in
+  its Save button or `mide-editor.save` (bound to `cmd-s` after manually merging
   `keys.json`'s `mod:mide-editor` section) and shows `Save failed: …` on
   error.
 
