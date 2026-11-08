@@ -19,7 +19,7 @@ INTERVAL ?= 1
 MODS ?= mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
-.PHONY: help dev sync test check install status shot switch
+.PHONY: help dev sync test check install status shot switch bundle
 
 help:
 	@echo "herdr-mIDE commands:"
@@ -31,6 +31,7 @@ help:
 	@echo "  make status   window state + mod errors"
 	@echo "  make shot     window screenshot → herdr-shot.png"
 	@echo "  make switch   show the herdr-mide layout"
+	@echo "  make bundle   create a self-contained layout bundle in dist/herdr-mide"
 
 dev:
 	@INTERVAL="$(INTERVAL)" ./scripts/dev.sh
@@ -45,6 +46,8 @@ test:
 	@node ./tests/test-changes-tracking.mjs
 	@node ./tests/test-file-icons.mjs
 	@node ./tests/test-editor-save.mjs
+	@sh ./tests/test-bundle.sh
+	@sh ./tests/test-install.sh
 
 check: test
 	@MODS="$(MODS)" sh ./scripts/check.sh
@@ -60,3 +63,6 @@ shot:
 
 switch:
 	@herdr-app do layout.switch --name herdr-mide
+
+bundle:
+	@sh ./scripts/bundle.sh "$(if $(BUNDLE_DIR),$(BUNDLE_DIR),dist/herdr-mide)"

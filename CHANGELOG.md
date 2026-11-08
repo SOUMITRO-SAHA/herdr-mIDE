@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- A single version for the layout and four cooperating mods, and a reproducible self-contained bundle for release and gallery preparation.
+- A release checklist covering a privacy-reviewed preview, compatibility testing and Herdr Gallery discovery.
+
 ### Changed
+- The rebuild recipe now documents the complete layout bundle, current Git actions, dependencies and limitations.
 - Opening files from the Files panel now reuses the editor pane; the first editor opens below an existing Diff pane, or to the right of the matching terminal, and modified drafts remain available when switching files.
 - mIDE panel UI typography now follows Herdr's active interface font and size; editor and diff content follows its active terminal font and size.
 - The editor Settings menu now includes persistent Word wrap and a Markdown Preview-by-default option, off by default so Markdown files open in Raw mode.
@@ -22,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is adapted from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
+- The no-clobber installer no longer changes or checks a pre-existing mod folder, and reports a failed mod check instead of claiming success.
+- Changes disables optional Git locks and filesystem monitoring for its repository lookup as well as its other refresh reads.
 - Changes keeps newly added files in the Untracked section when staged or unstaged, and refreshes their status after overlapping Git operations.
 - Staging or unstaging an individual file no longer opens a Diff pane from the checkbox; clicking the file row remains the explicit review action.
 - The commit message box uses Herdr's regular background for a subtler contrast against the Changes panel than the raised surface.

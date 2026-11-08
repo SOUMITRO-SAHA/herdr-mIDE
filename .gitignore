@@ -4,3 +4,4 @@ herdr-shot.png
 node_modules/
 mods/*/gpui-kit.d.ts
 mods/*/jsconfig.json
+dist/

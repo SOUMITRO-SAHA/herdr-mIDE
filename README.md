@@ -1,6 +1,3 @@
-> [!IMPORTANT]
-> Remove this line to confirm you've reviewed this PR before submitting.
-
 # herdr-mIDE
 
 > The minimal IDE for [Herdr](https://herdr.dev) — built for the age of AI-assisted coding.
@@ -9,14 +6,15 @@
 
 Most of the coding work today is done by AI agents. What's left for us is the *last mile*: review what the agent changed, make small surgical edits, stage the right files, and ship. Existing IDEs are built for a world where you write all the code. **herdr-mIDE is built for the world where you don't.**
 
-![herdr-mIDE](preview.png)
+> A public preview is pending; the release bundle is blocked until a reviewed
+> screenshot is available.
 
 ## What's inside
 
 ### 📁 Files — a file manager that tells you everything at a glance
 
 - **File-type icons** — a curated Material Icon Theme set (MIT): full-color icons for common file types, plus open/closed folder states in the tree; unknown files fall back to the theme's plain file icon.
-- **Git status baked into the tree** — the whole file name is colored: 🟠 modified, 🟢 new/untracked, 🔴 deleted or conflicted, plus a bold status letter.
+- **Git status baked into the tree** — the whole file name is colored: 🟡 modified or conflicted, 🟢 new/untracked, 🔴 deleted, plus a bold status letter.
 - Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
 
@@ -31,12 +29,17 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, a Save button, optional ⌘S shortcut, and an unsaved indicator.
-- Editor syntax, Git status colors and diff additions/deletions use Ayu Dark. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
+- Editor syntax uses Ayu Dark; Git status colors use Zed One Dark values, and diff colors use the bundled palette. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
 
 ## Install
 
-You need the [Herdr app](https://herdr.dev) (0.1.13 or later) on macOS, Linux or Windows.
+The layout is based on [Herdr app](https://herdr.dev) 0.1.13. The full
+macOS, Linux and Windows compatibility matrix still needs release testing.
+The source installer below needs a POSIX shell; Git is needed for Git features.
+Mods run with your access: Files reads your workspace, Editor can write files,
+and Changes runs Git, including network operations when requested. Review the
+source and [Herdr's security guidance](https://github.com/herdrdev/herdr-app/blob/master/docs/security.md) before installing.
 
 ```sh
 git clone https://github.com/SOUMITRO-SAHA/herdr-mIDE
@@ -45,15 +48,20 @@ cd herdr-mIDE
 herdr-app do layout.switch --name herdr-mide
 ```
 
-The installer copies the mods and layout into `~/.config/herdr-app` (never overwriting), prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on every mod. It does not install or switch a Herdr or CLI theme. `ctrl-shift-l` switches back to your old layout; deleting the files removes it.
+The installer copies the mods and layout into `~/.config/herdr-app` (or `HERDR_APP_HOME`), skipping existing names without modifying them, prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on newly installed mods. Skipped existing folders are not checked and may belong to another version: review conflicts before continuing. It does not install or switch a Herdr or CLI theme. `ctrl-shift-l` cycles layouts; deleting the installed files removes this bundle.
+
+If a copy or check fails, installation may be partial; inspect the reported
+files before retrying. A retry skips existing names rather than repairing them.
 
 Use **Save** in the editor to write changes to disk. The footer briefly shows **Saved** after the current contents are written, and the unsaved dot disappears. To also use ⌘S, merge the printed `mod:mide-editor` binding into your Herdr `keys.json`; the installer does not change your existing keys.
 
-Upgrading from a version that installed `ayu-dark.json` or selected it in the layout? `make sync` updates the installed mIDE mods and layout, but leaves existing theme files and settings untouched. The no-clobber installer does not update an existing installation. If Ayu was separately selected in Herdr settings or through its theme picker, select Graphite there yourself; mIDE will not change that choice. You may remove the old app-home `themes/ayu-dark.json` yourself if nothing else uses it.
+The no-clobber installer is not an upgrade tool. `make sync` is for development: it overwrites the installed mIDE layout and replaces mod-folder contents, including local edits, while leaving theme files and settings alone. Back up and review existing customizations before a manual upgrade.
 
-Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. Ayu is limited to editor syntax and Git change coloring; other UI colors follow Herdr.
+Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. Ayu applies to syntax, while Git colors use the bundled palette; other UI colors follow Herdr.
 
-Or ask your Herdr agent to add the layout at `github.com/SOUMITRO-SAHA/herdr-mIDE`.
+Do not copy the source `mods/` folders directly: Editor and Diff need generated
+shared files. Use the installer above or a complete, separately assembled
+release bundle. Gallery publication has not yet happened.
 
 ## How it works
 
@@ -68,14 +76,15 @@ mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 ⌘⇧E editor pane · ⌘S save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
-Makefile                  the entry point: dev · sync · check · install · status · shot · switch
+Makefile                  the entry point: dev · sync · test · check · install · status · shot · switch · bundle
+VERSION                   version of the complete layout + four-mod bundle
 scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
 ```
 
 All icons live in `mods/mide-files/icons/` — the single source of truth. File-type and folder icons come from Material Icon Theme (the only icon source).
 
-[RECIPE.md](./RECIPE.md) documents the build for humans and agents (it's the brief Herdr's ecosystem uses to install and rebuild packages). [ROADMAP.md](./ROADMAP.md) has the plan and the grounding study.
+[RECIPE.md](./RECIPE.md) documents the build for humans and agents (it's the brief Herdr's ecosystem uses to install and rebuild packages). [RELEASING.md](./RELEASING.md) explains versioning, bundle assembly and gallery publication; [ROADMAP.md](./ROADMAP.md) has the plan and the grounding study.
 
 ## Development
 
@@ -90,6 +99,7 @@ make install    # first-time install (never overwrites; prints keys to merge)
 make status     # window state + errors from files and mods
 make shot       # screenshot of the window → herdr-shot.png
 make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
+make bundle     # build a copyable layout bundle; needs a reviewed preview.png
 ```
 
 The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
@@ -100,8 +110,8 @@ Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot
 
 ## Status
 
-🚧 **v0 — foundation.** The panels and editor work today (all mods pass `herdr-app check`); vim mode, hunk-level staging and the agent-review flow are next. See the [roadmap](./ROADMAP.md).
+🚧 **v0.0.1 in preparation.** The bundle has not been released or submitted to the gallery. `herdr-app check` covers initial mod rendering, not the complete interaction or platform matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./ROADMAP.md).
 
 ## License
 
-[Apache-2.0](./LICENSE) © 2026 SOUMITRO-SAHA — with these third-party pieces, each under its own license (see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)): file and folder icons from Material Icon Theme (MIT), and code parts plus the chevron glyphs adapted from Herdr's shipped `files` and `changes` mods (Apache-2.0).
+[Apache-2.0](./LICENSE) © 2026 SOUMITRO-SAHA — with third-party icons, palettes and adapted code under their own licenses; see [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).

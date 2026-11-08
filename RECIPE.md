@@ -1,168 +1,125 @@
 # herdr-mIDE
 
-Herdr's window with a minimal IDE in the right-hand panel: a **Files** panel
-that shows file-type icons and colors each file by its git status, and a
-**Changes** panel with tracked and untracked groups, per-file staging, a
-detailed diff, a guided commit and an inline branch switcher. Clicking a file
-in Files opens it in an editor pane beside the terminal, with syntax
-highlighting and ⌘S save. Syntax and Git change colors use Ayu; other UI colors
-follow Herdr's theme, which is unchanged.
+Herdr's familiar window gains a Files tree, a Changes panel, a diff viewer
+and a small editor beside its terminals. Review an agent's changes, stage
+files, commit and make small edits without changing Herdr's theme.
 
 ![herdr-mIDE](preview.png)
 
 ## What you see
 
-- **Everything of Herdr's `main` layout** (sidebar, tab bar, panes, status
-  bar) with the panel stack holding two mIDE blocks: `files` (mod
-  `mide-files`) and `changes` (mod `mide-changes`), 440px wide by default
-  (300 to 900px), opened from the tab bar's Files and Changes buttons like
-  the shipped panels.
-- **The Files panel** (`mide-files`, 42px header "Files" + folder name,
-  26px rows): a lazy tree with chevrons and theme-tinted **solid folder
-  glyphs** — muted when clean, colored (glyph **and** title) by the most
-  severe change underneath (golden yellow modified, red deleted, green new),
-  propagating up every ancestor folder, swapping to an open glyph while
-  expanded — file and folder names in regular weight, muted when clean and
-  dimmer when git-ignored (dependencies, build output, local secrets),
-  taking their change color when modified via dedicated theme tokens
-   (`git_modified`/`git_added`/`git_deleted`/`git_conflict`) — and a full-color
-   **Material Icon Theme icon** for files (MIT, © Material Extensions;
-   credited in THIRD-PARTY-NOTICES.md). `icons.js`, adapted from the
-   theme's own associations, maps
-   338 suffixes and 297 whole names — filtered to the minimal keep
-   list (top-20 languages per TIOBE/Stack Overflow/PYPL, plus
-   universal files like git/yaml/json/docker/lock).
-   Match order: exact name, then longest dotted suffix, then the
-   theme's default file glyph for unknown types. The **whole
-   file name is colored by git status**: golden yellow modified or conflicted,
-   green added/untracked, red deleted, with a small bold status
-   letter (`M`, `A`, `D`, `U`) on the right. Status colors come from the Ayu
-   palette. Normal and ignored names
-   use `file_muted` and `git_ignored` (falling back to `muted` and `dim`).
-- **The Changes panel** (`mide-changes`): **Changes** and **History** tabs;
-  a `View Diff` summary with aggregate `+`/`−` counts and a Stage All /
-  Unstage All split action; **Tracked** and **Untracked** groups with counts,
-  per-file tri-state staging checkboxes, and group-level selection. The footer
-  keeps the repository and current branch (for example `main`) visible beside
-  Fetch and opens the branch switcher. The commit composer sits below it.
-- **The branch view** (inside `mide-changes`, replaces list + diff while
-  open): 28px branch rows (selected background on the current one,
-  "current" label, "delete" in red on hover for others), and a "branch
-  name" input with a **New** button that creates and switches.
-- **The editor pane** (`mide-editor`, opened by clicking a file in Files or
-  `cmd-shift-e`): file selections reuse the same pane, keeping modified drafts
-  available as you switch files; the first editor opens below an existing Diff
-  pane, or to the right of the matching terminal. It has a 36px header with the
-  file name and an orange `●` while
-  unsaved, a global Settings menu with persistent Word wrap and a default
-  Markdown Preview option (off by default, so files open in Raw), plus
-  Raw/Preview tabs; the code with Herdr's active terminal font and size;
-  Preview uses the active interface font family at the editor font size, with
-  generous leading and a centered reading column while retaining Markdown
-  heading and emphasis hierarchy; a 28px status
-  bar with the full path and an `⌘S save`
-  hint. Panel UI uses Herdr's active interface font and size, while editor and
-  diff text use its terminal font and size. mIDE's
-   controls follow Herdr, while the editor and Diff share the mIDE-owned
-   palette and tokenizer in `shared/syntax.js`; Git colors use mod-specific
-   tokens. The layout does
-   not select a host theme. Native editor/input internals still use some host
-   colors because Herdr does not expose per-widget overrides for them.
+- The main window keeps Herdr's spaces and agents sidebar (268px initially),
+  tab bar, terminal panes and status bar. The Files and Changes buttons show
+  a right panel, initially hidden, 440px wide and resizable from 300–900px.
+  Herdr's shipped agents view presents working, blocked, done and idle states.
+- Files has a 42px header and 26px tree rows. Folders expand to show their
+  contents; their glyphs and names reflect the most severe change underneath.
+  File-type icons are colored; changed names show a status letter. Ignored
+  names are dimmed. Git colors are green `#a1c181`, red `#d07277`, and
+  yellow `#dec184` for modified or conflicted entries.
+- Changes has a 36px Changes/History tab strip, a diff summary and stage
+  action, followed by Tracked and Untracked groups with tri-state checkboxes.
+  Its footer shows the repository, branch and remote action; the Changes tab
+  also has a commit message area. History lists recent commits.
+- The branch control opens a searchable popover with the current branch,
+  other local branches, delete actions and an option to create a branch.
+- Diff opens beside a terminal or editor with file headers, line numbers,
+  additions and deletions, and Split/Unified controls. Editor opens beside a
+  terminal or below Diff, with a 36px header, unsaved dot, optional Markdown
+  Raw/Preview tabs, Settings menu and 28px footer with Save.
+- Panel controls use Herdr's interface font and colors. Editor and diff text
+  use the terminal font; their syntax uses mIDE's Ayu palette. The layout does
+  not change the user's selected theme.
 
 ## How it behaves
 
-- **Files** expands a folder on click (lazy, one `sh`/PowerShell listing per
-  folder, 500 entries per folder / 5,000 total, `.git` and `.DS_Store`
-  hidden); clicking a file opens it in the tab's single editor pane, beside
-  the terminal. Git marks refresh with the folder watch and every
-  10s; modified/added/deleted coloring follows `git status
-  --porcelain=v1` per path.
-- **Changes** refreshes on the repo's folder watch and every 10s. Clicking a
-  row opens its diff in the dedicated Diff tab. The row checkbox stages or
-  unstages the file; its indeterminate state marks a partially staged file.
-  The top split action runs `git add -A` or `git reset`; group checkboxes stage
-  or unstage only that group. Commit defaults to staged files, or to tracked
-  changes (excluding untracked files) when nothing is staged; the menu exposes
-  both scopes. Enter in the message input commits.
-- **The branch chip** opens the branch view: clicking a branch runs `git
-  switch`, **New** runs `git switch -c`, "delete" runs `git branch -d`;
-  every action refreshes the panel; Escape (or the chip) returns to the
-  changes view.
-- **The editor** loads `props().file`, marks dirty on any edit, uses Ayu syntax
-  colors independently of Herdr's theme, and saves with
-  its Save button or `mide-editor.save` (bound to `cmd-s` after manually merging
-  `keys.json`'s `mod:mide-editor` section) and shows `Save failed: …` on
-  error.
+- Click folders to expand them and files to open or reuse the current tab's
+  editor. Unsaved drafts stay available while switching files in that editor.
+  File and Git information refresh on local folder changes and every 10 seconds.
+- In Changes, clicking a file opens its diff; its checkbox stages or unstages
+  it without opening Diff. Group checkboxes and Stage All/Unstage All act on
+  their respective files. History displays up to 100 recent commits.
+- Enter a commit message and submit it. The default commits staged changes;
+  if nothing is staged, it stages tracked changes and commits them, excluding
+  untracked files. The footer offers Fetch, Pull and Push; its primary action
+  follows the upstream ahead/behind state. The branch popover switches,
+  creates or deletes local branches.
+- Diff shows tracked changes against HEAD and untracked files as additions.
+  It refreshes, supports Split and Unified views, and uses Unified when the
+  view is too narrow for Split.
+- Editor's Save button writes the current file; the optional `cmd-s` binding
+  does the same. An external edit causes a save error instead of an overwrite;
+  Reload discards the draft. Word wrap and the Markdown Preview default are
+  persistent settings, with Markdown opening in Raw by default.
 
 ## Built from
 
-- **Layout** `layouts/herdr-mide.json`: a clone of Herdr 0.1.13's `main`
-  (`cloned_from: {name: "main", version: "0.1.13"}`); only the `panel-body`
-  stack's two blocks point at `mide-files` and `mide-changes`, the panel is
-  440px, and the shipped `tabs` mod is kept — its Files and Changes buttons
-  already toggle the `files` and `changes` block ids.
-- **`mods/mide-files`**: `main.js` (tree, marks, icons, open-in-editor),
-  `icons/` (folder + chevron glyphs) and `icons/material/` (62 Material Icon Theme SVGs — a researched minimal set), `icons.js` (the generated suffix/name map). Herdr
-  functions: `spaces`, `panes`, `focused`, `exec`, `watchFolder`,
-   `run`. Folder listing adapted from Herdr's shipped `files`
-  mod (Apache-2.0). All icons live in the mod itself
-  (`mods/mide-files/icons/` — the single source of truth).
-  Material Icon Theme is the only file-type and folder icon source.
-- **`mods/mide-changes`**: `main.js`. Herdr functions: `spaces`, `panes`,
-  `focused`, `exec`, `readTextFile`, `watchFolder`.
-  Diff rows and the virtual list adapt Herdr's shipped `changes` mod
-  (Apache-2.0). Programs: `git` only.
-- **`mods/mide-editor`** (`"focusable": true`): `main.js`. Herdr functions:
-  `props`, `settings`, `readTextFile`, `writeTextFile`,
-  `nextCommand`; gpui-base's `Editor` /
-  `EditorState`.
-- **`keys.json`**: global `cmd-shift-e` splits an editor pane;
-  `mod:mide-editor` binds `cmd-s` to `mide-editor.save`.
+- `layouts/herdr-mide.json` clones Herdr `main` at 0.1.13: root row with
+  sidebar (`workspace-chrome`, `spaces`, `agents`, `workspace-chrome` footer)
+  and work column (`tabs`, active tab with `pane` header, right panel stack,
+  `workspace-status`). The `files` and `changes` blocks load the mIDE mods;
+  the other named mods are shipped by Herdr.
+- Four cooperating folders, all with `place: none` in `mod.json`:
+  `mide-files` lists the tree and opens the editor; `mide-changes` handles
+  status, staging, commits, branches and remote Git actions; `mide-diff`
+  displays comparisons; `mide-editor` edits and saves files. Changes, Diff
+  and Editor opt into focus. Editor receives `{file}`; Diff receives a
+  request including `{root, files, selectedPath, on, branch, title}`. The
+  panel mods derive their location from the focused workspace.
+- Mods use `gpui-kit`, `gpui-base` and Herdr's `spaces`, `panes`, `focused`,
+  `props`, `settings`, `theme`, `shared`, `setShared`, `exec`, `watchFolder`,
+  `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
+  `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
+  `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e` and `cmd-s`
+  bindings for manual merging, not automatic replacement.
+- The tree invokes `sh` or PowerShell to list folders. Git is required for
+  status, diff, history, staging, commits, branches and remote operations.
+  Fetch, pull and push can contact the configured remote and use the user's
+  Git/SSH credentials; commits may run Git hooks. Mods read files outside
+  their own folders, and Editor writes the selected local file.
+- Material Icon Theme supplies file and folder SVGs and associations; the
+  chevrons come from Herdr and the branch glyph is adapted from Lucide. See `LICENSE` and
+  `THIRD-PARTY-NOTICES.md` for licenses, palette sources and adaptations.
+  `shared/syntax.js` is the development source for Editor and Diff's syntax
+  module; a distributable build must include its generated mod-local
+  `_shared/syntax.js` in each of those two folders.
 
 ## Watch out
 
-- **Icons have one home**: `mods/mide-files/icons/` — the mod folder
-  is self-contained (ecosystem installs copy `mods/<name>/` as-is), so
-  there is no separate assets tree and no copy step. Never commit file-type
-  or folder icons from any other source.
-
-- **The built-in EditorState has no cursor or selection API** — only
-  `value()`/`set_value()`/`on(change…)`. Modal (Vim) editing therefore
-  needs a custom editor core drawn from gpui-kit primitives; the `mod:` key
-  plumbing in `mide-editor` is its landing pad
-  (see ROADMAP Phase 1).
-- **`props()` can be null** — `herdr-app check` runs the mod with no props;
-  read it as `props()?.file ?? null` or init crashes.
-- **Paren balancing in long builder chains**: the runtime's parser rejects
-  what some Node versions accept in ESM files; run `herdr-app check` after
-  every edit (it is the only truth).
-- Git reads use `--no-optional-locks -c core.fsmonitor=false -c
-  diff.autoRefreshIndex=false` so they write nothing under `.git` —
-  otherwise the folder watch sees its own side effects and refreshes
-  forever.
-- The commit flow stages nothing implicitly: an unstaged work tree and a
-  message leave Commit disabled on purpose ("better file adding" means
-  explicit).
-- Remote machines (`on`) list, diff and stage fine, but `writeTextFile` is
-  local-only, so the editor pane only saves local files.
-- No `preview.png` yet: take one with `herdr-app shot` after the first real
-  run (the layout must be visible) and save it over the placeholder slot at
-  the repo root.
-- The branch view is inline, not an overlay, so it never fights the panel
-  stack; Escape returns to changes.
+- This is one layout with four dependent mods, not four independent gallery
+  mods. Source `mods/` is not a complete copyable package: use the assembled
+  bundle. Its Git UI also references SVGs in `mide-files`. Preserve or
+  consistently rename every cross-mod reference and asset path on conflicts.
+- The layout is based on Herdr 0.1.13; validate all features against the
+  supported released app and each target OS before release. Herdr's initial
+  mod checker does not exercise deferred rows or interactions.
+- Files limits listings to 500 entries per folder and 5,000 total; Changes
+  shows the first 1,000 changed files and the branch picker up to 200 branches.
+  Diff truncates large input and has syntax-highlighting budgets; binary and
+  conflicted files have limited views. Editor refuses to save files truncated
+  past 400,000 characters and cannot edit binary files.
+- Folder watch is local; remote views rely on periodic refresh. Editor reads
+  and writes locally, so do not rely on it to edit a remote machine's files.
+  Git operations can modify the index, worktree, branches and remote; test
+  them in a disposable repository. Vim mode and hunk staging are not present.
+- Git refresh reads disable optional locks and fsmonitor to avoid triggering
+  the folder watcher with their own side effects.
+- The source installer skips existing mod/layout names and prints keys rather
+  than overwriting them; it is not an upgrade tool. Review name and shortcut
+  conflicts before installing or manually updating. A `preview.png` must be a
+  reviewed, representative screenshot with no private information.
 
 ## Done when
 
-- `herdr-app check` passes for all three mods after `./install.sh`.
-- `herdr-app do layout.switch --name herdr-mide` shows the Files panel with
-  colored, icon-differentiated files in a dirty git repo (orange modified,
-  green new, red deleted), updating within a second of a file changing.
-- Clicking a file opens the editor pane beside the terminal; editing marks
-  the dot, `cmd-s` saves, and the saved state survives reopening the file.
-- In Changes: staging one file moves it to STAGED within a second, the `+`
-  and `−` buttons move files between groups, and Commit with a message
-  creates a commit containing exactly the staged files.
-- The branch chip lists branches; switching changes the chip and the tree's
-  marks; New creates and switches; delete removes a merged branch.
-- Herdr retains its configured theme and terminal colors when the layout is
-  opened; mIDE controls follow Herdr while editor syntax and Git changes use Ayu.
+- Each of the four assembled mod folders passes `herdr-app check`, and the
+  layout loads in an isolated Herdr setup without mod errors.
+- In a disposable Git repository, Files expands and marks changes; editing and
+  saving works, and an external edit is not silently overwritten.
+- Changes stages and unstages files and groups; a commit with staged changes
+  includes the staged content. With no staged changes, a tracked-only commit
+  excludes untracked files.
+- Diff opens for a changed file and switches views. Branch selection works;
+  remote actions are exercised only against a disposable remote.
+- The original layout, keys, app theme and unrelated installed mods remain
+  unchanged by installation; all relevant behaviors are checked on supported
+  platforms before publishing.

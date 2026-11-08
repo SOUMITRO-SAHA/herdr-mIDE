@@ -18,7 +18,9 @@ try {
   const captured = new Promise((resolve) => { statusCaptured = resolve; });
   const blocked = new Promise((resolve) => { releaseStatus = resolve; });
   let blockStatus = true;
+  const reads = [];
   const exec = async (_command, args) => {
+    if (args.includes("rev-parse") || args.includes("status") || args.includes("diff") || args.includes("branch") || args.includes("rev-list")) reads.push(args);
     let result;
     try { result = { code: 0, stdout: git(...args), stderr: "" }; }
     catch (error) { result = { code: error.status, stdout: String(error.stdout || ""), stderr: String(error.stderr || "") }; }
@@ -43,6 +45,9 @@ try {
   await tasks[1];
   releaseStatus();
   await drain();
+  for (const args of reads) {
+    assert.deepEqual(args.slice(0, 3), ["--no-optional-locks", "-c", "core.fsmonitor=false"], "Git reads must not trigger watcher refresh loops");
+  }
   assert.equal(view.files.length, 1);
   assert.equal(view.files[0].fresh, false, "staged addition must no longer be Git-untracked after an overlapping refresh");
   assert.equal(view.files[0].created, true, "a staged new file stays in the Untracked section");

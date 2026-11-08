@@ -10,8 +10,9 @@ REPO_DIR="${REPO_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 # Artifacts herdr-app check writes beside mods — never sync them.
 EXCLUDES="--exclude=.DS_Store --exclude=jsconfig.json --exclude=gpui-kit.d.ts --exclude=_shared/"
 
-# Everything that installs into the app home.
-MODS="${MODS:-mide-files mide-changes mide-diff mide-editor}"
+# The complete release bundle; development commands may select a subset.
+BUNDLE_MODS="mide-files mide-changes mide-diff mide-editor"
+MODS="${MODS:-$BUNDLE_MODS}"
 SHARED_MODULES="$REPO_DIR/shared-modules.list"
 
 materialize_shared_modules() {
