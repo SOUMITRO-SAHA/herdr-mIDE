@@ -6,8 +6,10 @@
 
 Most of the coding work today is done by AI agents. What's left for us is the *last mile*: review what the agent changed, make small surgical edits, stage the right files, and ship. Existing IDEs are built for a world where you write all the code. **herdr-mIDE is built for the world where you don't.**
 
-> A public preview is pending; the release bundle is blocked until a reviewed
-> screenshot is available.
+![herdr-mIDE Files panel and Markdown editor beside a terminal](preview.png)
+
+Real screenshots of the layout are below. They show a development workspace;
+review visible paths and session details before sharing them outside this repo.
 
 ## What's inside
 
@@ -18,19 +20,31 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 - Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
 
+![Files tree with file icons and Git status coloring](public/files-git-status.png)
+
 ### 🌿 Changes — a git panel for the review-and-commit loop
 
 - **Tracked and Untracked groups** — each file has a tri-state staging checkbox; partially staged files stay visible as partially staged.
 - **Stage All / Unstage All** — one split action stages every change or clears the index, with per-group selection too.
 - **Detailed diff view** — line-numbered, tinted additions/deletions, smooth on big diffs.
-- **Commit flow** — commits staged files when present; otherwise **Commit Tracked** stages tracked edits, excluding untracked files. The menu also lets you choose the scope explicitly.
+- **Commit flow** — submit a message to commit staged files; if none are staged, tracked edits are staged and committed without including untracked files.
 - **Branch switcher** — switch, create, and delete branches without leaving the panel.
+
+![Changes panel beside a syntax-highlighted diff](public/changes-diff-review.png)
 
 ### ⌨️ Editor — a minimal editor pane
 
 - Syntax highlighting, a Save button, optional ⌘S shortcut, and an unsaved indicator.
 - Editor syntax uses Ayu Dark; Git status colors use Zed One Dark values, and diff colors use the bundled palette. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
+
+![Rendered Markdown in the editor Preview tab](public/editor-markdown-preview.png)
+
+### More screenshots
+
+- [Markdown in the Raw editor](public/editor-markdown-raw.png) · [Syntax-highlighted JavaScript](public/editor-syntax-highlighting.png)
+- [Staging files and writing a commit message](public/changes-staging-commit.png) · [Commit history](public/changes-history.png)
+- [Branch switcher](public/changes-branch-switcher.png) · [Branch delete control](public/changes-branch-delete.png) · [Remote actions menu](public/changes-remote-actions.png)
 
 ## Install
 
@@ -101,6 +115,10 @@ make shot       # screenshot of the window → herdr-shot.png
 make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 make bundle     # build a copyable layout bundle; needs a reviewed preview.png
 ```
+
+`preview.png` is a copy of the Markdown Raw screenshot. `make bundle` packages
+it for Herdr's gallery; it only checks that the file exists, so review the
+image and the other screenshots for private information before publishing.
 
 The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 

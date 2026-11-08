@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - A single version for the layout and four cooperating mods, and a reproducible self-contained bundle for release and gallery preparation.
 - A release checklist covering a privacy-reviewed preview, compatibility testing and Herdr Gallery discovery.
+- Screenshots of the file tree, editor, diffs and Git workflows, including a real layout preview for the release bundle.
 
 ### Changed
 - The rebuild recipe now documents the complete layout bundle, current Git actions, dependencies and limitations.
