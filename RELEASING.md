@@ -29,12 +29,14 @@ one or assume a tag alone updates a gallery listing.
    disposable Git repository. Test remote actions only with a disposable
    remote. Record app version, OS and results. Never restart another person's
    app or core.
-3. The real `preview.png` is a copy of `public/editor-markdown-raw.png`;
-   other feature screenshots live in `public/`. Before publication, confirm
-   that these screenshots still represent the released code and review each
-   for names, paths, credentials, terminal output and other private content.
-   The existing screenshots show a development workspace, so inclusion in the
-   repo is not a substitute for the owner's final privacy review.
+3. `preview.png` is preview artwork containing a screenshot; feature
+   screenshots live in `public/examples/` and the demo video lives in
+   `public/`. Verify that the preview meets Herdr's screenshot requirements
+   before publication. Confirm that the media still represents the released
+   code and review it for names, paths, credentials, terminal output and other
+   private content. Check the video's audio and visual material for third-party
+   rights and notices. Inclusion in the repo is not a substitute for the
+   owner's final review.
 4. Run `make bundle`. This creates `dist/herdr-mide/` from the source layout,
    all four mods, keys, recipe, preview, license, notices and `VERSION`.
    It materializes shared files inside the two consuming mod copies. It

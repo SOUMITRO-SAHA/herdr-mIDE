@@ -6,9 +6,9 @@ Some screenshots show [OpenCode](https://github.com/anomalyco/opencode)
 running in a Herdr terminal beside the mIDE panels. OpenCode is by the
 opencode contributors (MIT License, Copyright (c) 2025 opencode). These
 screenshots were captured from the running interface and supplied for this
-project; no OpenCode source or standalone assets are bundled. The images are
-only renamed and linked from the README (the main preview is also copied to
-`preview.png`).
+project; no OpenCode source or standalone assets are bundled. The examples
+are renamed and linked from the README; `preview.png` is artwork incorporating
+a screenshot of the interface.
 
 ## Material Icon Theme icons (`mods/mide-files/icons/`)
 
