@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TEST_ROOT="$(mktemp -d "${TMPDIR:-/private/var/folders/0t/m74t111s18j5ppj8_0cy10wc0000gn/T/opencode}/mide-install-test.XXXXXX")"
+TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/mide-install-test.XXXXXX")"
 trap 'rm -r "$TEST_ROOT"' EXIT HUP INT TERM
 mkdir -p "$TEST_ROOT/bin" "$TEST_ROOT/home/mods/mide-editor" "$TEST_ROOT/home/layouts"
 printf '#!/bin/sh\nprintf "%%s\\n" "$2" >> "$CHECK_LOG"\ncase "$2" in */"${FAIL_MOD:-__none__}") exit 1;; esac\n' > "$TEST_ROOT/bin/herdr-app"

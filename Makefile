@@ -19,7 +19,7 @@ INTERVAL ?= 1
 MODS ?= mide-files mide-changes mide-diff mide-editor
 
 .DEFAULT_GOAL := help
-.PHONY: help dev sync test check install status shot switch bundle
+.PHONY: help dev sync test check install status shot switch bundle smoke-prepare smoke-capture
 
 help:
 	@echo "herdr-mIDE commands:"
@@ -32,6 +32,8 @@ help:
 	@echo "  make shot     window screenshot → herdr-shot.png"
 	@echo "  make switch   show the herdr-mide layout"
 	@echo "  make bundle   create a self-contained layout bundle in dist/herdr-mide"
+	@echo "  make smoke-prepare  prepare a separate app home; see TESTING.md"
+	@echo "  make smoke-capture  capture a scene from a user-started test window"
 
 dev:
 	@INTERVAL="$(INTERVAL)" ./scripts/dev.sh
@@ -44,8 +46,13 @@ test:
 	@node ./tests/test-syntax-config.mjs
 	@node ./tests/test-changes-stage-review.mjs
 	@node ./tests/test-changes-tracking.mjs
+	@node ./tests/test-changes-commit-branches.mjs
 	@node ./tests/test-file-icons.mjs
+	@node ./tests/test-file-directory.mjs
+	@node ./tests/test-diff-assets.mjs
 	@node ./tests/test-editor-save.mjs
+	@node ./tests/test-smoke.mjs
+	@node ./tests/test-portable-temp.mjs
 	@sh ./tests/test-bundle.sh
 	@sh ./tests/test-install.sh
 
@@ -66,3 +73,9 @@ switch:
 
 bundle:
 	@sh ./scripts/bundle.sh "$(if $(BUNDLE_DIR),$(BUNDLE_DIR),dist/herdr-mide)"
+
+smoke-prepare:
+	@node ./scripts/smoke.mjs --prepare
+
+smoke-capture:
+	@MIDE_SMOKE_ROOT="$(SMOKE_ROOT)" MIDE_SMOKE_SCENE="$(SCENE)" node ./scripts/smoke.mjs --capture

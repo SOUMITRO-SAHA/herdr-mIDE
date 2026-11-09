@@ -122,7 +122,8 @@ Instructions for AI coding agents working in this repo.
 ## House rules
 
 - The root `Makefile` is the only entry point (`make dev`, `sync`, `test`,
-  `check`, `install`, `shot`, `switch`, `bundle`); scripts live in `scripts/`,
+  `check`, `install`, `shot`, `switch`, `bundle`, `smoke-prepare`,
+  `smoke-capture`); scripts live in `scripts/`,
   only `install.sh` at the root.
 - Validate mods with `make check` after every edit; the app's checker is the
   runtime check for initial loading, not a replacement for interaction tests.
@@ -147,3 +148,6 @@ Instructions for AI coding agents working in this repo.
   `VERSION` and `RELEASING.md`. Never publish, tag, or change gallery topics
   without explicit owner approval. Gallery copies need a self-contained
   assembled bundle, not the incomplete development `mods/` tree.
+- Follow `TESTING.md` for cross-platform checks. Smoke preparation and capture
+  never start or stop a window or core; never fake input on a real display or
+  claim a visual/interaction test was automated when it was not.

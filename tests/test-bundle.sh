@@ -2,7 +2,7 @@
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TEST_ROOT="$(mktemp -d "${TMPDIR:-/private/var/folders/0t/m74t111s18j5ppj8_0cy10wc0000gn/T/opencode}/mide-bundle-test.XXXXXX")"
+TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/mide-bundle-test.XXXXXX")"
 trap 'rm -r "$TEST_ROOT"' EXIT HUP INT TERM
 printf 'test preview\n' > "$TEST_ROOT/preview.png"
 
@@ -12,6 +12,8 @@ diff -r "$TEST_ROOT/first" "$TEST_ROOT/second"
 for mod in mide-files mide-changes mide-diff mide-editor; do
   test -f "$TEST_ROOT/first/mods/$mod/main.js"
   test -f "$TEST_ROOT/first/mods/$mod/mod.json"
+  cmp "$ROOT/LICENSE" "$TEST_ROOT/first/mods/$mod/LICENSE"
+  cmp "$ROOT/THIRD-PARTY-NOTICES.md" "$TEST_ROOT/first/mods/$mod/THIRD-PARTY-NOTICES.md"
 done
 for mod in mide-editor mide-diff; do
   cmp "$ROOT/shared/syntax.js" "$TEST_ROOT/first/mods/$mod/_shared/syntax.js"

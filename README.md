@@ -91,7 +91,7 @@ herdr-mIDE doesn't fork Herdr — it rides on it. The Herdr app redraws its whol
 layouts/herdr-mide.json   the window: Herdr's main layout with mIDE panels
 mods/mide-files/          file tree · type icons · git-status colors
 mods/mide-changes/        staging · commit · branches
-mods/mide-diff/           git diff tab · split/unified · hunk navigation
+mods/mide-diff/           git diff pane · split/unified · refresh
 mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 ⌘⇧E editor pane · ⌘S save
@@ -104,7 +104,7 @@ install.sh                first-time installer (never overwrites)
 
 All icons live in `mods/mide-files/icons/` — the single source of truth. File-type and folder icons come from Material Icon Theme (the only icon source).
 
-[RECIPE.md](./RECIPE.md) documents the build for humans and agents (it's the brief Herdr's ecosystem uses to install and rebuild packages). [RELEASING.md](./RELEASING.md) explains versioning, bundle assembly and gallery publication; [ROADMAP.md](./ROADMAP.md) has the plan and the grounding study.
+[RECIPE.md](./RECIPE.md) documents the build for humans and agents. [TESTING.md](./TESTING.md) covers automated and isolated desktop checks across platforms; [RELEASING.md](./RELEASING.md) covers versioning and gallery publication; [ROADMAP.md](./ROADMAP.md) has the plan.
 
 ## Development
 
@@ -120,6 +120,8 @@ make status     # window state + errors from files and mods
 make shot       # screenshot of the window → herdr-shot.png
 make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 make bundle     # build a copyable layout bundle; needs a reviewed preview.png
+make smoke-prepare  # prepare a disposable app home and Git fixture
+make smoke-capture  # check and capture a user-started test window; see TESTING.md
 ```
 
 `preview.png` is the project's preview artwork. `make bundle` packages it for

@@ -23,6 +23,8 @@ mkdir "$bundle_root/mods" "$bundle_root/layouts"
 for mod in $MODS; do
   mkdir "$bundle_root/mods/$mod"
   rsync -a $EXCLUDES "$REPO_DIR/mods/$mod/" "$bundle_root/mods/$mod/"
+  # Gallery installs copy mod folders independently of package-root notices.
+  cp "$REPO_DIR/LICENSE" "$REPO_DIR/THIRD-PARTY-NOTICES.md" "$bundle_root/mods/$mod/"
 done
 materialize_shared_modules "$bundle_root" replace $MODS
 cp "$REPO_DIR/layouts/herdr-mide.json" "$bundle_root/layouts/"

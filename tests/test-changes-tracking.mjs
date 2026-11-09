@@ -1,14 +1,23 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { groupChanges } from "../mods/mide-changes/change-groups.js";
 
-const root = mkdtempSync(join(tmpdir(), "mide-tracking-"));
+const scratch = mkdtempSync(join(tmpdir(), "mide-tracking-"));
+const root = join(scratch, "repo");
 try {
-  const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  mkdirSync(root);
+  mkdirSync(join(scratch, "hooks"));
+  writeFileSync(join(scratch, "gitconfig"), "");
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) if (key.toUpperCase().startsWith("GIT_")) delete env[key];
+  Object.assign(env, { GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: join(scratch, "gitconfig"), GIT_TERMINAL_PROMPT: "0" });
+  const git = (...args) => execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   git("init", "-q");
+  git("config", "core.hooksPath", join(scratch, "hooks"));
+  git("config", "commit.gpgsign", "false");
   git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-q", "--allow-empty", "-m", "initial");
   writeFileSync(join(root, "new.txt"), "new file\n");
 
@@ -80,5 +89,5 @@ try {
   assert.deepEqual(groupChanges(view.files).tracked.map((file) => file.path), ["existing.txt"], "staged existing files stay in Tracked");
   console.log("Changes tracking categorization tests passed");
 } finally {
-  rmSync(root, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true });
 }

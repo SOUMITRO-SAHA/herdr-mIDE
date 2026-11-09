@@ -3,7 +3,7 @@
 //
 // Reads use the same no-write git flags as the Changes panel, so the folder
 // watcher never sees the diff itself and starts a refresh loop.
-import { View, div, svg } from "gpui-kit";
+import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
@@ -459,7 +459,7 @@ export default class MideDiff extends View {
         .child(div().flex_1().min_w(0))
         .child(h_flex().h(24).flex_none().gap(1).p(1).rounded(6).border_1().border_color(t.border)
           .child(this.modeButton("split", "Split", t, typography)).child(this.modeButton("unified", "Unified", t, typography)))
-        .child(div().id("mide-diff-refresh").size(24).flex_none().flex().items_center().justify_center().rounded(5).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground)).tooltip("Refresh diff").accessibility_label("Refresh diff").on_click((_e, cx) => this.load(cx)).child(svg("frame/settings/refresh.svg").size(14))))
+        .child(div().id("mide-diff-refresh").h(24).px(7).flex_none().flex().items_center().justify_center().rounded(5).text_size(typography.text(11)).text_color(t.muted).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground)).tooltip("Refresh diff").accessibility_label("Refresh diff").on_click((_e, cx) => this.load(cx)).child("Refresh")))
          .when(!request, (e) => e.child(this.emptyState("Open a changed file from Changes to view the project diff.", t, typography)))
         .when(Boolean(request), (e) => e
           .child(div().flex_1().min_h(0).relative().font_family(typography.codeFont).text_size(typography.codeSize)

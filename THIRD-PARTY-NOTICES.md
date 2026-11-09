@@ -1,5 +1,9 @@
 # Third-party notices
 
+These notices cover the complete herdr-mIDE bundle. Release copies include
+them in each mod folder as well as at the bundle root so they remain available
+when a Herdr gallery installation copies the mod folders separately.
+
 ## OpenCode in screenshots (`preview.png`, `public/`)
 
 Some screenshots show [OpenCode](https://github.com/anomalyco/opencode)
@@ -111,6 +115,14 @@ and `changes` mods, and the tree chevron glyphs
 from Herdr's shipped `files` mod (`defaults/mods/files/` in the app
 repo, name-bearing class attributes stripped). All Apache-2.0 licensed.
 See https://github.com/herdrdev/herdr-app.
+
+The source repository's smoke-testing workflow adapts the separate app-home,
+core-session and XDG-directory isolation approach from Herdr's
+[`scripts/bench.py`](https://github.com/herdrdev/herdr-app/blob/master/scripts/bench.py)
+(Herdr contributors, Apache-2.0). Our helper uses Node.js, prepares a
+user-started test window and captures screenshots; it does not copy Herdr's
+benchmark code, launch the app, or automate its input. The helper is not part
+of the gallery bundle.
 
 ## Lucide icons (`settings.svg`, `git-branch.svg`)
 

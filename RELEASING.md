@@ -23,7 +23,8 @@ one or assume a tag alone updates a gallery listing.
    intended released Herdr version; test macOS, Linux and Windows or state
    precisely which remain unsupported/unverified. The layout's clone metadata
    is 0.1.13, not proof that every feature works on that version.
-2. Run `make test` and `make check`. Check uses the installed app to render
+2. Follow the platform workflow in [TESTING.md](./TESTING.md). Run `make test`
+   and `make check`. Check uses the installed app to render
    initial mod states; additionally test the layout, editor saves/conflicts,
    tree, diff, staging, commits and branches in an isolated app home and a
    disposable Git repository. Test remote actions only with a disposable
@@ -39,11 +40,14 @@ one or assume a tag alone updates a gallery listing.
    owner's final review.
 4. Run `make bundle`. This creates `dist/herdr-mide/` from the source layout,
    all four mods, keys, recipe, preview, license, notices and `VERSION`.
-   It materializes shared files inside the two consuming mod copies. It
+   It materializes shared files inside the two consuming mod copies and puts
+   license and notice copies in each mod folder for gallery-style installs. It
    refuses an existing destination; choose another with
    `make bundle BUNDLE_DIR=dist/herdr-mide-candidate` rather than overwriting
    unreviewed work. The builder checks that a preview file exists, not its
-   quality or privacy. `dist/` is ignored and is not itself published.
+   quality or privacy. To select a different reviewed screenshot for the
+   bundle without replacing the README artwork, set `PREVIEW=/path/to/image.png`.
+   `dist/` is ignored and is not itself published.
 5. Inspect the assembled contents, licenses and references. Run `herdr-app
    check` on each **assembled** `mods/<name>` and exercise a clean install
    from the assembled files in an isolated home. Check name collisions and

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A cross-platform testing guide and isolated smoke preparation/capture helpers for user-started Herdr test windows.
 - A single version for the layout and four cooperating mods, and a reproducible self-contained bundle for release and gallery preparation.
 - A release checklist covering a privacy-reviewed preview, compatibility testing and Herdr Gallery discovery.
 - Screenshots of the file tree, editor, diffs and Git workflows, including a real layout preview for the release bundle.
@@ -28,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is adapted from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
+- Files uses Herdr's documented platform API to select PowerShell for local Windows folder listings.
+- Diff uses a labeled Refresh control instead of depending on a private Herdr frame asset.
+- Gallery-ready bundles carry the license and third-party notices inside each mod folder, so they accompany copied mods.
 - The no-clobber installer no longer changes or checks a pre-existing mod folder, and reports a failed mod check instead of claiming success.
 - Changes disables optional Git locks and filesystem monitoring for its repository lookup as well as its other refresh reads.
 - Changes keeps newly added files in the Untracked section when staged or unstaged, and refreshes their status after overlapping Git operations.

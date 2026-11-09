@@ -24,9 +24,9 @@ files, commit and make small edits without changing Herdr's theme.
 - The branch control opens a searchable popover with the current branch,
   other local branches, delete actions and an option to create a branch.
 - Diff opens beside a terminal or editor with file headers, line numbers,
-  additions and deletions, and Split/Unified controls. Editor opens beside a
-  terminal or below Diff, with a 36px header, unsaved dot, optional Markdown
-  Raw/Preview tabs, Settings menu and 28px footer with Save.
+  additions and deletions, Split/Unified controls and a Refresh button. Editor
+  opens beside a terminal or below Diff, with a 36px header, unsaved dot,
+  optional Markdown Raw/Preview tabs, Settings menu and 28px footer with Save.
 - Panel controls use Herdr's interface font and colors. Editor and diff text
   use the terminal font; their syntax uses mIDE's Ayu palette. The layout does
   not change the user's selected theme.
@@ -67,7 +67,7 @@ files, commit and make small edits without changing Herdr's theme.
   request including `{root, files, selectedPath, on, branch, title}`. The
   panel mods derive their location from the focused workspace.
 - Mods use `gpui-kit`, `gpui-base` and Herdr's `spaces`, `panes`, `focused`,
-  `props`, `settings`, `theme`, `shared`, `setShared`, `exec`, `watchFolder`,
+  `props`, `settings`, `theme`, `window`, `shared`, `setShared`, `exec`, `watchFolder`,
   `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
   `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e` and `cmd-s`
@@ -80,6 +80,8 @@ files, commit and make small edits without changing Herdr's theme.
 - Material Icon Theme supplies file and folder SVGs and associations; the
   chevrons come from Herdr and the branch glyph is adapted from Lucide. See `LICENSE` and
   `THIRD-PARTY-NOTICES.md` for licenses, palette sources and adaptations.
+  Release bundles include these notices and the project license both at the
+  root and within each mod folder so they accompany gallery-style copies.
   `shared/syntax.js` is the development source for Editor and Diff's syntax
   module; a distributable build must include its generated mod-local
   `_shared/syntax.js` in each of those two folders.

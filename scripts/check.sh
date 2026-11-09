@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/common.sh"
 
-CHECK_ROOT="$(mktemp -d "${TMPDIR:-/private/var/folders/0t/m74t111s18j5ppj8_0cy10wc0000gn/T/opencode}/mide-check.XXXXXX")"
+CHECK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/mide-check.XXXXXX")"
 trap 'rm -r "$CHECK_ROOT"' EXIT HUP INT TERM
 
 mkdir -p "$CHECK_ROOT/mods"
