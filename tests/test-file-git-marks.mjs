@@ -12,14 +12,10 @@ const source = (await readFile(new URL("../mods/mide-files/main.js", import.meta
 
 const element = () => new Proxy({}, { get: () => () => element() });
 const ROOT = "C:\\repo\\top";
+const dirents = list => list.map(([name, dir]) => ({ name, isDirectory: () => dir }));
 const calls = [];
 const exec = async (program, args) => {
   calls.push({ program, args });
-  if (program === "powershell") {
-    const payload = Buffer.from(args[args.length - 1], "base64").toString("utf16le");
-    assert.match(payload, /-LiteralPath 'C:\\repo\\top'/, "listing must embed the cwd path");
-    return { code: 0, stdout: '[{"name":"sample.txt","dir":false},{"name":"new.txt","dir":false},{"name":"Agent notes","dir":true}]' };
-  }
   if (args.includes("rev-parse")) return { code: 0, stdout: "C:/repo/top\n" };
   if (args.includes("--ignored=matching")) return { code: 0, stdout: " M sample.txt\0?? new.txt\0?? Agent notes/meeting notes.txt\0!! secret.log\0" };
   return { code: 0, stdout: " M sample.txt\0?? new.txt\0?? Agent notes/meeting notes.txt\0" };
@@ -31,8 +27,8 @@ const context = {
   focused: () => ({ space: "s1", pane: "p1", tab: "t1" }),
   exec, watchFolder: () => new Promise(() => {}),
   theme: () => ({}), settings: () => ({}), setShared: () => {}, run: () => {},
-  window: () => ({ platform: "windows" }),
   resolveIcon: () => null, gitColors: () => ({}),
+  readdir: async () => dirents([["sample.txt", false], ["new.txt", false], ["Agent notes", true]]),
 };
 const MideFiles = runInNewContext(source, context);
 
@@ -65,20 +61,15 @@ assert.equal(mod.marks["C:/repo/top/secret.log"], undefined);
 assert.ok(mod.ignored.has("C:/repo/top/secret.log"), "ignored paths must be keyed forward-slash");
 assert.equal(calls.filter(c => c.program === "git").length, 3, "rev-parse + status + ignored status");
 
-// Folder listings must be issued together, not walked serially: on Windows
-// every listing is a PowerShell process, so a serial walk leaves the tree
-// empty for seconds on end.
+// Folder listings must be issued together, not walked serially: the tree
+// should not wait for one folder before asking for the next.
 let release;
 const gate = new Promise(resolve => { release = resolve; });
 let listings = 0;
-context.exec = async (program, args) => {
-  if (program === "powershell") {
-    listings++;
-    await gate;
-    return { code: 0, stdout: '[{"name":"x.txt","dir":false}]' };
-  }
-  if (args.includes("rev-parse")) return { code: 0, stdout: "C:/repo/top\n" };
-  return { code: 0, stdout: "" };
+context.readdir = async () => {
+  listings++;
+  await gate;
+  return dirents([["x.txt", false]]);
 };
 mod.folders = new Set(["Agent notes"]);
 let secondPending;

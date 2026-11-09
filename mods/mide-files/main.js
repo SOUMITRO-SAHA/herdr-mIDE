@@ -6,7 +6,8 @@
 // same sh/PowerShell helpers, same lazy expansion, same bounded reads.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, window } from "herdr";
+import { readdir } from "fs/promises";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
 import { resolveIcon } from "./icons.js";
 import { gitColors } from "./palette.js";
 
@@ -102,7 +103,17 @@ async function directory(path, on) {
     const result = JSON.parse(r.stdout || "[]");
     return Array.isArray(result) ? result : [result];
   };
-  if (!on && window().platform === "windows") return windowsDirectory();
+  if (!on) {
+    // Local listings run in-process through Herdr's fs API: one PowerShell
+    // spawn costs seconds on Windows (Defender + .NET startup) and that
+    // dominated every refresh. loadFolder sorts and caps exactly as it did
+    // for shell output.
+    const entries = await readdir(path, { withFileTypes: true });
+    return entries
+      .filter(entry => entry.name !== ".git" && entry.name !== ".DS_Store")
+      .slice(0, 501)
+      .map(entry => ({ name: entry.name, dir: entry.isDirectory() }));
+  }
   const script = 'n=0; for p in "$1"/* "$1"/.[!.]* "$1"/..?*; do [ -e "$p" ] || [ -L "$p" ] || continue; name=${p##*/}; case "$name" in .git|.DS_Store) continue;; esac; if [ -d "$p" ]; then kind=d; else kind=f; fi; printf "%s\\0%s\\0" "$kind" "$name"; n=$((n+1)); [ "$n" -gt 500 ] && break; done; test -d "$1"';
   let r;
   try { r = await exec("sh", ["-c", script, "mide-files", path], { on }); }
