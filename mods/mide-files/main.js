@@ -162,45 +162,49 @@ export default class MideFiles extends View {
     this.limited = false;
     cx.spawn(async cx => {
       try {
-        for (const path of ["", ...this.folders]) {
-          if (!this.current(context)) return;
-          await this.loadFolder(path, context);
-        }
-        const top = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
-        const marks = {};
-        const ignored = new Set(), ignoredDirs = [];
-        if (top?.code === 0) {
-          const repoTop = slash(top.stdout.trim());
-          // Writes nothing under .git (index lock, fsmonitor cookie): the folder watch would refresh again.
-          const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
-          if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
-            const xy = entry.slice(0, 2);
-            marks[`${repoTop}/${entry.slice(3)}`] = statusMark(xy);
+        // Listings and Git run concurrently: each Windows listing is a
+        // PowerShell process, and walking folders serially left the tree
+        // empty for seconds on end.
+        const gitInfo = (async () => {
+          const top = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "rev-parse", "--show-toplevel"], { cwd, on }).catch(() => null);
+          const marks = {};
+          const ignored = new Set(), ignoredDirs = [];
+          if (top?.code === 0) {
+            const repoTop = slash(top.stdout.trim());
+            // Writes nothing under .git (index lock, fsmonitor cookie): the folder watch would refresh again.
+            const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
+            if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
+              const xy = entry.slice(0, 2);
+              marks[`${repoTop}/${entry.slice(3)}`] = statusMark(xy);
+            }
+            // Ignored paths (git collapses directories to `!! dir/`): they
+            // ghost the tree's names. Capped — this is tinting, not inventory.
+            const skipped = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--ignored=matching"], { cwd, on }).catch(() => null);
+            if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(entry => entry.startsWith("!! ")).slice(0, 2000)) {
+              const p = `${repoTop}/${entry.slice(3)}`;
+              if (p.endsWith("/")) ignoredDirs.push(p.slice(0, -1)); else ignored.add(p);
+            }
           }
-          // Ignored paths (git collapses directories to `!! dir/`): they
-          // ghost the tree's names. Capped — this is tinting, not inventory.
-          const skipped = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--ignored=matching"], { cwd, on }).catch(() => null);
-          if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(entry => entry.startsWith("!! ")).slice(0, 2000)) {
-            const p = `${repoTop}/${entry.slice(3)}`;
-            if (p.endsWith("/")) ignoredDirs.push(p.slice(0, -1)); else ignored.add(p);
+          // Folders take the color of the most severe change under them:
+          // conflicts first, then deletions, modifications and new files —
+          // the same precedence as individual names.
+          const SEVERITY = "UDMA";
+          const folderMarks = new Map();
+          const cwdForward = slash(cwd);
+          for (const [marked, mark] of Object.entries(marks)) {
+            if (!marked.startsWith(`${cwdForward}/`)) continue;
+            const parts = marked.slice(cwdForward.length + 1).split("/");
+            for (let i = 1; i < parts.length; i++) {
+              const folder = parts.slice(0, i).join("/");
+              const prev = folderMarks.get(folder);
+              if (!prev || SEVERITY.indexOf(mark) < SEVERITY.indexOf(prev)) folderMarks.set(folder, mark);
+            }
           }
-        }
+          return { marks, ignored, ignoredDirs, folderMarks };
+        })();
+        await Promise.all(["", ...this.folders].map(path => this.current(context) ? this.loadFolder(path, context) : null));
+        const { marks, ignored, ignoredDirs, folderMarks } = await gitInfo;
         if (!this.current(context)) return;
-        // Folders take the color of the most severe change under them:
-        // conflicts first, then deletions, modifications and new files —
-        // the same precedence as individual names.
-        const SEVERITY = "UDMA";
-        const folderMarks = new Map();
-        const cwdForward = slash(cwd);
-        for (const [marked, mark] of Object.entries(marks)) {
-          if (!marked.startsWith(`${cwdForward}/`)) continue;
-          const parts = marked.slice(cwdForward.length + 1).split("/");
-          for (let i = 1; i < parts.length; i++) {
-            const folder = parts.slice(0, i).join("/");
-            const prev = folderMarks.get(folder);
-            if (!prev || SEVERITY.indexOf(mark) < SEVERITY.indexOf(prev)) folderMarks.set(folder, mark);
-          }
-        }
         this.marks = marks; this.folderMarks = folderMarks; this.ignored = ignored; this.ignoredDirs = ignoredDirs; this.error = null; this.watch(cwd, cx);
       } catch (e) { if (this.current(context)) this.error = String(e); }
       finally { if (this.context === context) this.loading = false; cx.notify(); }

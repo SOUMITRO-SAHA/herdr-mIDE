@@ -65,4 +65,33 @@ assert.equal(mod.marks["C:/repo/top/secret.log"], undefined);
 assert.ok(mod.ignored.has("C:/repo/top/secret.log"), "ignored paths must be keyed forward-slash");
 assert.equal(calls.filter(c => c.program === "git").length, 3, "rev-parse + status + ignored status");
 
+// Folder listings must be issued together, not walked serially: on Windows
+// every listing is a PowerShell process, so a serial walk leaves the tree
+// empty for seconds on end.
+let release;
+const gate = new Promise(resolve => { release = resolve; });
+let listings = 0;
+context.exec = async (program, args) => {
+  if (program === "powershell") {
+    listings++;
+    await gate;
+    return { code: 0, stdout: '[{"name":"x.txt","dir":false}]' };
+  }
+  if (args.includes("rev-parse")) return { code: 0, stdout: "C:/repo/top\n" };
+  return { code: 0, stdout: "" };
+};
+mod.folders = new Set(["Agent notes"]);
+let secondPending;
+const secondCx = {
+  spawn(fn) { secondPending = fn(this); return secondPending; },
+  timer: { every() {} },
+  notify() {},
+};
+mod.refresh(secondCx);
+await Promise.resolve();
+const concurrent = listings;
+release();
+await secondPending;
+assert.ok(concurrent >= 2, `root and expanded-folder listings must run concurrently, got ${concurrent}`);
+
 console.log("file git marks tests passed");
