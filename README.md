@@ -10,7 +10,9 @@ Most of the coding work today is done by AI agents. What's left for us is the *l
 
 ![herdr-mIDE preview showing the Changes panel and diff beside a terminal](preview.png)
 
-**[Watch the one-minute herdr-mIDE demo](public/Herdr_mIDE_Launch.mp4)**
+**Watch the one-minute herdr-mIDE demo:**
+
+https://github.com/user-attachments/assets/1ef638c1-5d45-427a-9276-308a471030c1
 
 The screenshots below show a development workspace. Review the video and images
 for private information before sharing them outside this repo.
