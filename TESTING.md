@@ -137,4 +137,4 @@ For each release, record a fresh matrix rather than carrying old passes forward:
 | --- | --- | --- | --- | --- |
 | macOS | pending | pending | pending | |
 | Linux | pending | pending | pending | |
-| Windows | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout and Windows symlink fixes | pending — needs a machine with no Herdr window open | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above |
+| Windows | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout, Windows symlink, Files `-EncodedCommand` and Git-marks fixes | pending — Files scene verified on-window via screenshots; Editor/Changes/Diff/Remotes need the remaining clicks | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above |

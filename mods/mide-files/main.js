@@ -27,6 +27,10 @@ function location(previous) {
   return { cwd, on, space: space?.id, tab: f?.tab };
 }
 const key = loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space });
+// Git reports repository paths with forward slashes; a Windows space cwd
+// arrives with backslashes. Marks and the tree's lookups must agree on one
+// separator form on every platform.
+const slash = p => String(p).replace(/\\/g, "/");
 const PER_FOLDER = 500, TOTAL = 5000;
 
 // the reference IDE's label precedence combines index and worktree: conflicts, deletions,
@@ -49,8 +53,51 @@ const interfaceTypography = () => {
 // and its resolution order (exact name, then longest dotted suffix, then
 // prefix, then the theme's plain file glyph).
 async function directory(path, on) {
+  // RFC 4648 base64 of the script's UTF-16LE bytes, built without the
+  // runtime Buffer: its base64/utf16le output is rejected by PowerShell
+  // (-EncodedCommand) on Windows, so every byte is produced here.
+  const utf16leBase64 = text => {
+    const bytes = [];
+    for (let i = 0; i < text.length; i++) {
+      const unit = text.charCodeAt(i);
+      if (unit >= 0xd800 && unit <= 0xdbff && i + 1 < text.length) {
+        const next = text.charCodeAt(i + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) {
+          const point = 0x10000 + ((unit - 0xd800) << 10) + (next - 0xdc00);
+          bytes.push(point & 255, point >> 8 & 255, point >> 16 & 255, point >>> 24 & 255);
+          i++;
+          continue;
+        }
+      }
+      bytes.push(unit & 255, unit >> 8 & 255);
+    }
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let out = "";
+    for (let i = 0; i + 2 < bytes.length; i += 3) {
+      const chunk = bytes[i] << 16 | bytes[i + 1] << 8 | bytes[i + 2];
+      out += alphabet[chunk >> 18 & 63] + alphabet[chunk >> 12 & 63] + alphabet[chunk >> 6 & 63] + alphabet[chunk & 63];
+    }
+    const rest = bytes.length % 3;
+    if (rest === 1) out += alphabet[bytes[bytes.length - 1] >> 2] + alphabet[bytes[bytes.length - 1] << 4 & 63] + "==";
+    else if (rest === 2) {
+      const chunk = bytes[bytes.length - 2] << 8 | bytes[bytes.length - 1];
+      out += alphabet[chunk >> 10 & 63] + alphabet[chunk >> 4 & 63] + alphabet[chunk << 2 & 63] + "=";
+    }
+    return out;
+  };
   const windowsDirectory = async () => {
-    const r = await exec("powershell", ["-NoProfile", "-Command", "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); & { param($p) @(Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop | Where-Object { $_.Name -ne '.git' -and $_.Name -ne '.DS_Store' } | Select-Object -First 501 | ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $_.LinkType -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } }) | ConvertTo-Json -Compress } '" + path.replace(/['‘’‚‛]/g, "$&$&") + "'"], { on });
+    // Windows argv transport mangles arguments containing spaces or quotes,
+    // so the whole listing travels as one -EncodedCommand payload with the
+    // folder path embedded in it; nothing quoting-sensitive stays in argv.
+    const script =
+      "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); " +
+      "& { @(Get-ChildItem -LiteralPath '" + path.replace(/['‘’‚‛]/g, "$&$&") + "' -Force -ErrorAction Stop " +
+      "| Where-Object { $_.Name -ne '.git' -and $_.Name -ne '.DS_Store' } " +
+      "| Select-Object -First 501 " +
+      "| ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $_.LinkType -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } }) " +
+      "| ConvertTo-Json -Compress }";
+    const encoded = utf16leBase64(script);
+    const r = await exec("powershell", ["-NoProfile", "-EncodedCommand", encoded], { on });
     if (r.code !== 0) throw new Error(r.stderr || "Cannot list this folder");
     const result = JSON.parse(r.stdout || "[]");
     return Array.isArray(result) ? result : [result];
@@ -123,17 +170,18 @@ export default class MideFiles extends View {
         const marks = {};
         const ignored = new Set(), ignoredDirs = [];
         if (top?.code === 0) {
+          const repoTop = slash(top.stdout.trim());
           // Writes nothing under .git (index lock, fsmonitor cookie): the folder watch would refresh again.
           const status = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all"], { cwd, on }).catch(() => null);
           if (status?.code === 0) for (const entry of status.stdout.split("\0").filter(Boolean).slice(0, TOTAL)) {
             const xy = entry.slice(0, 2);
-            marks[`${top.stdout.trim()}/${entry.slice(3)}`] = statusMark(xy);
+            marks[`${repoTop}/${entry.slice(3)}`] = statusMark(xy);
           }
           // Ignored paths (git collapses directories to `!! dir/`): they
           // ghost the tree's names. Capped — this is tinting, not inventory.
           const skipped = await exec("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--ignored=matching"], { cwd, on }).catch(() => null);
           if (skipped?.code === 0) for (const entry of skipped.stdout.split("\0").filter(entry => entry.startsWith("!! ")).slice(0, 2000)) {
-            const p = `${top.stdout.trim()}/${entry.slice(3)}`;
+            const p = `${repoTop}/${entry.slice(3)}`;
             if (p.endsWith("/")) ignoredDirs.push(p.slice(0, -1)); else ignored.add(p);
           }
         }
@@ -143,9 +191,10 @@ export default class MideFiles extends View {
         // the same precedence as individual names.
         const SEVERITY = "UDMA";
         const folderMarks = new Map();
+        const cwdForward = slash(cwd);
         for (const [marked, mark] of Object.entries(marks)) {
-          if (!marked.startsWith(`${cwd}/`)) continue;
-          const parts = marked.slice(cwd.length + 1).split("/");
+          if (!marked.startsWith(`${cwdForward}/`)) continue;
+          const parts = marked.slice(cwdForward.length + 1).split("/");
           for (let i = 1; i < parts.length; i++) {
             const folder = parts.slice(0, i).join("/");
             const prev = folderMarks.get(folder);
@@ -189,7 +238,7 @@ export default class MideFiles extends View {
   }
 
   open(path, cx) {
-    const file = `${this.root}/${path}`;
+    const file = slash(`${this.root}/${path}`);
     const focus = focused(), tab = focus?.tab;
     const inTab = panes().filter(p => p.tab === tab);
     const request = { file };
@@ -218,7 +267,7 @@ export default class MideFiles extends View {
     if (out.length >= TOTAL || depth > 40) return out;
     for (const entry of this.entries.get(prefix) ?? []) {
       if (out.length >= TOTAL) break;
-      const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), abs = `${this.root}/${path}`, mark = this.marks[abs];
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name, open = this.folders.has(path), abs = slash(`${this.root}/${path}`), mark = this.marks[abs];
       const folderMark = entry.dir ? this.folderMarks.get(path) : null;
       const status = mark ?? folderMark, statusColor = status ? this.markColor(status, t) : null;
       const ignored = this.ignored.has(abs) || this.ignoredDirs.some(d => abs === d || abs.startsWith(`${d}/`));
