@@ -372,7 +372,7 @@ export default class MideDiff extends View {
       .child(div().w(2).flex_none().bg(add ? t.diff_added : del ? t.diff_deleted : t.background))
       .child(this.number(side === "left" ? line.old : line.new, add ? t.diff_added : del ? t.diff_deleted : t.dim, typography))
       .child(div().w(16).flex_none().text_center().font_semibold().text_color(color).child(add ? "+" : del ? "−" : " "))
-      .child(this.codeCell(line.text, row.sourceFile?.syntax?.[side]?.get(side === "left" ? line.old : line.new), line.kind === " " ? t.muted : t.foreground));
+      .child(this.codeCell(line.text, row.sourceFile?.syntax?.[side === "left" ? "old" : "new"]?.get(side === "left" ? line.old : line.new), line.kind === " " ? t.muted : t.foreground));
   }
 
   splitRow(row, t, typography) {
