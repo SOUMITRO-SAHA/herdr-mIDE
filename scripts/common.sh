@@ -20,11 +20,17 @@ materialize_shared_modules() {
   mode="$2"
   shift 2
   requested_mods=" $* "
+  cr=$(printf '\r')
 
   while IFS=' ' read -r source destination destinations; do
     case "$source" in
       ""|\#*) continue ;;
     esac
+    # Tolerate CRLF checkouts (Windows core.autocrlf): the CR survives in
+    # the last field of each line and would never match a requested mod.
+    source="${source%"$cr"}"
+    destination="${destination%"$cr"}"
+    destinations="${destinations%"$cr"}"
     for mod in $destinations; do
       case "$requested_mods" in *" $mod "*) ;; *) continue ;; esac
       source_path="$REPO_DIR/$source"

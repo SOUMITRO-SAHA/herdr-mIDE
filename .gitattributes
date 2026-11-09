@@ -1,0 +1,4 @@
+# Normalize line endings: this repo drives POSIX shell and parses text
+# data files with line-oriented tools, so CRLF checkouts break tests.
+* text=auto eol=lf
+*.png -text

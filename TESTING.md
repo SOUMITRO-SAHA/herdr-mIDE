@@ -6,9 +6,13 @@ already-installed `herdr-app` and `hc`; record their versions and the OS with
 the results. A pass on one OS, or a mocked platform test, is not proof of a
 pass on another.
 
-This workflow has been exercised on macOS only so far. Linux and Windows,
-including Git Bash path conversion and native desktop interactions, still need
-testing on those systems; the instructions below are not a platform pass.
+This workflow has been fully exercised on macOS. On Windows, the automated
+checks and `make smoke-prepare` passed on 2026-11-09 (herdr-app 0.1.14,
+hc 0.1.19) after fixing CRLF-checkout and Windows symlink issues, but the
+interactive desktop scenes could not run there yet: while any Herdr window is
+already open, a second `herdr-app` launch exits silently (machine-wide
+single-instance behavior on Windows), so the isolated smoke needs a machine
+or disposable VM with no Herdr window open. Linux still needs testing.
 
 Herdr's own approach separates an app home, core session and state for tests;
 its Linux UI sandbox additionally uses a private Weston/Xwayland display. The
@@ -28,11 +32,17 @@ make check
 ```
 
 `make test` needs Node.js, Git, a POSIX shell, `make` and `rsync`. On Windows,
-use a POSIX shell such as Git Bash and provide `make` and `rsync` separately;
-PowerShell alone cannot run this Makefile. `make check` also needs the
-installed Herdr CLI. Tests use disposable Git repositories; remote-action tests
-use a local bare repository, not the network. The mod checker loads and renders
-the initial state but does not exercise deferred rows or user interactions.
+use a POSIX shell such as Git Bash and provide `make` and `rsync` separately
+(for example GNU Make 4.4.1 and cwRsync; cwRsync's Cygwin rsync needs a small
+path-adapter shim when driven from Git Bash, because MSYS path conversion
+turns `C:/...` arguments into strings rsync mistakes for remote specs, and it
+cannot map MSYS `/c/...` or `/tmp` paths); PowerShell alone cannot run this
+Makefile. Export `MSYS=winsymlinks:nativestrict` with Windows Developer Mode
+enabled (or run elevated) so the installer test can create real symlinks.
+`make check` also needs the installed Herdr CLI. Tests use disposable Git
+repositories; remote-action tests use a local bare repository, not the
+network. The mod checker loads and renders the initial state but does not
+exercise deferred rows or user interactions.
 
 ## Isolated desktop smoke checks
 
@@ -70,6 +80,10 @@ restart an app or core you did not start. No helper here starts or stops either.
    the scratch directory's `fixture/`. Before using any Herdr CLI command,
    verify that this terminal still has the generated `HERDR_APP_HOME` and
    `HC_SESSION`. Do not use your normal window, core, or Git repository.
+   On Windows this step fails while any Herdr window is already open: the
+   second launch exits without a new window, socket or isolated state
+   (observed with herdr-app 0.1.14). Use a machine or disposable VM with no
+   Herdr window open for the interactive scenes.
 4. Exercise each scene below in that test window. From the project in a second
    terminal, run, replacing the path and scene name each time:
 
@@ -123,4 +137,4 @@ For each release, record a fresh matrix rather than carrying old passes forward:
 | --- | --- | --- | --- | --- |
 | macOS | pending | pending | pending | |
 | Linux | pending | pending | pending | |
-| Windows | pending | pending | pending | |
+| Windows | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout and Windows symlink fixes | pending — needs a machine with no Herdr window open | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above |

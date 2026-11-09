@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 
 const source = (await readFile(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8"))
+  .replace(/\r\n/g, "\n")
   .replace(/^import .*;\n/gm, "")
   .replace("export default class MideEditor", "class MideEditor") + "\nMideEditor;";
 const controls = new Map();
