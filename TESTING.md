@@ -51,10 +51,22 @@ location overrides that per invocation with
 `just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`. Provisioning
 cwRsync that worked here: install Chocolatey's `rsync` package or unpack the
 free zip after verifying its published SHA-256, then place an executable
-`rsync` shim earlier on the PATH — a small POSIX script that sets
-`MSYS_NO_PATHCONV=1` and `MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...`
-and `/c/...` arguments to Cygwin's `/cygdrive/c/...` before exec'ing
-cwRsync's rsync, so options and relative patterns pass through unchanged.
+`rsync` shim earlier on the PATH — `scripts/rsync-path-adapter.sh` is the
+reference implementation. It sets `MSYS_NO_PATHCONV=1` and
+`MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...` and `/c/...` arguments to
+Cygwin's `/cygdrive/c/...` before exec'ing cwRsync's rsync, and maps MSYS's
+`/tmp` mount (which cwRsync resolves to its own missing root) to the Windows
+temp directory. `smoke-prepare` also works without GNU Make: when `make` is
+absent it drives the same `scripts/bundle.sh` through the POSIX shell.
+
+A dispatch-only GitHub Actions workflow
+(`.github/workflows/windows-e2e.yml`) repeats this workflow on a disposable
+hosted Windows VM: it provisions rsync through the committed adapter,
+installs the released Herdr app, runs `just test` and `just check`, prepares
+the isolated fixture, starts the app in the isolated app home and captures
+the command-driven scenes (screen, files, changes, editor). It does not
+automate pointer interactions; scenes still need the manual or VM-desktop
+work below.
 
 ## Isolated desktop smoke checks
 

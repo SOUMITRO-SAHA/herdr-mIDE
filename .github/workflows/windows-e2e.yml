@@ -1,0 +1,173 @@
+# Disposable hosted Windows VM end-to-end smoke for herdr-mIDE.
+#
+# Provisioning rsync, installing the released Herdr app, running the
+# automated checks, preparing the isolated smoke fixture, launching the app
+# in the isolated app home, and capturing the command-driven scenes.
+# Pointer interactions are not automated yet; see TESTING.md. Run it with
+# `gh workflow run windows-e2e` — it never runs automatically.
+name: Windows end-to-end smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      MSYS: winsymlinks:nativestrict
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the environment
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, OSArchitecture | Format-List
+          git --version
+          node --version
+          "PowerShell session id: $((Get-Process -Id $PID).SessionId)"
+
+      - name: Install rsync (cwRsync) and the path adapter
+        shell: pwsh
+        run: |
+          choco install rsync just -y --no-progress
+          New-Item -ItemType Directory -Force "$HOME\mide-tools\bin" | Out-Null
+          Copy-Item scripts/rsync-path-adapter.sh "$HOME\mide-tools\bin\rsync"
+          Add-Content $env:GITHUB_PATH "$HOME\mide-tools\bin"
+
+      - name: Install the released Herdr app and core
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-RestMethod https://releases.herdr.dev/app/install.ps1 | Invoke-Expression
+          Add-Content $env:GITHUB_PATH "$env:LOCALAPPDATA\Programs\herdr-app"
+          Add-Content $env:GITHUB_PATH "$env:LOCALAPPDATA\Programs\herdr-core"
+
+      - name: Record tool versions
+        shell: pwsh
+        run: |
+          herdr-app --version
+          hc --version
+          just --version
+          & 'C:\Program Files\Git\bin\bash.exe' -lc 'command -v rsync && rsync --version | head -2'
+
+      - name: just test
+        shell: pwsh
+        run: just test
+
+      - name: just check
+        shell: pwsh
+        run: just check
+
+      - name: Prepare the isolated smoke fixture
+        shell: pwsh
+        run: |
+          $out = (just smoke-prepare 2>&1) | Out-String
+          Write-Output $out.TrimEnd()
+          $m = [regex]::Match($out, 'Prepared: (.+)$', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+          if (-not $m.Success) { throw 'smoke-prepare did not print a scratch directory' }
+          "MIDE_ROOT=$($m.Groups[1].Value.Trim())" | Add-Content $env:GITHUB_ENV
+
+      - name: Inspect the fixture
+        shell: pwsh
+        run: |
+          git -C "$env:MIDE_ROOT\fixture" --no-optional-locks status --porcelain
+          git -C "$env:MIDE_ROOT\fixture" --no-optional-locks log --oneline
+          Get-ChildItem "$env:MIDE_ROOT\bundle\mods" | Select-Object -ExpandProperty Name
+          Get-Content "$env:MIDE_ROOT\env.ps1"
+          Get-Content "$env:MIDE_ROOT\.mide-smoke.json"
+
+      - name: Pin the window geometry
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          # Deterministic window bounds for later coordinate-based automation.
+          $window = @{ state = 'normal'; bounds = @(0.0, 0.0, 1600.0, 900.0) } | ConvertTo-Json
+          Set-Content -Path "$env:MIDE_ROOT\h\window.json" -Value $window -Encoding utf8
+
+      - name: Launch the app in the isolated environment
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          "HERDR_APP_HOME=$env:HERDR_APP_HOME"
+          "HC_SESSION=$env:HC_SESSION"
+          if ($env:HERDR_APP_HOME -ne "$env:MIDE_ROOT\h") { throw 'the isolated app home is not set' }
+          Start-Process "$env:LOCALAPPDATA\Programs\herdr-app\herdr-app.exe"
+          $status = $null
+          $deadline = (Get-Date).AddMinutes(3)
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            try { $status = herdr-app status 2>$null | ConvertFrom-Json } catch { $status = $null }
+            if ($status) { break }
+          }
+          if (-not $status) {
+            Get-Process herdr* -ErrorAction SilentlyContinue | Format-List Name, Id, MainWindowTitle
+            throw 'the app did not report status within 3 minutes'
+          }
+
+      - name: Show the herdr-mide layout and the fixture space
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          herdr-app do overlay.close
+          herdr-app do overlay.close
+          herdr-app do layout.switch --name herdr-mide
+          herdr-app do space.new --name 'mIDE smoke' --folder "$env:MIDE_ROOT\fixture"
+          herdr-app status
+          herdr-app ls
+          herdr-app commands | Set-Content "$env:MIDE_ROOT\commands.json"
+
+      - name: Capture the initial screen
+        shell: pwsh
+        run: just smoke-capture "$env:MIDE_ROOT" screen
+
+      - name: Show the Files panel and capture
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          herdr-app do layout.show --id panel
+          just smoke-capture "$env:MIDE_ROOT" files
+
+      - name: Show the Changes panel and capture
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          herdr-app do layout.select --stack panel-body --child changes
+          just smoke-capture "$env:MIDE_ROOT" changes
+
+      - name: Open the editor on the fixture file (command-driven)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          herdr-app do tab.new --mod mide-editor --props ('{"file":"' + ($env:MIDE_ROOT -replace '\\','/') + '/fixture/sample.txt"}')
+          just smoke-capture "$env:MIDE_ROOT" editor
+
+      - name: Final status and mod-error check
+        shell: pwsh
+        run: |
+          . "$env:MIDE_ROOT\env.ps1"
+          $status = herdr-app status | ConvertFrom-Json
+          $status | ConvertTo-Json -Depth 5
+          if ($status.errors.Count -gt 0) { throw "mod errors: $($status.errors | ConvertTo-Json -Compress)" }
+
+      - name: Stop the app and core started for this run
+        if: always()
+        shell: pwsh
+        run: |
+          if (-not $env:MIDE_ROOT) { Write-Output 'no scratch root; nothing to stop'; exit 0 }
+          . "$env:MIDE_ROOT\env.ps1"
+          herdr-app do window.close
+          Start-Sleep -Seconds 3
+          hc server stop
+
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-smoke
+          path: |
+            ${{ env.MIDE_ROOT }}/captures
+            ${{ env.MIDE_ROOT }}/commands.json
+          if-no-files-found: warn
+          retention-days: 14
