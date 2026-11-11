@@ -54,8 +54,8 @@ files, commit and make small edits without changing Herdr's theme.
 - Diff shows tracked changes against HEAD and untracked files as additions.
   It refreshes, supports Split and Unified views, and uses Unified when the
   view is too narrow for Split.
-- Editor's Save button writes the current file; the optional `cmd-s` binding
-  does the same. An external edit causes a save error instead of an overwrite;
+- Editor's Save button writes the current file; the optional `⌘S`/`Ctrl+S`
+  binding does the same. An external edit causes a save error instead of an overwrite;
   Reload discards the draft. Word wrap and the Markdown Preview default are
   persistent settings, with Markdown opening in Raw by default.
 
@@ -77,8 +77,8 @@ files, commit and make small edits without changing Herdr's theme.
   `props`, `settings`, `theme`, `window`, `shared`, `setShared`, `exec`, `watchFolder`,
   `notify`, `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
-  `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e` and `cmd-s`
-  bindings for manual merging, not automatic replacement.
+  `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e`/`ctrl-shift-e`
+  and `cmd-s`/`ctrl-s` bindings for manual merging, not automatic replacement.
 - The tree invokes `sh` or PowerShell to list folders. Git is required for
   status, diff, history, staging, commits, branches and remote operations.
   Fetch, pull and push can contact the configured remote and use the user's

@@ -1,5 +1,5 @@
 // mIDE Editor — the minimal editor pane. Opens a file (props: { file }),
-// edits it with syntax highlighting, saves with cmd-s (mide-editor.save)
+// edits it with syntax highlighting, saves with ⌘S or Ctrl+S (mide-editor.save)
 // with Ayu syntax highlighting and Herdr's UI theme.
 //
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
@@ -7,13 +7,16 @@
 // (ROADMAP Phase 1).
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
-import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand } from "herdr";
+import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand, window } from "herdr";
 import { languageFor, syntaxPalette } from "./_shared/syntax.js";
 
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
 const MARKDOWN_PREVIEW_SETTING = "mide.editor.markdown_preview_default";
 const EDITOR_REQUEST = "mide.editor.request";
+// Herdr's key names are platform-literal: cmd-s matches only on macOS, so
+// the hint follows the documented window().platform.
+const saveHint = () => window().platform === "macos" ? "⌘S save" : "Ctrl+S save";
 const editorTypography = () => {
   const current = settings();
   const uiSize = current.ui_font_size ?? 13;
@@ -231,7 +234,7 @@ export default class MideEditor extends View {
       .child(h_flex().h(28).flex_none().px(12).gap(8).items_center().border_t(1).border_color(t.border).text_size(typography.text(11)).text_color(t.dim)
         .child(div().flex_1().min_w(0).truncate().child(this.file ?? ""))
         .when(this.code && this.file, el => el.child(div().id("mide-editor-save-status").flex_none()
-          .child(this.saving ? "Saving…" : this.saved ? "Saved" : "⌘S save")))
+          .child(this.saving ? "Saving…" : this.saved ? "Saved" : saveHint())))
         .when(this.code && this.file, el => el.child(div().id("mide-editor-save").flex_none().cursor_pointer()
           .accessibility_label("Save file").text_color(t.foreground).child("Save")
           .on_click((_e, cx) => this.save(cx)))));

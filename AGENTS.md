@@ -124,7 +124,9 @@ Instructions for AI coding agents working in this repo.
 - The root `Makefile` is the only entry point (`make dev`, `sync`, `test`,
   `check`, `install`, `shot`, `switch`, `bundle`, `smoke-prepare`,
   `smoke-capture`); scripts live in `scripts/`,
-  only `install.sh` at the root.
+  only `install.sh` at the root. The `justfile` mirrors those targets for
+  machines without GNU Make; when changing a target or its script, keep both
+  in step.
 - Validate mods with `make check` after every edit; the app's checker is the
   runtime check for initial loading, not a replacement for interaction tests.
 - Follow TDD for every behavior change: add a focused test, confirm it fails

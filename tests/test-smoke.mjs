@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { capture, createFixture, environmentFiles, fixtureGitEnv, isolatedEnv, parseStatus, sceneName, socketFits } from "../scripts/smoke.mjs";
+import { capture, bundleInvocation, createFixture, environmentFiles, fixtureGitEnv, isolatedEnv, parseStatus, sceneName, socketFits } from "../scripts/smoke.mjs";
 
 const root = join(tmpdir(), "mide-smoke-test");
 const inherited = {
@@ -45,6 +45,11 @@ assert.throws(() => sceneName(""));
 assert.equal(socketFits("/short", "m0123456789", "darwin"), true);
 assert.equal(socketFits(`/${"a".repeat(120)}`, "m0123456789", "darwin"), false);
 assert.equal(socketFits(`/${"a".repeat(120)}`, "m0123456789", "win32"), true);
+assert.deepEqual(bundleInvocation("darwin"), { program: "sh", args: ["./scripts/bundle.sh"] });
+const windowsBundle = bundleInvocation("win32");
+assert.equal(windowsBundle.program, "C:/Program Files/Git/bin/bash.exe");
+assert.equal(windowsBundle.args[0], "-c");
+assert.match(windowsBundle.args[1], /sh \.\/scripts\/bundle\.sh "\$1"/);
 
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "mide-smoke-test-")));
 try {

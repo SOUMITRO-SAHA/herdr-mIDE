@@ -44,6 +44,30 @@ repositories; remote-action tests use a local bare repository, not the
 network. The mod checker loads and renders the initial state but does not
 exercise deferred rows or user interactions.
 
+Without GNU Make, the same commands exist as a `justfile`: `just` forwards
+every target to the identical scripts. On Windows its recipes run through
+Git Bash's `bash.exe -lc` at the default install path; a non-default Git
+location overrides that per invocation with
+`just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`. Provisioning
+cwRsync that worked here: install Chocolatey's `rsync` package or unpack the
+free zip after verifying its published SHA-256, then place an executable
+`rsync` shim earlier on the PATH — `scripts/rsync-path-adapter.sh` is the
+reference implementation. It sets `MSYS_NO_PATHCONV=1` and
+`MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...` and `/c/...` arguments to
+Cygwin's `/cygdrive/c/...` before exec'ing cwRsync's rsync, and maps MSYS's
+`/tmp` mount (which cwRsync resolves to its own missing root) to the Windows
+temp directory. `smoke-prepare` also works without GNU Make: when `make` is
+absent it drives the same `scripts/bundle.sh` through the POSIX shell.
+
+A dispatch-only GitHub Actions workflow
+(`.github/workflows/windows-e2e.yml`) repeats this workflow on a disposable
+hosted Windows VM: it provisions rsync through the committed adapter,
+installs the released Herdr app, runs `just test` and `just check`, prepares
+the isolated fixture, starts the app in the isolated app home and captures
+the command-driven scenes (screen, files, changes, editor). It does not
+automate pointer interactions; scenes still need the manual or VM-desktop
+work below.
+
 ## Isolated desktop smoke checks
 
 Use a disposable VM or dedicated test machine on the target OS, with the
@@ -142,3 +166,4 @@ For each release, record a fresh matrix rather than carrying old passes forward:
 | macOS | pending | pending | pending | |
 | Linux | pending | pending | pending | |
 | Windows | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout, Windows symlink, Files `-EncodedCommand` and Git-marks fixes | pending — Files scene verified on-window via screenshots; Editor/Changes/Diff/Remotes need the remaining clicks | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above |
+| Windows | herdr-app 0.1.15 / hc 0.1.20 (2026-11-11) | pass — `just test`/`just check` (GNU Make not installed; the justfile and path-adapter shim above), locally and on a hosted VM by the `windows-e2e` workflow | partial — Files tree with space/apostrophe/Unicode names, editor Save button and the Ctrl+S binding fix, draft persistence, external-edit save conflict, Reload, Markdown Raw/Preview, word wrap, staging checkboxes, Stage All/Unstage All, row diffs, Split/Unified and Refresh verified on-window with independent Git checks; UI commits, history, the branch picker and fetch/pull/push not exercised | `just smoke-prepare` green; single-instance finding above; hosted-VM command-driven scenes (layout, space, panels, screenshots, no mod errors) green with artifacts |

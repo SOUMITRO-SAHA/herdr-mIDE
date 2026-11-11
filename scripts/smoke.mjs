@@ -51,6 +51,17 @@ function command(program, args, env, cwd = repo) {
   return result.stdout;
 }
 
+export function bundleInvocation(platform = process.platform) {
+  // How prepare() builds the bundle after `make` turns out to be missing:
+  // Git Bash drives the same scripts/bundle.sh on Windows, where GNU Make is
+  // often not installed and Node cannot spawn a bare `sh` by name.
+  if (platform !== "win32") return { program: "sh", args: ["./scripts/bundle.sh"] };
+  return {
+    program: "C:/Program Files/Git/bin/bash.exe",
+    args: ["-c", `sh ./scripts/bundle.sh "$1"`, "bundle"],
+  };
+}
+
 function posixQuote(value) { return `'${value.replace(/'/g, "'\\''")}'`; }
 function psQuote(value) { return `'${value.replace(/'/g, "''")}'`; }
 
@@ -98,7 +109,14 @@ function prepare() {
   }
   const bundle = join(root, "bundle");
   const buildEnv = { ...process.env, PREVIEW: join(repo, "preview.png") };
-  command("make", ["bundle", `BUNDLE_DIR=${bundle}`], buildEnv);
+  try {
+    command("make", ["bundle", `BUNDLE_DIR=${bundle}`], buildEnv);
+  } catch (error) {
+    // Only fall back when GNU Make itself is missing; a failed build rethrows.
+    if (error?.code !== "ENOENT") throw error;
+    const fallback = bundleInvocation(process.platform);
+    command(fallback.program, [...fallback.args, bundle], buildEnv);
+  }
   cpSync(join(bundle, "mods"), join(env.HERDR_APP_HOME, "mods"), { recursive: true, errorOnExist: true, force: false });
   cpSync(join(bundle, "layouts"), join(env.HERDR_APP_HOME, "layouts"), { recursive: true, errorOnExist: true, force: false });
   createFixture(root, env);
