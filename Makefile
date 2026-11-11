@@ -51,6 +51,7 @@ test:
 	@node ./tests/test-file-directory.mjs
 	@node ./tests/test-diff-assets.mjs
 	@node ./tests/test-editor-save.mjs
+	@node ./tests/test-keys.mjs
 	@node ./tests/test-smoke.mjs
 	@node ./tests/test-portable-temp.mjs
 	@sh ./tests/test-bundle.sh

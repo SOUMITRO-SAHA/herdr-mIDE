@@ -26,11 +26,13 @@ let write = async (path, value, expected) => {
   if (await readFile(path, "utf8") !== expected) throw new Error("File changed outside Herdr");
   await writeFile(path, value);
 };
+let hintPlatform = "macos";
 const context = {
   View: class {}, div: element, svg: element, v_flex: element, h_flex: element,
   Editor: { new: element }, EditorState: {}, TextView: { markdown: element },
   Checkbox: { new: element }, Popover: { new: element },
   theme: () => ({ accent: "primary-accent" }), settings: () => ({}), shared: () => false, setShared: () => {},
+  window: () => ({ platform: hintPlatform }),
   languageFor: () => "text", syntaxPalette: () => ({}),
   readTextFile: path => readFile(path, "utf8"), writeTextFile: (...args) => write(...args),
 };
@@ -106,6 +108,20 @@ try {
   editor.save(cx);
   assert.match(editor.note, /Too large to save/);
   assert.equal(await readFile(file, "utf8"), "external edit\n");
+
+  // The save hint follows the platform's modifier: ⌘S on macOS, Ctrl+S on
+  // Windows and Linux, where cmd-s is not a key.
+  editor.truncated = false;
+  editor.dirty = true;
+  hintPlatform = "windows";
+  editor.render(cx);
+  assert.equal(rendered.get("mide-editor-save-status").text, "Ctrl+S save");
+  hintPlatform = "linux";
+  editor.render(cx);
+  assert.equal(rendered.get("mide-editor-save-status").text, "Ctrl+S save");
+  hintPlatform = "macos";
+  editor.render(cx);
+  assert.equal(rendered.get("mide-editor-save-status").text, "⌘S save");
   console.log("editor save tests passed");
 } finally {
   await rm(root, { recursive: true, force: true });

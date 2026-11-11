@@ -1,8 +1,10 @@
 {
   "global": {
-    "cmd-shift-e": { "command": "pane.split", "args": { "direction": "right", "mod": "mide-editor" } }
+    "cmd-shift-e": { "command": "pane.split", "args": { "direction": "right", "mod": "mide-editor" } },
+    "ctrl-shift-e": { "command": "pane.split", "args": { "direction": "right", "mod": "mide-editor" } }
   },
   "mod:mide-editor": {
-    "cmd-s": "mide-editor.save"
+    "cmd-s": "mide-editor.save",
+    "ctrl-s": "mide-editor.save"
   }
 }
