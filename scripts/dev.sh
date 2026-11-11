@@ -4,7 +4,7 @@
 # window. A broken save keeps the last good version running and reports
 # in `herdr-app status`; nothing is lost by iterating.
 #
-# Usage: scripts/dev.sh    (or: make dev)
+# Usage: scripts/dev.sh    (or: just dev)
 # Env:   HERDR_APP_HOME  app home (default ~/.config/herdr-app)
 #        INTERVAL        poll seconds (default 1)
 set -e
@@ -19,7 +19,7 @@ echo "Watching (every ${INTERVAL}s):"
 echo "  $REPO_DIR/mods/mide-*  →  $HERDR_APP_HOME/mods/"
 echo "  layouts/herdr-mide.json"
 echo "Herdr reloads each file as it lands. Ctrl-C to stop."
-echo "Verify: make status (errors) · make shot (window PNG)"
+echo "Verify: just status (errors) · just shot (window PNG)"
 
 while :; do
   changed="$(

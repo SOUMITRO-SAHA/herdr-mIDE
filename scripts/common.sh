@@ -1,5 +1,5 @@
 # Shared configuration for herdr-mIDE scripts: paths and sync rules.
-# Sourced by the scripts in this folder; the Makefile is the entry point.
+# Sourced by the scripts in this folder; the justfile is the entry point.
 
 # The Herdr app home (override with HERDR_APP_HOME).
 HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"

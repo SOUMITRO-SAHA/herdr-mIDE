@@ -1,18 +1,21 @@
-# herdr-mIDE — the Makefile's commands for machines without GNU Make.
-# The root Makefile stays the canonical entry point; this file runs the
-# identical scripts so `just` is a drop-in alternative, which matters on
-# Windows where the workflow lives in Git Bash (see TESTING.md).
+# herdr-mIDE — the one entry point for every command.
+# The script logic lives in scripts/ (install.sh stays at the root).
 #
-# Requirements are the same as `make test` / `make check`: Node.js, Git, a
-# POSIX shell and rsync. On Windows the recipes run through Git Bash's
-# bash.exe at its default install location; if your Git lives elsewhere,
-# override it per invocation:
+#   just dev       watch loop: sync repo → Herdr app home on every change;
+#                  Herdr hot-reloads each mod as it lands. Ctrl-C to stop.
+#   just sync      one-shot copy of mods and layout into the app home
+#   just check     herdr-app check on every mod (the runtime's own parser)
+#   just install   first-time install (never overwrites; prints keys to merge)
+#   just status    what the window says: layout, focus, errors from mods
+#   just shot      PNG of the window → herdr-shot.png
+#   just switch    show the herdr-mide layout (ctrl-shift-l cycles back)
+#
+# Requirements: Node.js, Git, a POSIX shell (Git Bash on Windows) and rsync —
+# see TESTING.md for the Windows provisioning notes. On Windows the recipes
+# run through Git Bash's bash.exe at its default install location; if your
+# Git lives elsewhere, override it per invocation:
 #
 #   just --shell "D:/path/to/Git/bin/bash.exe" --shell-arg -lc <recipe>
-#
-# Provision rsync per TESTING.md — for example cwRsync, driven from Git Bash
-# through the small path-adapter shim described there — and put it on the
-# PATH the recipes see before running just.
 
 set windows-shell := ['C:/Program Files/Git/bin/bash.exe', '-lc']
 

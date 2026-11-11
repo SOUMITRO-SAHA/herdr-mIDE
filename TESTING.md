@@ -27,37 +27,31 @@ On each OS, from this repo run:
 ```sh
 herdr-app --version
 hc --version
-make test
-make check
+just test
+just check
 ```
 
-`make test` needs Node.js, Git, a POSIX shell, `make` and `rsync`. On Windows,
-use a POSIX shell such as Git Bash and provide `make` and `rsync` separately
-(for example GNU Make 4.4.1 and cwRsync; cwRsync's Cygwin rsync needs a small
-path-adapter shim when driven from Git Bash, because MSYS path conversion
-turns `C:/...` arguments into strings rsync mistakes for remote specs, and it
-cannot map MSYS `/c/...` or `/tmp` paths); PowerShell alone cannot run this
-Makefile. Export `MSYS=winsymlinks:nativestrict` with Windows Developer Mode
+The root `justfile` is the only entry point; install
+[just](https://github.com/casey/just) (1.59 tested) alongside Node.js, Git,
+a POSIX shell and `rsync`. On Windows, run the commands from PowerShell or
+cmd: the recipes drive Git Bash's `bash.exe -lc` at the default install path
+(a non-default Git location overrides that per invocation with
+`just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`), and rsync
+must be provisioned separately — Git for Windows does not include it.
+Provisioning cwRsync that worked here: install Chocolatey's `rsync` package
+or unpack the free zip after verifying its published SHA-256, then place an
+executable `rsync` shim earlier on the PATH —
+`scripts/rsync-path-adapter.sh` is the reference implementation. It sets
+`MSYS_NO_PATHCONV=1` and `MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...`
+and `/c/...` arguments to Cygwin's `/cygdrive/c/...` before exec'ing
+cwRsync's rsync, and maps MSYS's `/tmp` mount (which cwRsync resolves to its
+own missing root) to the Windows temp directory.
+Export `MSYS=winsymlinks:nativestrict` with Windows Developer Mode
 enabled (or run elevated) so the installer test can create real symlinks.
-`make check` also needs the installed Herdr CLI. Tests use disposable Git
+`just check` also needs the installed Herdr CLI. Tests use disposable Git
 repositories; remote-action tests use a local bare repository, not the
 network. The mod checker loads and renders the initial state but does not
 exercise deferred rows or user interactions.
-
-Without GNU Make, the same commands exist as a `justfile`: `just` forwards
-every target to the identical scripts. On Windows its recipes run through
-Git Bash's `bash.exe -lc` at the default install path; a non-default Git
-location overrides that per invocation with
-`just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`. Provisioning
-cwRsync that worked here: install Chocolatey's `rsync` package or unpack the
-free zip after verifying its published SHA-256, then place an executable
-`rsync` shim earlier on the PATH — `scripts/rsync-path-adapter.sh` is the
-reference implementation. It sets `MSYS_NO_PATHCONV=1` and
-`MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...` and `/c/...` arguments to
-Cygwin's `/cygdrive/c/...` before exec'ing cwRsync's rsync, and maps MSYS's
-`/tmp` mount (which cwRsync resolves to its own missing root) to the Windows
-temp directory. `smoke-prepare` also works without GNU Make: when `make` is
-absent it drives the same `scripts/bundle.sh` through the POSIX shell.
 
 A dispatch-only GitHub Actions workflow
 (`.github/workflows/windows-e2e.yml`) repeats this workflow on a disposable
@@ -76,7 +70,7 @@ does **not** isolate the installed app binary: Herdr releases may update
 themselves. Never run fake input on a person's real display, and never stop or
 restart an app or core you did not start. No helper here starts or stops either.
 
-1. Run `make smoke-prepare` from the project. It creates a unique temporary
+1. Run `just smoke-prepare` from the project. It creates a unique temporary
    directory, a self-contained staged bundle, a separate app home, a unique
    core session, private XDG state/config/runtime directories and a disposable
    Git fixture with one modified and one untracked file. It prints the
@@ -112,11 +106,11 @@ restart an app or core you did not start. No helper here starts or stops either.
    terminal, run, replacing the path and scene name each time:
 
    ```sh
-   make smoke-capture "SMOKE_ROOT=/absolute/scratch/path" SCENE=files
+   just smoke-capture /absolute/scratch/path files
    ```
 
    On Windows, pass the printed native path using forward slashes, for example
-   `make smoke-capture "SMOKE_ROOT=C:/absolute/scratch/path" SCENE=files`;
+   `just smoke-capture "C:/absolute/scratch/path" files`;
    the Node helper requires an absolute native path rather than `/c/...`.
    The helper connects **only** to the prepared app home's control socket,
    requires the `herdr-mide` layout and no reported mod errors, and asks Herdr
@@ -161,7 +155,7 @@ unless it was actually performed.
 
 For each release, record a fresh matrix rather than carrying old passes forward:
 
-| Platform | App/core versions | `make check` | Interactive scenes | Notes / screenshots |
+| Platform | App/core versions | `just check` | Interactive scenes | Notes / screenshots |
 | --- | --- | --- | --- | --- |
 | macOS | pending | pending | pending | |
 | Linux | pending | pending | pending | |

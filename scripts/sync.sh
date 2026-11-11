@@ -3,7 +3,7 @@
 # app home. Overwrites the installed copies (dev semantics); install.sh at
 # the repo root is the no-clobber first-time installer.
 #
-# Usage: scripts/sync.sh          (or: make sync)
+# Usage: scripts/sync.sh          (or: just sync)
 #        scripts/sync.sh --quiet  no output unless something fails
 # Env:   HERDR_APP_HOME  app home (default ~/.config/herdr-app)
 set -e

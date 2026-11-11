@@ -50,6 +50,11 @@ const windowsBundle = bundleInvocation("win32");
 assert.equal(windowsBundle.program, "C:/Program Files/Git/bin/bash.exe");
 assert.equal(windowsBundle.args[0], "-c");
 assert.match(windowsBundle.args[1], /sh \.\/scripts\/bundle\.sh "\$1"/);
+// The justfile is the only entry point: smoke-prepare must drive
+// scripts/bundle.sh itself instead of spawning GNU Make.
+const smokeSource = readFileSync(new URL("../scripts/smoke.mjs", import.meta.url), "utf8");
+assert.ok(!smokeSource.includes('command("make"'), "smoke-prepare must not depend on GNU Make");
+assert.ok(smokeSource.includes("bundleInvocation("), "smoke-prepare must build the bundle through bundleInvocation");
 
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "mide-smoke-test-")));
 try {

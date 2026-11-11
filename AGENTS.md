@@ -42,7 +42,7 @@ Instructions for AI coding agents working in this repo.
   copies, keep layout references and mod asset paths consistent, and credit
   any shipped adaptations. Do not overwrite a person's files or key bindings
   without permission; respect the repository's no-clobber install workflow.
-- `make check` tests and copies all configured mods into temporary staging, materializes shared
+- `just check` tests and copies all configured mods into temporary staging, materializes shared
   modules, and runs the installed `herdr-app check` on each. The checker
   loads and renders the initial mod, but does not prove layout, deferred
   rows, later asynchronous states, or interactions work. For user-facing
@@ -75,7 +75,7 @@ Instructions for AI coding agents working in this repo.
   verification as fact.
 - Derive and cross-check the recipe against the current layout, all mod
   manifests and source, shared-module materialization, keys, installer,
-  Makefile, tests and third-party notices. Resolve contradictions and remove
+  justfile, tests and third-party notices. Resolve contradictions and remove
   stale claims rather than copying old recipe text. Document required
   programs, side effects, platform and remote limitations, supported Herdr
   version, key merging and no-overwrite behavior where relevant. Reference
@@ -121,16 +121,15 @@ Instructions for AI coding agents working in this repo.
 
 ## House rules
 
-- The root `Makefile` is the only entry point (`make dev`, `sync`, `test`,
+- The root `justfile` is the only entry point (`just dev`, `sync`, `test`,
   `check`, `install`, `shot`, `switch`, `bundle`, `smoke-prepare`,
   `smoke-capture`); scripts live in `scripts/`,
-  only `install.sh` at the root. The `justfile` mirrors those targets for
-  machines without GNU Make; when changing a target or its script, keep both
-  in step.
-- Validate mods with `make check` after every edit; the app's checker is the
+  only `install.sh` at the root. There is no Makefile; do not reintroduce a
+  second runner.
+- Validate mods with `just check` after every edit; the app's checker is the
   runtime check for initial loading, not a replacement for interaction tests.
 - Follow TDD for every behavior change: add a focused test, confirm it fails
-  before implementing, then run `make test` and `make check`.
+  before implementing, then run `just test` and `just check`.
 - Keep shared mod logic in one canonical source under `shared/` and list its
   consuming mods in `shared-modules.list`. The runtime isolates each mod, so
   materialize local copies under that mod's `_shared/` only in staging or the

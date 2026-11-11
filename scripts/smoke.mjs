@@ -52,9 +52,9 @@ function command(program, args, env, cwd = repo) {
 }
 
 export function bundleInvocation(platform = process.platform) {
-  // How prepare() builds the bundle after `make` turns out to be missing:
-  // Git Bash drives the same scripts/bundle.sh on Windows, where GNU Make is
-  // often not installed and Node cannot spawn a bare `sh` by name.
+  // How prepare() builds the bundle: Git Bash drives the same
+  // scripts/bundle.sh on Windows, where Node cannot spawn a bare `sh` by
+  // name. The justfile is the only entry point; nothing here runs GNU Make.
   if (platform !== "win32") return { program: "sh", args: ["./scripts/bundle.sh"] };
   return {
     program: "C:/Program Files/Git/bin/bash.exe",
@@ -109,14 +109,8 @@ function prepare() {
   }
   const bundle = join(root, "bundle");
   const buildEnv = { ...process.env, PREVIEW: join(repo, "preview.png") };
-  try {
-    command("make", ["bundle", `BUNDLE_DIR=${bundle}`], buildEnv);
-  } catch (error) {
-    // Only fall back when GNU Make itself is missing; a failed build rethrows.
-    if (error?.code !== "ENOENT") throw error;
-    const fallback = bundleInvocation(process.platform);
-    command(fallback.program, [...fallback.args, bundle], buildEnv);
-  }
+  const invocation = bundleInvocation(process.platform);
+  command(invocation.program, [...invocation.args, bundle], buildEnv);
   cpSync(join(bundle, "mods"), join(env.HERDR_APP_HOME, "mods"), { recursive: true, errorOnExist: true, force: false });
   cpSync(join(bundle, "layouts"), join(env.HERDR_APP_HOME, "layouts"), { recursive: true, errorOnExist: true, force: false });
   createFixture(root, env);
@@ -154,6 +148,6 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
       const shot = capture(process.env.MIDE_SMOKE_ROOT, process.env.MIDE_SMOKE_SCENE || "screen");
       console.log(`No mod errors reported. Screenshot: ${shot}\nInspect the image and test interactions manually; capture is not a visual assertion.`);
     }
-    else throw new Error("Use make smoke-prepare or make smoke-capture");
+    else throw new Error("Use just smoke-prepare or just smoke-capture");
   } catch (error) { console.error(`smoke: ${error.message}`); process.exitCode = 1; }
 }

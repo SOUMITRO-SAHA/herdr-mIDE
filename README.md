@@ -73,9 +73,9 @@ The installer copies the mods and layout into `~/.config/herdr-app` (or `HERDR_A
 If a copy or check fails, installation may be partial; inspect the reported
 files before retrying. A retry skips existing names rather than repairing them.
 
-Use **Save** in the editor to write changes to disk. The footer briefly shows **Saved** after the current contents are written, and the unsaved dot disappears. To also use ⌘S, merge the printed `mod:mide-editor` binding into your Herdr `keys.json`; the installer does not change your existing keys.
+Use **Save** in the editor to write changes to disk. The footer briefly shows **Saved** after the current contents are written, and the unsaved dot disappears. To also save from the keyboard, merge the printed `mod:mide-editor` bindings (`cmd-s`, and `ctrl-s` on Windows and Linux) into your Herdr `keys.json`; the installer does not change your existing keys.
 
-The no-clobber installer is not an upgrade tool. `make sync` is for development: it overwrites the installed mIDE layout and replaces mod-folder contents, including local edits, while leaving theme files and settings alone. Back up and review existing customizations before a manual upgrade.
+The no-clobber installer is not an upgrade tool. `just sync` is for development: it overwrites the installed mIDE layout and replaces mod-folder contents, including local edits, while leaving theme files and settings alone. Back up and review existing customizations before a manual upgrade.
 
 Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. Ayu applies to syntax, while Git colors use the bundled palette; other UI colors follow Herdr.
 
@@ -94,9 +94,9 @@ mods/mide-changes/        staging · commit · branches
 mods/mide-diff/           git diff pane · split/unified · refresh
 mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
-keys.json                 ⌘⇧E editor pane · ⌘S save
+keys.json                 optional bindings: cmd/ctrl-shift-e editor split, cmd/ctrl-s save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
-Makefile                  the entry point: dev · sync · test · check · install · status · shot · switch · bundle
+justfile                  the entry point: dev, sync, test, check, install, status, shot, switch, bundle, smoke-*
 VERSION                   version of the complete layout + four-mod bundle
 scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
@@ -108,29 +108,29 @@ All icons live in `mods/mide-files/icons/` — the single source of truth. File-
 
 ## Development
 
-Every command lives in the root `Makefile`:
+Every command lives in the root `justfile`:
 
 ```sh
-make dev        # live loop: sync on every save, Herdr hot-reloads in place
-make sync       # one-shot copy into ~/.config/herdr-app
-make test       # source tests for shared helpers and palette boundaries
-make check      # herdr-app check every mod (the runtime's own parser)
-make install    # first-time install (never overwrites; prints keys to merge)
-make status     # window state + errors from files and mods
-make shot       # screenshot of the window → herdr-shot.png
-make switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
-make bundle     # build a copyable layout bundle; needs a reviewed preview.png
-make smoke-prepare  # prepare a disposable app home and Git fixture
-make smoke-capture  # check and capture a user-started test window; see TESTING.md
+just dev        # live loop: sync on every save, Herdr hot-reloads in place
+just sync       # one-shot copy into ~/.config/herdr-app
+just test       # source tests for shared helpers and palette boundaries
+just check      # herdr-app check every mod (the runtime's own parser)
+just install    # first-time install (never overwrites; prints keys to merge)
+just status     # window state + errors from files and mods
+just shot       # screenshot of the window → herdr-shot.png
+just switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
+just bundle     # build a copyable layout bundle; needs a reviewed preview.png
+just smoke-prepare  # prepare a disposable app home and Git fixture
+just smoke-capture  # check and capture a user-started test window; see TESTING.md
 ```
 
-`preview.png` is the project's preview artwork. `make bundle` packages it for
+`preview.png` is the project's preview artwork. `just bundle` packages it for
 Herdr's gallery; it only checks that the file exists, so review the image,
 other screenshots and demo video for private information before publishing.
 
-The typical loop: `make dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `make status`; `make shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `make dev INTERVAL=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
+The typical loop: `just dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `just status`; `just shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `just dev interval=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
-Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the Makefile; only `install.sh` (the no-clobber installer) stays at the root beside it.
+Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
 `shared/syntax.js` owns mIDE's single syntax palette and lightweight tokenizer; the editor and Diff consume it through generated mod-local copies. It uses the documented `EditorState` syntax option and tokenizes Diff lines locally, without depending on extra host APIs. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
 
