@@ -92,17 +92,21 @@ jobs:
       - name: Launch the app in the isolated environment
         shell: pwsh
         run: |
+          $appExe = "$env:LOCALAPPDATA\Programs\herdr-app\herdr-app.exe"
+          if (-not (Test-Path $appExe)) { throw "the installed app is missing: $appExe" }
           . "$env:MIDE_ROOT\env.ps1"
           "HERDR_APP_HOME=$env:HERDR_APP_HOME"
           "HC_SESSION=$env:HC_SESSION"
           if ($env:HERDR_APP_HOME -ne "$env:MIDE_ROOT\h") { throw 'the isolated app home is not set' }
-          Start-Process "$env:LOCALAPPDATA\Programs\herdr-app\herdr-app.exe"
+          if ($env:LOCALAPPDATA -eq $appExe) { throw 'unreachable' }
+          Start-Process $appExe
           $status = $null
           $deadline = (Get-Date).AddMinutes(3)
           while ((Get-Date) -lt $deadline) {
             Start-Sleep -Seconds 5
             try { $status = herdr-app status 2>$null | ConvertFrom-Json } catch { $status = $null }
             if ($status) { break }
+            if (-not (Get-Process herdr-app -ErrorAction SilentlyContinue)) { throw 'the herdr-app process exited on its own' }
           }
           if (-not $status) {
             Get-Process herdr* -ErrorAction SilentlyContinue | Format-List Name, Id, MainWindowTitle
