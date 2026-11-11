@@ -44,6 +44,18 @@ repositories; remote-action tests use a local bare repository, not the
 network. The mod checker loads and renders the initial state but does not
 exercise deferred rows or user interactions.
 
+Without GNU Make, the same commands exist as a `justfile`: `just` forwards
+every target to the identical scripts. On Windows its recipes run through
+Git Bash's `bash.exe -lc` at the default install path; a non-default Git
+location overrides that per invocation with
+`just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`. Provisioning
+cwRsync that worked here: install Chocolatey's `rsync` package or unpack the
+free zip after verifying its published SHA-256, then place an executable
+`rsync` shim earlier on the PATH — a small POSIX script that sets
+`MSYS_NO_PATHCONV=1` and `MSYS2_ARG_CONV_EXCL='*'` and translates `C:/...`
+and `/c/...` arguments to Cygwin's `/cygdrive/c/...` before exec'ing
+cwRsync's rsync, so options and relative patterns pass through unchanged.
+
 ## Isolated desktop smoke checks
 
 Use a disposable VM or dedicated test machine on the target OS, with the

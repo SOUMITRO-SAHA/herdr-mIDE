@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A `justfile` mirroring every Makefile target, so machines without GNU Make (typical Windows setups) run the same scripts with `just`; TESTING.md documents provisioning cwRsync and its Git Bash path-adapter shim.
 - A cross-platform testing guide and isolated smoke preparation/capture helpers for user-started Herdr test windows.
 - Windows testing guidance: provisioning GNU Make and cwRsync (with a Git Bash path-adapter note for its Cygwin rsync), the real-symlink requirement (`MSYS=winsymlinks:nativestrict` with Developer Mode), and Herdr's machine-wide single-instance behavior on Windows, which blocks a second isolated smoke window while one is already open.
 - A single version for the layout and four cooperating mods, and a reproducible self-contained bundle for release and gallery preparation.
