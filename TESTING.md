@@ -117,6 +117,10 @@ restart an app or core you did not start. No helper here starts or stops either.
   Commit staged changes, then tracked-only changes; verify the commit contents
   and that untracked files remain excluded. Use only the scratch repository.
 - **Branches and remotes:** create, switch and delete a merged test branch.
+  In the scratch repository, make conflicting changes on two branches and
+  attempt to switch with an uncommitted edit. Check the error with the branch
+  picker open, then closed, in both Changes and History; text must not overlap
+  controls and the error toast should appear. Confirm the edit remains intact.
   Exercise fetch/pull/push only against a disposable local bare remote. The
   automated Git integration test already exercises these methods against one,
   but it is not a UI test.

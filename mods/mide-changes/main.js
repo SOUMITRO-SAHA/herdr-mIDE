@@ -4,10 +4,11 @@
 // Clicking a file opens its diff in a full-size pane beside the editor.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, notify } from "herdr";
 import { gitColors } from "./palette.js";
 import { toggleStage } from "./stage-action.js";
 import { groupChanges } from "./change-groups.js";
+import { friendlyGitError, gitActionLabel } from "./git-errors.js";
 
 function location(previous) {
   const f = focused(), allSpaces = spaces();
@@ -200,6 +201,14 @@ export default class MideChanges extends View {
     cx.notify();
   }
 
+  // A failed git action reads as one short line — inline where it was taken
+  // and once as an error toast — never as git's raw multiline output.
+  fail(context, args, error) {
+    if (this.currentKey() !== context) return;
+    this.note = friendlyGitError(error);
+    notify({ title: `${gitActionLabel(args)} failed`, body: this.note, level: "error" });
+  }
+
   // Stage / unstage one file; stageAll covers the "everything the agent
   // touched" case. Refresh follows from the folder watch, but ping once
   // anyway so the panel answers immediately.
@@ -211,7 +220,7 @@ export default class MideChanges extends View {
         const r = await exec("git", args, { cwd: root, on });
         if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim());
         if (this.currentKey() === context && then) then();
-      } catch (e) { if (this.currentKey() === context) this.note = String(e); }
+      } catch (e) { this.fail(context, args, e); }
       finally { this.busy = false; this.refresh(cx); cx.notify(); }
     });
     cx.notify();
@@ -276,7 +285,7 @@ export default class MideChanges extends View {
         const result = await exec("git", ["commit", "-m", message], { cwd: root, on });
         if (result.code !== 0) throw new Error((result.stderr || result.stdout).trim());
         if (this.currentKey() === context) { this.message = ""; this.input.set_value(""); }
-      } catch (e) { if (this.currentKey() === context) this.note = String(e); }
+      } catch (e) { this.fail(context, ["commit"], e); }
       finally { this.busy = false; this.refresh(cx); cx.notify(); }
     });
     cx.notify();
@@ -333,6 +342,15 @@ export default class MideChanges extends View {
       .child(label);
   }
 
+  noteRow(t, typography, message = this.note) {
+    const [summary, ...details] = String(message).split(" — ");
+    return div().w_full().min_w(0).flex_none().overflow_hidden().px(8).py(4)
+      .text_size(typography.text(11)).text_color(t.ansi1)
+      .child(v_flex().w_full().min_w(0)
+        .child(div().w_full().min_w(0).truncate().child(summary))
+        .when(Boolean(details.length), (e) => e.child(div().w_full().min_w(0).truncate().child(details.join(" — ")))));
+  }
+
   branchPicker(t, typography) {
     const query = this.branchQuery.value().trim();
     const normalizedQuery = query.toLowerCase();
@@ -361,8 +379,8 @@ export default class MideChanges extends View {
         .child(`Create branch “${createName}”`)))
       .child(div().w_full().h(30).px(8).flex().items_center().rounded(6).border_1().border_color(t.border)
         .child(Input.new(this.branchQuery).h_full().text_size(typography.text(12)).text_color(t.foreground)))
-      .when(Boolean(this.branchError), (e) => e.child(div().px(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.branchError)))
-      .when(Boolean(this.note), (e) => e.child(div().px(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note)));
+      .when(Boolean(this.branchError), (e) => e.child(this.noteRow(t, typography, this.branchError)))
+      .when(Boolean(this.note), (e) => e.child(this.noteRow(t, typography)));
   }
 
   stageActions(t, label, enabled, action, typography) {
@@ -503,7 +521,7 @@ export default class MideChanges extends View {
              .when(!this.files.length, (item) => item.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder"))))
               .when(this.limited, (item) => item.child(div().p(8).text_size(typography.text(11)).text_color(t.dim).child("Showing the first 1,000 changed files"))))
            .child(Scrollbar.vertical("mide-changes-list").absolute().inset_0()))
-          .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note))))
+          .when(Boolean(this.note) && !this.branchMenuOpen, (e) => e.child(this.noteRow(t, typography))))
       .when(this.view === "history", (el) => el.child(div().flex_1().min_h(0).relative().border_b(1).border_color(t.border)
         .child(v_flex().id("mide-history-list").absolute().inset_0().overflow_y_scroll().p(6)
            .children(this.history.map((commit) => this.historyRow(commit, t, typography)))
@@ -514,6 +532,6 @@ export default class MideChanges extends View {
         .child(div().id("mide-commit-message").h(92).px(8).py(5).rounded(7).bg(host.background).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Textarea.new(this.input).size_full().text_size(typography.uiSize).text_color(t.muted)))
          .child(h_flex().h(20).flex_none().items_center()
            .child(div().flex_1().text_size(typography.text(10)).text_color(t.dim).child(this.staged ? `${this.staged} staged` : hasTrackedChanges ? `${tracked.length} tracked changes` : "No changes to commit")))))
-       .when(this.view === "history" && Boolean(this.note), (el) => el.child(div().px(10).pb(8).text_size(typography.text(11)).text_color(t.ansi1).child(this.note)));
+       .when(this.view === "history" && Boolean(this.note) && !this.branchMenuOpen, (el) => el.child(this.noteRow(t, typography)));
   }
 }

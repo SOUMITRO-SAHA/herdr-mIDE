@@ -44,6 +44,13 @@ files, commit and make small edits without changing Herdr's theme.
   untracked files. The footer offers Fetch, Pull and Push; its primary action
   follows the upstream ahead/behind state. The branch popover switches,
   creates or deletes local branches.
+- A failed Git action — a switch blocked by uncommitted changes, a missing
+  branch, an unmerged delete — shows one short readable line where the action
+  was taken and posts an error toast (for example "Uncommitted changes to
+  .gitignore would be overwritten — commit or stash them first."), never git's
+  raw multiline output. While the branch popover is open, the message appears
+  only inside it; otherwise it appears in the panel. Long inline text is
+  truncated to fit, with recovery guidance on a separate line when available.
 - Diff shows tracked changes against HEAD and untracked files as additions.
   It refreshes, supports Split and Unified views, and uses Unified when the
   view is too narrow for Split.
@@ -68,7 +75,7 @@ files, commit and make small edits without changing Herdr's theme.
   panel mods derive their location from the focused workspace.
 - Mods use `gpui-kit`, `gpui-base` and Herdr's `spaces`, `panes`, `focused`,
   `props`, `settings`, `theme`, `window`, `shared`, `setShared`, `exec`, `watchFolder`,
-  `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
+  `notify`, `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
   `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e` and `cmd-s`
   bindings for manual merging, not automatic replacement.
@@ -122,6 +129,9 @@ files, commit and make small edits without changing Herdr's theme.
   excludes untracked files.
 - Diff opens for a changed file and switches views. Branch selection works;
   remote actions are exercised only against a disposable remote.
+- A branch switch blocked by local edits fails without moving HEAD, and the
+  panel shows the short blocked-files message plus an error toast rather than
+  git's raw output.
 - The original layout, keys, app theme and unrelated installed mods remain
   unchanged by installation; all relevant behaviors are checked on supported
   platforms before publishing.

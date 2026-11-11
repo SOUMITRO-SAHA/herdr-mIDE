@@ -47,6 +47,8 @@ test:
 	@node ./tests/test-changes-stage-review.mjs
 	@node ./tests/test-changes-tracking.mjs
 	@node ./tests/test-changes-commit-branches.mjs
+	@node ./tests/test-changes-git-errors.mjs
+	@node ./tests/test-changes-note-layout.mjs
 	@node ./tests/test-file-icons.mjs
 	@node ./tests/test-file-directory.mjs
 	@node ./tests/test-diff-assets.mjs

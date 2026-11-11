@@ -35,7 +35,10 @@ try {
     if (result.error) throw result.error;
     return { code: result.status, stdout: result.stdout, stderr: result.stderr };
   };
-  const methods = new Function("exec", `return ({${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`)(exec);
+  const toasts = [];
+  const notify = (toast) => { toasts.push(toast); return `toast-${toasts.length}`; };
+  const { friendlyGitError, gitActionLabel } = await import("../mods/mide-changes/git-errors.js");
+  const methods = new Function("friendlyGitError", "gitActionLabel", "exec", "notify", `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`)(friendlyGitError, gitActionLabel, exec, notify);
   const tasks = [];
   const cx = { notify() {}, spawn(fn) { tasks.push(fn(cx)); } };
   const drain = async () => { while (tasks.length) await tasks.shift(); };
@@ -106,6 +109,32 @@ try {
   await drain();
   assert.equal(view.note, null);
   assert.equal(readFileSync(join(root, "upstream.txt"), "utf8"), "upstream\n");
+
+  // A switch that would clobber local edits must fail with one short,
+  // readable line and an error toast — not git's raw multiline output.
+  git("switch", "-q", "-c", "diverged");
+  writeFileSync(join(root, "tracked.txt"), "diverged\n");
+  git("commit", "-q", "-a", "-m", "diverged");
+  git("switch", "-q", initialBranch);
+  writeFileSync(join(root, "tracked.txt"), "local edit\n");
+  toasts.length = 0;
+  view.switchBranch("diverged", cx);
+  await drain();
+  assert.equal(git("branch", "--show-current"), initialBranch, "the blocked switch must not move HEAD");
+  assert.equal(view.note, `Uncommitted changes to tracked.txt would be overwritten — commit or stash them first.`);
+  assert.ok(!view.note.includes("\n"), "the inline note must be one line");
+  assert.equal(toasts.length, 1, "a failed switch posts one toast");
+  assert.equal(toasts[0].level, "error");
+  assert.equal(toasts[0].title, "Branch switch failed");
+  assert.equal(toasts[0].body, view.note);
+
+  // Switching to a branch that is gone reads as a missing branch, not a raw fatal.
+  toasts.length = 0;
+  view.switchBranch("deleted-elsewhere", cx);
+  await drain();
+  assert.equal(view.note, "No branch named “deleted-elsewhere”.");
+  assert.equal(toasts.length, 1);
+  assert.equal(toasts[0].body, view.note);
   console.log("Changes commit, branch and local-remote integration tests passed");
 } finally {
   rmSync(root, { recursive: true, force: true });
