@@ -48,7 +48,27 @@ Instructions for AI coding agents working in this repo.
   rows, later asynchronous states, or interactions work. For user-facing
   changes also exercise the affected layout, states and interactions in Herdr
   when possible; report what could not be verified. Never stop or restart
-  someone else's app or core; use an isolated app home and core for testing.
+  someone else's app or core; use an isolated app home and core for testing —
+  locally that means the `herdr-dev` profile (see below), never production.
+
+## Local testing — always the `herdr-dev` profile
+
+- All local testing and development runs against our dedicated developer
+  profile, **`herdr-dev`**: its own app home and core session, selected by
+  pointing `HERDR_APP_HOME` at it (e.g. `HERDR_APP_HOME=~/.config/herdr-dev`)
+  for every command that touches a Herdr environment — `just dev`, `just
+  sync`, `just status`, `just shot`, `just switch`.
+- Never run, sync, install, hot-reload, switch layouts or capture screenshots
+  against the original production environment (the default `~/.config/herdr-app`
+  app home with no `HERDR_APP_HOME` override). Do not point tests at it "just
+  this once", and do not treat it as a fallback when the dev profile is
+  missing, broken or not set up — prepare or fix `herdr-dev` instead.
+- Production has exactly one purpose: verifying the live, released version of
+  our mods as a person sees them. Touch it only deliberately for that check,
+  never as a side effect of development, testing or automation.
+- Disposable fixtures (CI, `just smoke-prepare`) use their own isolated app
+  homes and never production; `just check` stages into temporary directories
+  and touches no app home at all.
 
 ## Maintaining RECIPE.md
 
