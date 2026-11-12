@@ -25,6 +25,16 @@ assert.equal(resolveIcon(".dev.vars"), "tune");
 assert.equal(resolveIcon("env"), "tune");
 assert.equal(resolveIcon("sudoers"), "key");
 
+// Task-runner and release files in this repo's root were missed by the
+// generated map: Just's justfile takes the theme's dedicated Just glyph
+// (upstream maps justfile/.justfile → just), and a bare VERSION file is
+// release metadata — the same gear glyph the theme gives .tool-versions.
+assert.equal(resolveIcon("justfile"), "just");
+assert.equal(resolveIcon(".justfile"), "just");
+assert.equal(resolveIcon("VERSION"), "settings");
+// Shell scripts keep the console glyph.
+assert.equal(resolveIcon("install.sh"), "console");
+
 // Resolution order stays: exact name first, then longest dotted suffix.
 assert.equal(resolveIcon("readme.txt"), "readme");
 assert.equal(resolveIcon("LICENSE.txt"), "license");
