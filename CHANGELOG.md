@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- An issue-first contribution flow in CONTRIBUTING.md: every PR needs a tracked issue claimed before work starts (`/claim`), claimants get merge priority, claimed issues are off-limits to others (ask for owner, status and ETA in a comment instead), branches follow `<type>/<issue-number>-<slug>` and commits `type(scope): summary`; a PR-template checklist and a merge gate formalize verification before merging.
+- Code formatting via Prettier run through Bun (`just fmt`, `just fmt-check`, config tuned to the existing house style). The compact `mods/mide-files/icons.js` association map and the vendored `.agents/` reference checkouts are exempt by design.
+- A `Checks` workflow that runs `just fmt-check` and `just test` on every pull request and push to `main`; the Windows end-to-end workflow installs Bun for the Bun-driven recipes.
 - TESTING.md documents provisioning cwRsync and its Git Bash path-adapter shim (`scripts/rsync-path-adapter.sh`) for Windows machines, where rsync must be provided separately.
 - A dispatch-only GitHub Actions workflow that repeats the Windows workflow on a disposable hosted VM: it provisions rsync and the path adapter, installs the released Herdr app, runs `just test` and `just check`, prepares the isolated smoke fixture, launches the app in the isolated app home, and captures the command-driven scenes.
 
 ### Removed
+
 - The root Makefile. The `justfile` is the single entry point (`just dev`, `sync`, `test`, `check`, `install`, `status`, `shot`, `switch`, `bundle`, `smoke-prepare`, `smoke-capture`), and smoke preparation builds its bundle by driving `scripts/bundle.sh` through the POSIX shell (Git Bash on Windows) instead of spawning GNU Make.
 - A cross-platform testing guide and isolated smoke preparation/capture helpers for user-started Herdr test windows.
 - Windows testing guidance: provisioning GNU Make and cwRsync (with a Git Bash path-adapter note for its Cygwin rsync), the real-symlink requirement (`MSYS=winsymlinks:nativestrict` with Developer Mode), and Herdr's machine-wide single-instance behavior on Windows, which blocks a second isolated smoke window while one is already open.
@@ -20,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screenshots of the file tree, editor, diffs and Git workflows, including a real layout preview for the release bundle.
 
 ### Changed
+
+- The test and smoke recipes run through Bun instead of Node.js (`bun install` once replaces any Node setup), and the whole tree is normalized once to the Prettier style — formatting only, no behavior change; `just test` and `just check` stay green. `tests/test-diff-assets.mjs` now matches its source-snippet assertions across line breaks so formatting cannot break it.
 - The rebuild recipe now documents the complete layout bundle, current Git actions, dependencies and limitations.
 - Opening files from the Files panel now reuses the editor pane; the first editor opens below an existing Diff pane, or to the right of the matching terminal, and modified drafts remain available when switching files.
 - mIDE panel UI typography now follows Herdr's active interface font and size; editor and diff content follows its active terminal font and size.
@@ -35,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Icons now come entirely from Material Icon Theme (MIT)** — 62 file-type icons replace the previous 169-icon set — a researched minimal keep-list (the top-20 languages cross-referenced from TIOBE, the Stack Overflow 2025 survey and PYPL, plus universal files like git, yaml, json, docker and lockfiles, and famous formats like svg, zip, pdf, fonts, media, keys and certificates). The association map is adapted from the theme's own mapping filtered to that list (338 suffixes + 297 names); anything uncommon renders as the plain file glyph. Folder glyphs and chevrons are unchanged.
 
 ### Fixed
+
 - Files lists projects stored outside the home folder again, per platform: Herdr grants its fs API reads inside the home folder only (`read_roots([home()])` in the app's mods policy, on every platform), and the perf change that read local folders in-process surfaced that refusal as a panel error for any project on another volume or drive. Local listings still read in-process first; when Herdr refuses the path, the original platform dispatch returns unchanged — the encoded PowerShell payload on Windows (chosen directly by `window().platform`, without an `sh` probe: the argv transport mangles space- or quote-containing paths and stock Windows has no sh), `sh` on macOS and Linux — and remote machines keep their `sh`-then-PowerShell probe exactly as before.
 - The Files panel shows dedicated glyphs for task-runner and release files the generated map missed: `justfile` (and `.justfile`) gets the theme's Just mark, and a bare `VERSION` file shares the settings gear the theme gives other version metadata such as `.tool-versions`; `install.sh` keeps the console glyph it already had.
 - Editor saving works by keyboard on Windows and Linux: Herdr's key names are platform-literal (`cmd-s` matches only on macOS), so `keys.json` now offers `ctrl-s` and `ctrl-shift-e` beside the macOS bindings, and the footer hint shows the platform's modifier (⌘S on macOS, Ctrl+S elsewhere) instead of always ⌘S.
@@ -55,14 +63,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git status colors use Ayu's modified, deleted and added colors consistently across Files, Changes and Diff.
 - Editor: a visible Save button writes files even when the optional ⌘S key binding has not been installed. The unsaved dot uses the app accent, and the footer briefly confirms a successful save before showing the shortcut again. Edits made during a save remain marked unsaved, and drafts retain the correct disk baseline when switching files. Saves carry the loaded baseline so external edits are caught, with a `Reload (discard draft)` action on failure; oversized files refuse to save instead of silently truncating. The `mide-editor.save` command handles both plain strings and named command objects.
 - Files panel: macOS `.DS_Store` files no longer appear in the tree (filtered in both the `sh` and PowerShell listings; other dotfiles still show).
-- Files panel: a file's *name prefix* no longer outranks its *type* in icon matching — `Dockerfile.rs` used to show the Docker glyph; the Rust type now wins, while `Dockerfile.prod` still reads as a Dockerfile.
+- Files panel: a file's _name prefix_ no longer outranks its _type_ in icon matching — `Dockerfile.rs` used to show the Docker glyph; the Rust type now wins, while `Dockerfile.prod` still reads as a Dockerfile.
 
 ### Changed
+
 - File-icon matching resolves like a full IDE: exact file name first (`package.json`, `docker-compose.yml`, `CMakeLists.txt`…), then the longest dotted suffix (`foo.d.ts` tries `d.ts` before `ts`), then name prefixes — and lockfiles (`Cargo.lock`, `poetry.lock`…) now get the lock glyph. Tree icons render at 16px, level with the row text.
 - Folder status colorization now works the way the reference IDE does it: the color of the most severe change underneath paints the folder's glyph **and its title**, propagating up every ancestor folder, so the path to a changed file lights up as a whole. The colors use the private Ayu Git status tokens.
 - File names render calm: muted against the foreground instead of full-bright, and git-ignored paths (dependencies, build output, local secrets) go one step deeper so they stop shouting; changed names keep their orange/red/green.
 
 ### Added
+
 - **Syntax-highlighted diffs.** Diff rows use mIDE's shared lightweight tokenizer and palette on both old and new sides, in Split and Unified views; files highlight in small batches under per-file and total character budgets, so large diffs stay responsive and binary or unsupported files fall back to plain text.
 - Shared mod logic now lives once under `shared/`, with `shared-modules.list` naming each consuming mod; sync, install and `make check` materialize every `_shared/` copy (never kept in `mods/`), and `make test` runs source tests for the shared helpers, the palette boundary and the file-icon mappings.
 - **Ayu Dark for mIDE**: the MIT-licensed palette covers editor syntax and Git change colors without changing Herdr's theme.

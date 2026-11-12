@@ -16,7 +16,7 @@ const LANG = {
   vue: "html",
   yaml: "toml",
 };
-export const languageFor = (file) => {
+export const languageFor = file => {
   const ext = file.includes(".") ? file.split(".").pop().toLowerCase() : "txt";
   return LANG[ext] ?? ext;
 };
@@ -44,43 +44,92 @@ const SYNTAX_COLORS = Object.freeze({
 
 export const syntaxPalette = () => Object.freeze({ ...SYNTAX_COLORS });
 
-const KEYWORDS = new Set((
-  "as async await break case catch class const continue debugger default delete do else export " +
-  "extends finally for from function get if import in instanceof let new of return set static " +
-  "super switch this throw try typeof var void while with yield abstract assert boolean byte " +
-  "char double enum final float implements int interface long native package private protected " +
-  "public short synchronized throws transient volatile def del elif except exec global lambda " +
-  "nonlocal pass print raise self and or not is fn impl let mut pub crate mod trait type use " +
-  "where match loop move ref struct unsafe dyn extern union macro_rules select go defer fallthrough " +
-  "chan map range rune string const func var package type interface struct " +
-  "begin end module require ensure alias undef unless until when then elsif rescue retry unless " +
-  "select case end function local repeat then elseif do while for in class extends require " +
-  "using namespace template typename constexpr decltype constexpr operator friend virtual override " +
-  "readonly keyof infer satisfies declare as const enum implements abstract async await " +
-  "true false null undefined None True False"
-).split(/\s+/));
+const KEYWORDS = new Set(
+  (
+    "as async await break case catch class const continue debugger default delete do else export " +
+    "extends finally for from function get if import in instanceof let new of return set static " +
+    "super switch this throw try typeof var void while with yield abstract assert boolean byte " +
+    "char double enum final float implements int interface long native package private protected " +
+    "public short synchronized throws transient volatile def del elif except exec global lambda " +
+    "nonlocal pass print raise self and or not is fn impl let mut pub crate mod trait type use " +
+    "where match loop move ref struct unsafe dyn extern union macro_rules select go defer fallthrough " +
+    "chan map range rune string const func var package type interface struct " +
+    "begin end module require ensure alias undef unless until when then elsif rescue retry unless " +
+    "select case end function local repeat then elseif do while for in class extends require " +
+    "using namespace template typename constexpr decltype constexpr operator friend virtual override " +
+    "readonly keyof infer satisfies declare as const enum implements abstract async await " +
+    "true false null undefined None True False"
+  ).split(/\s+/),
+);
 
 const CONSTANTS = new Set([
-  "true", "false", "null", "undefined", "NaN", "Infinity", "None", "True", "False", "nil", "NULL",
+  "true",
+  "false",
+  "null",
+  "undefined",
+  "NaN",
+  "Infinity",
+  "None",
+  "True",
+  "False",
+  "nil",
+  "NULL",
 ]);
 
-const TYPES = new Set((
-  "Array Boolean Date Error Function Map Number Object Promise Proxy Reflect RegExp Set String Symbol " +
-  "WeakMap WeakSet BigInt any never unknown void bool byte char double float int integer long short " +
-  "str bytes list dict tuple set Optional Union Result Option Vec HashMap HashSet Self self TypeError " +
-  "HTMLElement Element Node Document Event Record Partial Pick Omit Readonly PromiseLike"
-).split(/\s+/));
+const TYPES = new Set(
+  (
+    "Array Boolean Date Error Function Map Number Object Promise Proxy Reflect RegExp Set String Symbol " +
+    "WeakMap WeakSet BigInt any never unknown void bool byte char double float int integer long short " +
+    "str bytes list dict tuple set Optional Union Result Option Vec HashMap HashSet Self self TypeError " +
+    "HTMLElement Element Node Document Event Record Partial Pick Omit Readonly PromiseLike"
+  ).split(/\s+/),
+);
 
 const HASH_COMMENT_LANGUAGES = new Set([
-  "bash", "dockerfile", "makefile", "perl", "python", "py", "ruby", "r", "sh", "shell", "toml", "yaml",
+  "bash",
+  "dockerfile",
+  "makefile",
+  "perl",
+  "python",
+  "py",
+  "ruby",
+  "r",
+  "sh",
+  "shell",
+  "toml",
+  "yaml",
 ]);
 const DASH_COMMENT_LANGUAGES = new Set(["haskell", "lua", "sql"]);
 const SLASH_COMMENT_LANGUAGES = new Set([
-  "c", "cc", "cpp", "csharp", "css", "cxx", "go", "h", "hpp", "hxx", "java", "javascript", "js", "json", "kotlin", "m", "mm", "php", "rust", "rs", "scala", "swift", "typescript", "tsx", "zig",
+  "c",
+  "cc",
+  "cpp",
+  "csharp",
+  "css",
+  "cxx",
+  "go",
+  "h",
+  "hpp",
+  "hxx",
+  "java",
+  "javascript",
+  "js",
+  "json",
+  "kotlin",
+  "m",
+  "mm",
+  "php",
+  "rust",
+  "rs",
+  "scala",
+  "swift",
+  "typescript",
+  "tsx",
+  "zig",
 ]);
 
-const isWordStart = (char) => Boolean(char && /[A-Za-z_$]/.test(char));
-const isWordPart = (char) => Boolean(char && /[A-Za-z0-9_$]/.test(char));
+const isWordStart = char => Boolean(char && /[A-Za-z_$]/.test(char));
+const isWordPart = char => Boolean(char && /[A-Za-z0-9_$]/.test(char));
 const appendRun = (runs, start, end, scope) => {
   if (start >= end) return;
   const previous = runs[runs.length - 1];
@@ -189,13 +238,21 @@ function tokenizeLine(line, language, state) {
       index = end + 2;
       continue;
     }
-    if (slashComments && line.startsWith("//", index) || dashComments && line.startsWith("--", index) || hashComments && line[index] === "#") {
+    if (
+      (slashComments && line.startsWith("//", index)) ||
+      (dashComments && line.startsWith("--", index)) ||
+      (hashComments && line[index] === "#")
+    ) {
       add(index, line.length, "comment");
       break;
     }
 
     const quote = line[index];
-    if ((quote === "\"" || quote === "'" || quote === "`") && language === "python" && line.startsWith(quote.repeat(3), index)) {
+    if (
+      (quote === '"' || quote === "'" || quote === "`") &&
+      language === "python" &&
+      line.startsWith(quote.repeat(3), index)
+    ) {
       const delimiter = quote.repeat(3);
       const end = line.indexOf(delimiter, index + 3);
       if (end < 0) {
@@ -207,11 +264,17 @@ function tokenizeLine(line, language, state) {
       index = end + 3;
       continue;
     }
-    if (quote === "\"" || quote === "'" || quote === "`") {
+    if (quote === '"' || quote === "'" || quote === "`") {
       let end = index + 1;
       while (end < line.length) {
-        if (line[end] === "\\") { end += 2; continue; }
-        if (line[end] === quote) { end++; break; }
+        if (line[end] === "\\") {
+          end += 2;
+          continue;
+        }
+        if (line[end] === quote) {
+          end++;
+          break;
+        }
         end++;
       }
       add(index, Math.min(end, line.length), "string");
@@ -238,10 +301,19 @@ function tokenizeLine(line, language, state) {
       const tagOpen = tagStart > line.lastIndexOf(">", index);
       const tagPrefix = tagOpen ? line.slice(tagStart + 1, index) : "";
       const htmlScope = tagOpen ? (/^\/?$/.test(tagPrefix) ? "type" : "keyword") : null;
-      const scope = htmlScope ?? (CONSTANTS.has(word) ? (word === "true" || word === "false" || word === "True" || word === "False" ? "boolean" : "constant")
-        : KEYWORDS.has(word) ? "keyword"
-          : TYPES.has(word) || /^[A-Z]/.test(word) ? "type"
-            : line[end + next] === "(" ? "function" : null);
+      const scope =
+        htmlScope ??
+        (CONSTANTS.has(word)
+          ? word === "true" || word === "false" || word === "True" || word === "False"
+            ? "boolean"
+            : "constant"
+          : KEYWORDS.has(word)
+            ? "keyword"
+            : TYPES.has(word) || /^[A-Z]/.test(word)
+              ? "type"
+              : line[end + next] === "("
+                ? "function"
+                : null);
       if (scope) add(index, end, scope);
       index = end;
       continue;
@@ -259,7 +331,9 @@ function tokenizeLine(line, language, state) {
 // but all preceding lines are scanned so multiline comments/strings stay right.
 export const highlightLines = (source, language, requestedLines) => {
   const lines = String(source ?? "").split("\n");
-  const requested = new Set((requestedLines ?? []).filter(line => Number.isInteger(line) && line > 0 && line <= lines.length));
+  const requested = new Set(
+    (requestedLines ?? []).filter(line => Number.isInteger(line) && line > 0 && line <= lines.length),
+  );
   if (!requested.size) return [];
 
   const state = { blockEnd: null, multilineQuote: null };

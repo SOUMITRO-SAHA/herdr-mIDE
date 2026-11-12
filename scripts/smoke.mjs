@@ -12,16 +12,27 @@ const cleared = ["HC_SOCKET", "HC_TERMINAL_ID", "HC_TERMINAL_SOCKET", "HC_SCOPE"
 
 export function isolatedEnv(root, session, inherited = process.env, platform = process.platform) {
   if (!isAbsolute(root) || !/^m[0-9a-f]{10}$/.test(session)) throw new Error("Invalid isolated root or session");
-  const env = { ...inherited, HERDR_APP_HOME: join(root, "h"), HC_SESSION: session,
-    XDG_STATE_HOME: join(root, "s"), XDG_CONFIG_HOME: join(root, "c"), XDG_RUNTIME_DIR: join(root, "r"), DO_NOT_TRACK: "1" };
+  const env = {
+    ...inherited,
+    HERDR_APP_HOME: join(root, "h"),
+    HC_SESSION: session,
+    XDG_STATE_HOME: join(root, "s"),
+    XDG_CONFIG_HOME: join(root, "c"),
+    XDG_RUNTIME_DIR: join(root, "r"),
+    DO_NOT_TRACK: "1",
+  };
   for (const key of cleared) delete env[key];
-  if (platform === "win32") { env.APPDATA = join(root, "a"); env.LOCALAPPDATA = join(root, "l"); }
+  if (platform === "win32") {
+    env.APPDATA = join(root, "a");
+    env.LOCALAPPDATA = join(root, "l");
+  }
   return env;
 }
 
 export function parseStatus(text, expectedLayout) {
   const status = JSON.parse(text);
-  if (!status || status.layout !== expectedLayout || !Array.isArray(status.errors)) throw new Error("Expected the isolated herdr-mide layout and an errors list");
+  if (!status || status.layout !== expectedLayout || !Array.isArray(status.errors))
+    throw new Error("Expected the isolated herdr-mide layout and an errors list");
   if (status.errors.length) throw new Error(`Herdr reports errors: ${JSON.stringify(status.errors)}`);
   return status;
 }
@@ -62,19 +73,40 @@ export function bundleInvocation(platform = process.platform) {
   };
 }
 
-function posixQuote(value) { return `'${value.replace(/'/g, "'\\''")}'`; }
-function psQuote(value) { return `'${value.replace(/'/g, "''")}'`; }
+function posixQuote(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function psQuote(value) {
+  return `'${value.replace(/'/g, "''")}'`;
+}
 
 export function environmentFiles(env, platform = process.platform) {
-  const names = ["HERDR_APP_HOME", "HC_SESSION", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_RUNTIME_DIR", "DO_NOT_TRACK",
-    ...(platform === "win32" ? ["APPDATA", "LOCALAPPDATA"] : [])];
-  const shell = names.map(key => `export ${key}=${posixQuote(env[key])}`).concat(`unset ${cleared.join(" ")}`).join("\n") + "\n";
-  const powershell = names.map(key => `$env:${key} = ${psQuote(env[key])}`).concat(`Remove-Item ${cleared.map(key => `Env:${key}`).join(", ")} -ErrorAction SilentlyContinue`).join("\n") + "\n";
+  const names = [
+    "HERDR_APP_HOME",
+    "HC_SESSION",
+    "XDG_STATE_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_RUNTIME_DIR",
+    "DO_NOT_TRACK",
+    ...(platform === "win32" ? ["APPDATA", "LOCALAPPDATA"] : []),
+  ];
+  const shell =
+    names
+      .map(key => `export ${key}=${posixQuote(env[key])}`)
+      .concat(`unset ${cleared.join(" ")}`)
+      .join("\n") + "\n";
+  const powershell =
+    names
+      .map(key => `$env:${key} = ${psQuote(env[key])}`)
+      .concat(`Remove-Item ${cleared.map(key => `Env:${key}`).join(", ")} -ErrorAction SilentlyContinue`)
+      .join("\n") + "\n";
   return { shell, powershell };
 }
 
 export function createFixture(root, env) {
-  const fixture = join(root, "fixture"), hooks = join(root, "hooks"), globalConfig = join(root, "gitconfig");
+  const fixture = join(root, "fixture"),
+    hooks = join(root, "hooks"),
+    globalConfig = join(root, "gitconfig");
   mkdirSync(fixture, { mode: 0o700 });
   mkdirSync(hooks, { mode: 0o700 });
   writeFileSync(globalConfig, "", { flag: "wx", mode: 0o600 });
@@ -98,13 +130,22 @@ function prepare() {
   // Prefer the configured temp directory, falling back to Herdr's /var/tmp
   // convention only when Unix-domain socket limits require a shorter path.
   const candidates = [tmpdir(), ...(process.platform === "win32" ? [] : ["/var/tmp"])];
-  const base = candidates.filter(existsSync).map(path => realpathSync(path))
+  const base = candidates
+    .filter(existsSync)
+    .map(path => realpathSync(path))
     .find(path => socketFits(join(path, "mXXXXXX"), session));
-  if (!base) throw new Error("No private temp path is short enough for Herdr's socket; set TMPDIR to a shorter directory");
+  if (!base)
+    throw new Error("No private temp path is short enough for Herdr's socket; set TMPDIR to a shorter directory");
   // Short names leave room for Unix-domain sockets. No existing path is reused.
   const root = realpathSync(mkdtempSync(join(base, "m")));
   const env = isolatedEnv(root, session);
-  for (const key of ["HERDR_APP_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_RUNTIME_DIR", ...(process.platform === "win32" ? ["APPDATA", "LOCALAPPDATA"] : [])]) {
+  for (const key of [
+    "HERDR_APP_HOME",
+    "XDG_STATE_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_RUNTIME_DIR",
+    ...(process.platform === "win32" ? ["APPDATA", "LOCALAPPDATA"] : []),
+  ]) {
     mkdirSync(env[key], { recursive: true, mode: 0o700 });
   }
   const bundle = join(root, "bundle");
@@ -112,9 +153,16 @@ function prepare() {
   const invocation = bundleInvocation(process.platform);
   command(invocation.program, [...invocation.args, bundle], buildEnv);
   cpSync(join(bundle, "mods"), join(env.HERDR_APP_HOME, "mods"), { recursive: true, errorOnExist: true, force: false });
-  cpSync(join(bundle, "layouts"), join(env.HERDR_APP_HOME, "layouts"), { recursive: true, errorOnExist: true, force: false });
+  cpSync(join(bundle, "layouts"), join(env.HERDR_APP_HOME, "layouts"), {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+  });
   createFixture(root, env);
-  writeFileSync(join(root, ".mide-smoke.json"), JSON.stringify({ version: 1, root, session }) + "\n", { flag: "wx", mode: 0o600 });
+  writeFileSync(join(root, ".mide-smoke.json"), JSON.stringify({ version: 1, root, session }) + "\n", {
+    flag: "wx",
+    mode: 0o600,
+  });
   const { shell, powershell } = environmentFiles(env);
   writeFileSync(join(root, "env.sh"), shell, { flag: "wx", mode: 0o600 });
   writeFileSync(join(root, "env.ps1"), powershell, { flag: "wx", mode: 0o600 });
@@ -136,7 +184,13 @@ export function capture(rootArg, label, run = command) {
   if (existsSync(shot)) throw new Error("Refusing to overwrite a screenshot");
   run("herdr-app", ["shot", shot], env);
   const png = readFileSync(shot);
-  if (png.length < 24 || !png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) || !png.readUInt32BE(16) || !png.readUInt32BE(20)) throw new Error("Herdr did not produce a valid PNG header");
+  if (
+    png.length < 24 ||
+    !png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
+    !png.readUInt32BE(16) ||
+    !png.readUInt32BE(20)
+  )
+    throw new Error("Herdr did not produce a valid PNG header");
   parseStatus(run("herdr-app", ["status"], env), "herdr-mide");
   return shot;
 }
@@ -146,8 +200,12 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     if (process.argv[2] === "--prepare") prepare();
     else if (process.argv[2] === "--capture") {
       const shot = capture(process.env.MIDE_SMOKE_ROOT, process.env.MIDE_SMOKE_SCENE || "screen");
-      console.log(`No mod errors reported. Screenshot: ${shot}\nInspect the image and test interactions manually; capture is not a visual assertion.`);
-    }
-    else throw new Error("Use just smoke-prepare or just smoke-capture");
-  } catch (error) { console.error(`smoke: ${error.message}`); process.exitCode = 1; }
+      console.log(
+        `No mod errors reported. Screenshot: ${shot}\nInspect the image and test interactions manually; capture is not a visual assertion.`,
+      );
+    } else throw new Error("Use just smoke-prepare or just smoke-capture");
+  } catch (error) {
+    console.error(`smoke: ${error.message}`);
+    process.exitCode = 1;
+  }
 }

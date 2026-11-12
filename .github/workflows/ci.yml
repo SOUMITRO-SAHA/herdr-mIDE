@@ -1,0 +1,32 @@
+# Checks on every pull request and push to main: the formatting gate and the
+# source test suite, both through the justfile (the single entry point).
+# `just check` (needs the installed Herdr app) and the Windows end-to-end
+# smoke stay in their own label/dispatch-gated workflow.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: just fmt-check
+        run: just fmt-check
+
+      - name: just test
+        run: just test

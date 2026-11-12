@@ -18,7 +18,10 @@ calls.length = 0;
 toggleStage(file, false, cx, actions);
 assert.deepEqual(calls, [["unstage", file, cx]]);
 
-assert.equal(calls.some(([action]) => action === "openDiff"), false);
+assert.equal(
+  calls.some(([action]) => action === "openDiff"),
+  false,
+);
 
 // Exercise the actual file-row builder and bubble clicks through its tree.
 // The checkbox may consume its own click in the host, so do not rely on a
@@ -28,19 +31,32 @@ function element() {
   return new Proxy(node, {
     get(target, property, receiver) {
       if (property in target) return Reflect.get(target, property, receiver);
-      if (property === "child") return (child) => {
-        if (child && typeof child === "object") { child.parent = receiver; target.children.push(child); }
-        return receiver;
-      };
-      if (property === "on_click") return (handler) => { target.click = handler; return receiver; };
-      if (property === "when") return (condition, fn) => condition ? fn(receiver) : receiver;
+      if (property === "child")
+        return child => {
+          if (child && typeof child === "object") {
+            child.parent = receiver;
+            target.children.push(child);
+          }
+          return receiver;
+        };
+      if (property === "on_click")
+        return handler => {
+          target.click = handler;
+          return receiver;
+        };
+      if (property === "when") return (condition, fn) => (condition ? fn(receiver) : receiver);
       return () => receiver;
     },
   });
 }
 const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
 const rowMethod = source.slice(source.indexOf("  fileRow("), source.indexOf("  group(", source.indexOf("  fileRow(")));
-const fileRow = new Function("h_flex", "div", "gitStatusColor", "toggleStage", `return ({${rowMethod}}).fileRow`)(element, element, () => "color", toggleStage);
+const fileRow = new Function("h_flex", "div", "gitStatusColor", "toggleStage", `return ({${rowMethod}}).fileRow`)(
+  element,
+  element,
+  () => "color",
+  toggleStage,
+);
 let checkbox;
 const rowCalls = [];
 const view = {

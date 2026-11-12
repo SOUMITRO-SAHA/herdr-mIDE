@@ -57,7 +57,7 @@ Instructions for AI coding agents working in this repo.
   profile, **`herdr-dev`**: its own app home and core session, selected by
   pointing `HERDR_APP_HOME` at it (e.g. `HERDR_APP_HOME=~/.config/herdr-dev`)
   for every command that touches a Herdr environment — `just dev`, `just
-  sync`, `just status`, `just shot`, `just switch`.
+sync`, `just status`, `just shot`, `just switch`.
 - Never run, sync, install, hot-reload, switch layouts or capture screenshots
   against the original production environment (the default `~/.config/herdr-app`
   app home with no `HERDR_APP_HOME` override). Do not point tests at it "just
@@ -69,6 +69,18 @@ Instructions for AI coding agents working in this repo.
 - Disposable fixtures (CI, `just smoke-prepare`) use their own isolated app
   homes and never production; `just check` stages into temporary directories
   and touches no app home at all.
+
+## Contributing — the issue-first flow
+
+Every change, by a person or an agent, follows
+[`CONTRIBUTING.md`](./CONTRIBUTING.md): find or create the issue, comment
+`/claim` on it **before** starting work, branch
+`<type>/<issue-number>-<slug>`, commit `type(scope): summary`, and open the
+PR linked with `Fixes #N`. Never work on an issue someone else has claimed;
+if it matters, comment on the issue asking for owner, status and ETA — merge
+priority goes to the claimant. `just fmt-check`, `just test` and (for mods)
+`just check` must be green before review; the PR template checklist is the
+merge gate.
 
 ## Maintaining RECIPE.md
 
@@ -148,6 +160,10 @@ Instructions for AI coding agents working in this repo.
   second runner.
 - Validate mods with `just check` after every edit; the app's checker is the
   runtime check for initial loading, not a replacement for interaction tests.
+- Run `bun install` once after cloning, then `just fmt` before committing;
+  `just fmt-check` is the CI gate on every PR. Prettier (config in
+  `.prettierrc`) covers JS, JSON, Markdown and YAML; `mods/mide-files/icons.js`
+  and the vendored `.agents/` references are exempt by design.
 - Follow TDD for every behavior change: add a focused test, confirm it fails
   before implementing, then run `just test` and `just check`.
 - Keep shared mod logic in one canonical source under `shared/` and list its
@@ -162,7 +178,7 @@ Instructions for AI coding agents working in this repo.
   Herdr highlighting APIs. If they do not expose a required capability, stop
   and ask rather than depending on private host APIs.
 - Git reads in mods must run with `--no-optional-locks -c
-  core.fsmonitor=false` or the folder watcher refresh loops forever.
+core.fsmonitor=false` or the folder watcher refresh loops forever.
 - Commits follow `type(scope): summary` and explain the why for users;
   `CHANGELOG.md` stays release-ready (see `.opencode/commands/`).
 - Version and release the layout and its four dependent mods together; follow

@@ -1,0 +1,13 @@
+{
+  "name": "herdr-mide",
+  "private": true,
+  "description": "Formatting for the herdr-mIDE repository. Not part of the shipped layout bundle; see CONTRIBUTING.md.",
+  "type": "module",
+  "scripts": {
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
