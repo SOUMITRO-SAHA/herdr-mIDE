@@ -6,7 +6,7 @@
 
 **herdr-mIDE** is a layout + mod package for the [Herdr app](https://herdr.dev): a better file manager, a better git panel, and a minimal editor — all living inside the same window as your terminals and coding agents.
 
-Most of the coding work today is done by AI agents. What's left for us is the *last mile*: review what the agent changed, make small surgical edits, stage the right files, and ship. Existing IDEs are built for a world where you write all the code. **herdr-mIDE is built for the world where you don't.**
+Most of the coding work today is done by AI agents. What's left for us is the _last mile_: review what the agent changed, make small surgical edits, stage the right files, and ship. Existing IDEs are built for a world where you write all the code. **herdr-mIDE is built for the world where you don't.**
 
 ![herdr-mIDE preview showing the Changes panel and diff beside a terminal](preview.png)
 
@@ -115,6 +115,8 @@ just dev        # live loop: sync on every save, Herdr hot-reloads in place
 just sync       # one-shot copy into ~/.config/herdr-app
 just test       # source tests for shared helpers and palette boundaries
 just check      # herdr-app check every mod (the runtime's own parser)
+just fmt        # format the tree (Prettier via Bun; bun install once)
+just fmt-check  # verify formatting; CI enforces this on every PR
 just install    # first-time install (never overwrites; prints keys to merge)
 just status     # window state + errors from files and mods
 just shot       # screenshot of the window → herdr-shot.png
@@ -133,6 +135,16 @@ The typical loop: `just dev` in one terminal, edit in your editor — each save 
 Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
 `shared/syntax.js` owns mIDE's single syntax palette and lightweight tokenizer; the editor and Diff consume it through generated mod-local copies. It uses the documented `EditorState` syntax option and tokenizes Diff lines locally, without depending on extra host APIs. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
+
+## Contributing
+
+Issues first: every pull request starts with a tracked issue, claimed with a
+`/claim` comment before work begins, and the PR links back to it (`Fixes #N`)
+so the discussion closes on merge. Claimants get merge priority; never race
+someone on an already-claimed issue — comment asking for status and ETA
+instead. Branch `<type>/<issue-number>-<slug>`, commit `type(scope): summary`,
+and keep `just fmt-check`, `just test` and (for mods) `just check` green. The
+full flow and merge gate are in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Status
 

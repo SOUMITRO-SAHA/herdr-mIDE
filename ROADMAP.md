@@ -10,15 +10,15 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 
 **Feasibility from the study:**
 
-| Intended feature | Verdict | Grounding |
-| --- | --- | --- |
-| File viewer with type icons | ✅ | `svg()` tints per glyph; `exec` + `watchFolder` drive the tree |
-| Git status colors in the tree | ✅ | `git status --porcelain=v1` per path, colored names (done in v0) |
-| Detailed diff view | ✅ | `git diff [--cached]` on a virtual list (done in v0) |
-| Better staging & commit flow | ✅ | per-file `git add` / `restore --staged`, commit-staged-only (done in v0) |
-| Branch switching | ✅ | `git switch` / `switch -c` / `branch -d` (done in v0) |
-| Herdr theme integration | ✅ | Panels and editor use the active Herdr theme |
-| Vim editing | ⚠️ | `EditorState` has **no cursor/selection API** (only `value()`/`set_value()`) — needs a custom editor core (Phase 1) |
+| Intended feature              | Verdict | Grounding                                                                                                           |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| File viewer with type icons   | ✅      | `svg()` tints per glyph; `exec` + `watchFolder` drive the tree                                                      |
+| Git status colors in the tree | ✅      | `git status --porcelain=v1` per path, colored names (done in v0)                                                    |
+| Detailed diff view            | ✅      | `git diff [--cached]` on a virtual list (done in v0)                                                                |
+| Better staging & commit flow  | ✅      | per-file `git add` / `restore --staged`, commit-staged-only (done in v0)                                            |
+| Branch switching              | ✅      | `git switch` / `switch -c` / `branch -d` (done in v0)                                                               |
+| Herdr theme integration       | ✅      | Panels and editor use the active Herdr theme                                                                        |
+| Vim editing                   | ⚠️      | `EditorState` has **no cursor/selection API** (only `value()`/`set_value()`) — needs a custom editor core (Phase 1) |
 
 ---
 
@@ -66,7 +66,7 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 
 ## Phase 4 — The agent workflow
 
-> Make herdr-mIDE the natural home for working *with* AI coding agents.
+> Make herdr-mIDE the natural home for working _with_ AI coding agents.
 
 - [ ] "Review everything the agent changed" session: every diff in one pass, keep/discard as you go
 - [ ] Commit message drafting from staged diffs
@@ -86,7 +86,7 @@ against the real mod API (`herdr.d.ts`, `gpui-kit.d.ts`).
 
 - **Heavyweight plugins / extension marketplaces** — config files over plugin systems
 - **Built-in debugger, notebooks, remote dev** — use the right tool for those
-- **AI code generation built-in** — herdr-mIDE is for *reviewing* agent output, not replacing agents
+- **AI code generation built-in** — herdr-mIDE is for _reviewing_ agent output, not replacing agents
 - **Feature parity with full IDEs** — minimal is the point
 
 ## Suggesting roadmap changes

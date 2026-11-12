@@ -49,7 +49,7 @@ one or assume a tag alone updates a gallery listing.
    bundle without replacing the README artwork, set `PREVIEW=/path/to/image.png`.
    `dist/` is ignored and is not itself published.
 5. Inspect the assembled contents, licenses and references. Run `herdr-app
-   check` on each **assembled** `mods/<name>` and exercise a clean install
+check` on each **assembled** `mods/<name>` and exercise a clean install
    from the assembled files in an isolated home. Check name collisions and
    key conflicts; never replace existing user files silently. The source
    `install.sh` is a no-clobber first install, not an upgrade mechanism;
