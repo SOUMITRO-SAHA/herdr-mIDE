@@ -853,6 +853,21 @@ export const NAMES = {
   "readme.rst":"readme",
   "readme.txt":"readme",
   "readme":"readme",
+  // Repository community and planning docs, exact upstream fileNames
+  // (v5.39.0): AGENTS.md, the changelog and contributing families, and
+  // roadmap.md/roadmap.txt — upstream maps no bare "roadmap", and no
+  // glyph at all for the other root docs, which keep the markdown one.
+  "agents.md":"agent",
+  "changelog":"changelog",
+  "changelog.md":"changelog",
+  "changelog.rst":"changelog",
+  "changelog.txt":"changelog",
+  "contributing":"contributing",
+  "contributing.md":"contributing",
+  "contributing.rst":"contributing",
+  "contributing.txt":"contributing",
+  "roadmap.md":"roadmap",
+  "roadmap.txt":"roadmap",
   ".editorconfig":"editorconfig",
   ".editorconfig-checker.json":"editorconfig",
   ".ecrc":"editorconfig",

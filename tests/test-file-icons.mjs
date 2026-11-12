@@ -44,6 +44,23 @@ assert.equal(resolveIcon("Dockerfile.prod"), "docker");
 assert.equal(resolveIcon("flake.nix"), "nix");
 assert.equal(resolveIcon("Makefile"), "makefile");
 
+// Repository root docs take the theme's dedicated glyphs where upstream
+// has them (exact fileNames in the v5.39.0 manifest); docs without an
+// upstream mapping keep the markdown glyph — VS Code with the theme
+// renders those the same way.
+assert.equal(resolveIcon("AGENTS.md"), "agent");
+assert.equal(resolveIcon("CHANGELOG.md"), "changelog");
+assert.equal(resolveIcon("changelog.rst"), "changelog");
+assert.equal(resolveIcon("CONTRIBUTING.md"), "contributing");
+assert.equal(resolveIcon("CONTRIBUTING"), "contributing");
+assert.equal(resolveIcon("ROADMAP.md"), "roadmap");
+assert.equal(resolveIcon("roadmap.txt"), "roadmap");
+assert.equal(resolveIcon("RECIPE.md"), "markdown");
+assert.equal(resolveIcon("RELEASING.md"), "markdown");
+assert.equal(resolveIcon("TESTING.md"), "markdown");
+assert.equal(resolveIcon("THIRD-PARTY-NOTICES.md"), "markdown");
+assert.equal(resolveIcon("roadmap"), null); // no bare "roadmap" upstream; a dotless name has no md suffix either
+
 // The Prettier config family takes the theme's Prettier glyph. Upstream
 // maps it via the Cosmiconfig filename pattern, which the generated map
 // skips — so the expansion is enumerated: .prettierrc and its suffixed
