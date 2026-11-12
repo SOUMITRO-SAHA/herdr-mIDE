@@ -104,7 +104,8 @@ files, commit and make small edits without changing Herdr's theme.
 
 - This is one layout with four dependent mods, not four independent gallery
   mods. Source `mods/` is not a complete copyable package: use the assembled
-  bundle. Its Git UI also references SVGs in `mide-files`. Preserve or
+  bundle or the checked-in `gallery/herdr-mide/` snapshot. Its Git UI also
+  references SVGs in `mide-files`. Preserve or
   consistently rename every cross-mod reference and asset path on conflicts.
 - The layout is based on Herdr 0.1.13; validate all features against the
   supported released app and each target OS before release. Herdr's initial
@@ -133,7 +134,8 @@ files, commit and make small edits without changing Herdr's theme.
 ## Done when
 
 - Each of the four assembled mod folders passes `herdr-app check`, and the
-  layout loads in an isolated Herdr setup without mod errors.
+  layout loads in the isolated `herdr-dev` profile without mod errors during
+  local testing; a separate VM or test machine is not required.
 - In a disposable Git repository, Files expands and marks changes; editing and
   saving works, and an external edit is not silently overwritten.
 - Changes stages and unstages files and groups; a commit with staged changes

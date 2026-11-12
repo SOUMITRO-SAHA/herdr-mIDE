@@ -81,7 +81,9 @@ Herdr's native editor and input controls resolve internal colors (including edit
 
 Do not copy the source `mods/` folders directly: Editor and Diff need generated
 shared files. Use the installer above or a complete, separately assembled
-release bundle. Gallery publication has not yet happened.
+release bundle. The self-contained [Gallery package](./gallery/herdr-mide/)
+is assembled from the same sources and includes those shared files. Gallery
+publication has not yet happened.
 
 ## How it works
 

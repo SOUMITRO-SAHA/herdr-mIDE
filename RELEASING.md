@@ -47,7 +47,12 @@ one or assume a tag alone updates a gallery listing.
    unreviewed work. The builder checks that a preview file exists, not its
    quality or privacy. To select a different reviewed screenshot for the
    bundle without replacing the README artwork, set `PREVIEW=/path/to/image.png`.
-   `dist/` is ignored and is not itself published.
+   `dist/` is ignored and is not itself published. The checked-in
+   `gallery/herdr-mide/` snapshot uses `public/examples/files-git-status.png`;
+   `just test` builds a fresh comparison and fails if the snapshot drifts.
+   To update it, assemble a new bundle in a new staging directory with that
+   preview, review the differences, then replace only the reviewed snapshot
+   as part of the same change. Never overwrite an unreviewed destination.
 5. Inspect the assembled contents, licenses and references. Run `herdr-app
 check` on each **assembled** `mods/<name>` and exercise a clean install
    from the assembled files in an isolated home. Check name collisions and
@@ -68,18 +73,19 @@ as **one `herdr-layout` entry**, not four supposedly standalone `herdr-mod`
 entries. The separate Herdr TUI plugin marketplace is not this app's mod
 gallery; do not add a TUI plugin manifest for this package.
 
-After the owner approves publication, place the reviewed assembled bundle in
-a public GitHub repository/folder, with `layouts/`, `mods/`, `RECIPE.md` and
-`preview.png` together, and add the GitHub topic `herdr-layout`. Herdr says
+The intended package is `gallery/herdr-mide/` in this public repository, with
+`layouts/`, `mods/`, `RECIPE.md` and `preview.png` together. After the owner
+approves publication, publish the reviewed snapshot and add the GitHub topic
+`herdr-layout`. Herdr says
 discovery takes up to an hour and community images are screened. A generated
 bundle in ignored `dist/`, or only as a GitHub Release attachment, is not a
 public repository folder for discovery. The development repository root is
 also not directly copyable because it intentionally omits the shared mod
 copies; do not add the topic to that incomplete root and assume it is safe.
-Choose a public location for the complete snapshot, then verify the actual
-listing and its linked files after publication. The gallery's exact handling of
-multiple nested candidates and updates is not specified here; verify it rather
-than claiming a particular path or automatic update behavior.
+The root also has a recipe and layout, so the gallery could discover the wrong
+candidate. Its exact handling of multiple nested candidates and updates is not
+specified here: verify the actual listing and its linked files after publication
+rather than claiming a particular path or automatic update behavior.
 
 Create the approved `v0.0.1` tag and GitHub release separately, referencing
 the matching source commit and attaching the reviewed assembled bundle if

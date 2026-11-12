@@ -1,6 +1,7 @@
 # Never formatted (generated, vendored or binary content).
 node_modules/
 dist/
+gallery/herdr-mide/
 public/
 .h/
 # Vendored upstream reference checkouts (zed, neovim) and local agent config.
