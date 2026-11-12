@@ -44,6 +44,51 @@ assert.equal(resolveIcon("Dockerfile.prod"), "docker");
 assert.equal(resolveIcon("flake.nix"), "nix");
 assert.equal(resolveIcon("Makefile"), "makefile");
 
+// The Prettier config family takes the theme's Prettier glyph. Upstream
+// maps it via the Cosmiconfig filename pattern, which the generated map
+// skips — so the expansion is enumerated: .prettierrc and its suffixed
+// variants, the .config/prettierrc* convention (lifted to bare basenames
+// because resolution is name-only), and prettier.config.* files.
+assert.equal(resolveIcon(".prettierrc"), "prettier");
+assert.equal(resolveIcon(".prettierrc.json"), "prettier");
+assert.equal(resolveIcon(".prettierrc.jsonc"), "prettier");
+assert.equal(resolveIcon(".prettierrc.json5"), "prettier");
+assert.equal(resolveIcon(".prettierrc.yaml"), "prettier");
+assert.equal(resolveIcon(".prettierrc.yml"), "prettier");
+assert.equal(resolveIcon(".prettierrc.toml"), "prettier");
+assert.equal(resolveIcon(".prettierrc.js"), "prettier");
+assert.equal(resolveIcon(".prettierrc.mjs"), "prettier");
+assert.equal(resolveIcon(".prettierrc.cjs"), "prettier");
+assert.equal(resolveIcon(".prettierrc.ts"), "prettier");
+assert.equal(resolveIcon(".prettierrc.mts"), "prettier");
+assert.equal(resolveIcon(".prettierrc.cts"), "prettier");
+assert.equal(resolveIcon(".prettierignore"), "prettier");
+// .config/prettierrc* basenames — see the comment above.
+assert.equal(resolveIcon("prettierrc"), "prettier");
+assert.equal(resolveIcon("prettierrc.json"), "prettier");
+assert.equal(resolveIcon("prettierrc.yaml"), "prettier");
+assert.equal(resolveIcon("prettierrc.toml"), "prettier");
+assert.equal(resolveIcon("prettierrc.cts"), "prettier");
+// prettier.config.* — no bare "prettier.config" upstream.
+assert.equal(resolveIcon("prettier.config.js"), "prettier");
+assert.equal(resolveIcon("prettier.config.mjs"), "prettier");
+assert.equal(resolveIcon("prettier.config.cjs"), "prettier");
+assert.equal(resolveIcon("prettier.config.ts"), "prettier");
+assert.equal(resolveIcon("prettier.config.mts"), "prettier");
+assert.equal(resolveIcon("prettier.config.cts"), "prettier");
+assert.equal(resolveIcon("prettier.config.json"), "prettier");
+assert.equal(resolveIcon("prettier.config.yaml"), "prettier");
+assert.equal(resolveIcon("prettier.config.yml"), "prettier");
+assert.equal(resolveIcon("prettier.config.toml"), "prettier");
+assert.equal(resolveIcon("prettier.config.jsonc"), "prettier");
+assert.equal(resolveIcon("prettier.config.json5"), "prettier");
+// Bare "prettier.config" is not an upstream convention; it keeps the
+// generic settings gear via the "config" suffix.
+assert.equal(resolveIcon("prettier.config"), "settings");
+// Exact names still win over suffixes: .prettierrc.json is Prettier
+// config, not a plain JSON file.
+assert.notEqual(resolveIcon(".prettierrc.json"), "json");
+
 // Unmapped names fall back to the plain file glyph.
 assert.equal(resolveIcon("unknown.zzz"), null);
 
