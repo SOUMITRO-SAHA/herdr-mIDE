@@ -184,6 +184,12 @@ tags and GitHub releases are our conventions, not Herdr's.
   snapshot mods in an isolated home with pre-existing keys/layouts retained.
   `preview.png` is the owner-approved screenshot. Topic not added; no
   listing verified yet.
+- 2026-11-12: Owner media sign-off — `preview.png`, the README screenshots
+  and the demo video are approved for the v0.0.1 release.
+- 2026-11-12: Owner accepted the recorded platform gaps for v0.0.1 — Windows
+  and Linux hands-on coverage remains partial and tracked in
+  [TESTING.md](./TESTING.md); macOS was fully exercised live in the
+  `herdr-dev` profile.
 
 Create the approved `v0.0.1` tag and GitHub release separately, referencing
 the matching source commit and attaching the reviewed assembled bundle if
