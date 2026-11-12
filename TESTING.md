@@ -32,8 +32,8 @@ just check
 ```
 
 The root `justfile` is the only entry point; install
-[just](https://github.com/casey/just) (1.59 tested) alongside Node.js, Git,
-a POSIX shell and `rsync`. On Windows, run the commands from PowerShell or
+[just](https://github.com/casey/just) (1.59 tested) alongside Bun, Git,
+a POSIX shell and `rsync` (`bun install` once, for the Prettier formatter). On Windows, run the commands from PowerShell or
 cmd: the recipes drive Git Bash's `bash.exe -lc` at the default install path
 (a non-default Git location overrides that per invocation with
 `just --shell "<path>/bin/bash.exe" --shell-arg -lc <target>`), and rsync
@@ -93,6 +93,7 @@ restart an app or core you did not start. No helper here starts or stops either.
    Windows both files also isolate `APPDATA` and `LOCALAPPDATA`.
    Prepare a fresh directory **on each target OS**; do not transfer env files
    between machines.
+
 3. In that same isolated environment, start the installed `herdr-app` yourself.
    Complete any first-run prompts, select `herdr-mide`, and open a space at
    the scratch directory's `fixture/`. Before using any Herdr CLI command,
@@ -118,6 +119,7 @@ restart an app or core you did not start. No helper here starts or stops either.
    dimensions, not its pixels or the interaction's outcome. Inspect each image
    and the window yourself. Scene names are lowercase letters, digits and
    hyphens; repeat captures never overwrite earlier ones.
+
 5. When finished, close only the test window and stop only the isolated core
    session and terminals you started, using the generated environment. Keep or
    remove the scratch directory only after confirming that nothing in it is
@@ -155,9 +157,9 @@ unless it was actually performed.
 
 For each release, record a fresh matrix rather than carrying old passes forward:
 
-| Platform | App/core versions | `just check` | Interactive scenes | Notes / screenshots |
-| --- | --- | --- | --- | --- |
-| macOS | pending | pending | pending | |
-| Linux | pending | pending | pending | |
-| Windows | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout, Windows symlink, Files `-EncodedCommand` and Git-marks fixes | pending — Files scene verified on-window via screenshots; Editor/Changes/Diff/Remotes need the remaining clicks | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above |
-| Windows | herdr-app 0.1.15 / hc 0.1.20 (2026-11-11) | pass — `just test`/`just check` (GNU Make not installed; the justfile and path-adapter shim above), locally and on a hosted VM by the `windows-e2e` workflow | partial — Files tree with space/apostrophe/Unicode names, editor Save button and the Ctrl+S binding fix, draft persistence, external-edit save conflict, Reload, Markdown Raw/Preview, word wrap, staging checkboxes, Stage All/Unstage All, row diffs, Split/Unified and Refresh verified on-window with independent Git checks; UI commits, history, the branch picker and fetch/pull/push not exercised | `just smoke-prepare` green; single-instance finding above; hosted-VM command-driven scenes (layout, space, panels, screenshots, no mod errors) green with artifacts |
+| Platform | App/core versions                         | `just check`                                                                                                                                                 | Interactive scenes                                                                                                                                                                                                                                                                                                                                                                                         | Notes / screenshots                                                                                                                                                 |
+| -------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | pending                                   | pending                                                                                                                                                      | pending                                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                     |
+| Linux    | pending                                   | pending                                                                                                                                                      | pending                                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                     |
+| Windows  | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout, Windows symlink, Files `-EncodedCommand` and Git-marks fixes                                                                     | pending — Files scene verified on-window via screenshots; Editor/Changes/Diff/Remotes need the remaining clicks                                                                                                                                                                                                                                                                                            | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above                                                                                |
+| Windows  | herdr-app 0.1.15 / hc 0.1.20 (2026-11-11) | pass — `just test`/`just check` (GNU Make not installed; the justfile and path-adapter shim above), locally and on a hosted VM by the `windows-e2e` workflow | partial — Files tree with space/apostrophe/Unicode names, editor Save button and the Ctrl+S binding fix, draft persistence, external-edit save conflict, Reload, Markdown Raw/Preview, word wrap, staging checkboxes, Stage All/Unstage All, row diffs, Split/Unified and Refresh verified on-window with independent Git checks; UI commits, history, the branch picker and fetch/pull/push not exercised | `just smoke-prepare` green; single-instance finding above; hosted-VM command-driven scenes (layout, space, panels, screenshots, no mod errors) green with artifacts |

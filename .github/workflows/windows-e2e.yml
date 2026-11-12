@@ -23,12 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: oven-sh/setup-bun@v2
+
       - name: Record the environment
         shell: pwsh
         run: |
           Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, OSArchitecture | Format-List
           git --version
           node --version
+          bun --version
           "PowerShell session id: $((Get-Process -Id $PID).SessionId)"
 
       - name: Install rsync (cwRsync) and the path adapter

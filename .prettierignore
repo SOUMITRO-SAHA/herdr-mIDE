@@ -1,0 +1,17 @@
+# Never formatted (generated, vendored or binary content).
+node_modules/
+dist/
+public/
+.h/
+# Vendored upstream reference checkouts (zed, neovim) and local agent config.
+.agents/
+.opencode/
+# A deliberately compact, hand-editable data map; one association per short
+# line keeps it scannable and diff-friendly. Code style rules do not apply.
+mods/mide-files/icons.js
+mods/*/gpui-kit.d.ts
+mods/*/jsconfig.json
+*.png
+*.mp4
+bun.lock
+bun.lockb
