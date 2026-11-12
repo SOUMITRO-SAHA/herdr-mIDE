@@ -129,7 +129,12 @@ files, commit and make small edits without changing Herdr's theme.
   the folder watcher with their own side effects.
 - The source installer skips existing mod/layout names and prints keys rather
   than overwriting them; it is not an upgrade tool. Review name and shortcut
-  conflicts before installing or manually updating. A `preview.png` must be a
+  conflicts before installing or manually updating. Uninstalling
+  (`sh scripts/uninstall.sh`, recipe `just uninstall`) deletes exactly the four
+  mIDE mod folders and `layouts/herdr-mide.json` from the target app home —
+  Herdr's documented removal — leaving `keys.json`, shipped mods and Herdr's
+  own bookkeeping untouched; merged keys are only ever removed by hand.
+  A `preview.png` must be a
   reviewed, representative screenshot with no private information.
 
 ## Done when
@@ -150,3 +155,6 @@ files, commit and make small edits without changing Herdr's theme.
 - The original layout, keys, app theme and unrelated installed mods remain
   unchanged by installation; all relevant behaviors are checked on supported
   platforms before publishing.
+- Uninstalling removes only the bundle's own files (the four mods and the
+  layout) and is safe to repeat; keys, unrelated mods and bookkeeping stay
+  byte-identical, including when the installed names are symlinks.

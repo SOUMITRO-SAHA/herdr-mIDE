@@ -73,6 +73,8 @@ herdr-app do layout.switch --name herdr-mide
 
 The installer copies the mods and layout into `~/.config/herdr-app` (or `HERDR_APP_HOME`), skipping existing names without modifying them, prints the key bindings to merge into your `keys.json`, and runs `herdr-app check` on newly installed mods. Skipped existing folders are not checked and may belong to another version: review conflicts before continuing. It does not install or switch a Herdr or CLI theme. `ctrl-shift-l` cycles layouts; deleting the installed files removes this bundle.
 
+To remove the bundle again, run `just uninstall` (or `sh scripts/uninstall.sh`, with the same `HERDR_APP_HOME` support). It deletes exactly what the installer puts down — the four mIDE mods and `layouts/herdr-mide.json` — and nothing else: your `keys.json`, shipped mods and Herdr's own bookkeeping stay untouched. It is safe to run more than once, and it never un-merges keys: the bindings it printed at install time are shown again so you can remove them by hand. If a herdr-mide layout is on screen, switch back first (`ctrl-shift-l`).
+
 If a copy or check fails, installation may be partial; inspect the reported
 files before retrying. A retry skips existing names rather than repairing them.
 
@@ -101,7 +103,7 @@ mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 optional bindings: cmd/ctrl-shift-e editor split, cmd/ctrl-s save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
-justfile                  the entry point: dev, sync, test, check, install, status, shot, switch, bundle, smoke-*
+justfile                  the entry point: dev, sync, test, check, install, uninstall, status, shot, switch, bundle, smoke-*
 VERSION                   version of the complete layout + four-mod bundle
 scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
@@ -123,6 +125,7 @@ just check      # herdr-app check every mod (the runtime's own parser)
 just fmt        # format the tree (Prettier via Bun; bun install once)
 just fmt-check  # verify formatting; CI enforces this on every PR
 just install    # first-time install (never overwrites; prints keys to merge)
+just uninstall  # remove the installed mods and layout (keys stay, run any number of times)
 just status     # window state + errors from files and mods
 just shot       # screenshot of the window → herdr-shot.png
 just switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
@@ -137,7 +140,7 @@ other screenshots and demo video for private information before publishing.
 
 The typical loop: `just dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `just status`; `just shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `just dev interval=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
-Scripts live in `scripts/` — `dev.sh` (the watch loop) and `sync.sh` (one-shot copy) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
+Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot copy) and `uninstall.sh` (remove the installed bundle) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
 `shared/syntax.js` owns mIDE's single syntax palette and lightweight tokenizer; the editor and Diff consume it through generated mod-local copies. It uses the documented `EditorState` syntax option and tokenizes Diff lines locally, without depending on extra host APIs. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
 

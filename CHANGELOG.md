@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An uninstaller for the installed bundle: `just uninstall` (or `sh scripts/uninstall.sh`, honoring `HERDR_APP_HOME`) deletes exactly the four mIDE mods and `layouts/herdr-mide.json` from the target app home — Herdr's documented removal mechanism — and nothing else. It is idempotent, removes symlinks without touching their targets, never edits `keys.json` (it reprints the optional bindings for manual review), and a test (`tests/test-uninstall.sh`) proves bystanders stay byte-identical.
+
 - Community health files for outside contributors: GitHub issue forms (bug report, feature request) with blank issues disabled and an upstream herdr-app contact link, a project Code of Conduct, a SECURITY.md for private vulnerability reporting, and README links to the new files.
 
 ### Changed
