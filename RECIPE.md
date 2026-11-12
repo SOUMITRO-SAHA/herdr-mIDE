@@ -54,8 +54,9 @@ files, commit and make small edits without changing Herdr's theme.
 - Diff shows tracked changes against HEAD and untracked files as additions.
   It refreshes, supports Split and Unified views, and uses Unified when the
   view is too narrow for Split.
-- Editor's Save button writes the current file; the optional `⌘S`/`Ctrl+S`
-  binding does the same. An external edit causes a save error instead of an overwrite;
+- Editor's Save button writes the current file; ⌘S on macOS and Ctrl+S on
+  Windows and Linux save by default, and a `mod:mide-editor` binding the
+  person already merged keeps precedence. An external edit causes a save error instead of an overwrite;
   Reload discards the draft. Word wrap and the Markdown Preview default are
   persistent settings, with Markdown opening in Raw by default.
 
