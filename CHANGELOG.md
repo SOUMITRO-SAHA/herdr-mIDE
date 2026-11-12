@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A reproducible, self-contained Gallery package under `gallery/herdr-mide/`, with a test that detects drift from the development sources.
+- The Herdr Gallery sharing standard in `docs/RELEASING.md`, quoted from source, with our standing against it, the approval-gated publication steps and the verification log.
 - An issue-first contribution flow in CONTRIBUTING.md: every PR needs a tracked issue claimed before work starts (`/claim`), claimants get merge priority, claimed issues are off-limits to others (ask for owner, status and ETA in a comment instead), branches follow `<type>/<issue-number>-<slug>` and commits `type(scope): summary`; a PR-template checklist and a merge gate formalize verification before merging.
 - Code formatting via Prettier run through Bun (`just fmt`, `just fmt-check`, config tuned to the existing house style). The compact `mods/mide-files/icons.js` association map and the vendored `.agents/` reference checkouts are exempt by design.
 - A `Checks` workflow that runs `just fmt-check` and `just test` on every pull request and push to `main`; the Windows end-to-end workflow installs Bun for the Bun-driven recipes.
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Local interactive verification uses the `herdr-dev` profile on the developer's machine; a separate VM or test machine is not required.
+- Maintainer guides (releasing, testing, roadmap) now live under `docs/`; README, AGENTS.md, RECIPE.md, CONTRIBUTING.md, CHANGELOG.md and THIRD-PARTY-NOTICES.md stay at the root where tools and the Herdr installer flow expect them.
 - The test and smoke recipes run through Bun instead of Node.js (`bun install` once replaces any Node setup), and the whole tree is normalized once to the Prettier style — formatting only, no behavior change; `just test` and `just check` stay green. `tests/test-diff-assets.mjs` now matches its source-snippet assertions across line breaks so formatting cannot break it.
 - The rebuild recipe now documents the complete layout bundle, current Git actions, dependencies and limitations.
 - Opening files from the Files panel now reuses the editor pane; the first editor opens below an existing Diff pane, or to the right of the matching terminal, and modified drafts remain available when switching files.

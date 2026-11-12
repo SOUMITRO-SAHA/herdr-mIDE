@@ -14,7 +14,7 @@
 # The real rsync is found through MIDE_CWRSYNC, or rsync.exe on the PATH
 # (Chocolatey's rsync package installs a shim there). Install this script
 # as an executable `rsync` in a directory earlier on the PATH than the
-# real rsync; see TESTING.md.
+# real rsync; see docs/TESTING.md.
 export MSYS_NO_PATHCONV=1
 export MSYS2_ARG_CONV_EXCL='*'
 

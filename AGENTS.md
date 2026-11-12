@@ -185,9 +185,9 @@ core.fsmonitor=false` or the folder watcher refresh loops forever.
 - Commits follow `type(scope): summary` and explain the why for users;
   `CHANGELOG.md` stays release-ready (see `.opencode/commands/`).
 - Version and release the layout and its four dependent mods together; follow
-  `VERSION` and `RELEASING.md`. Never publish, tag, or change gallery topics
+  `VERSION` and `docs/RELEASING.md`. Never publish, tag, or change gallery topics
   without explicit owner approval. Gallery copies need a self-contained
   assembled bundle, not the incomplete development `mods/` tree.
-- Follow `TESTING.md` for cross-platform checks. Smoke preparation and capture
+- Follow `docs/TESTING.md` for cross-platform checks. Smoke preparation and capture
   never start or stop a window or core; never fake input on a real display or
   claim a visual/interaction test was automated when it was not.

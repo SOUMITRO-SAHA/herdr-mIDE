@@ -166,7 +166,9 @@ function prepare() {
   const { shell, powershell } = environmentFiles(env);
   writeFileSync(join(root, "env.sh"), shell, { flag: "wx", mode: 0o600 });
   writeFileSync(join(root, "env.ps1"), powershell, { flag: "wx", mode: 0o600 });
-  console.log(`Prepared: ${root}\nNo app or core was launched. Follow TESTING.md in a disposable desktop environment.`);
+  console.log(
+    `Prepared: ${root}\nNo app or core was launched. Follow docs/TESTING.md in a disposable desktop environment.`,
+  );
 }
 
 export function capture(rootArg, label, run = command) {
