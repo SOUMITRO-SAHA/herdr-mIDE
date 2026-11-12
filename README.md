@@ -54,8 +54,11 @@ for private information before sharing them outside this repo.
 
 ## Install
 
-The layout is based on [Herdr app](https://herdr.dev) 0.1.13. The full
-macOS, Linux and Windows compatibility matrix still needs release testing.
+The layout is based on [Herdr app](https://herdr.dev) 0.1.13 and is verified
+against the released app on every platform we could test: automated checks and
+live interaction checks on macOS, automated checks plus partial live coverage
+on Linux and Windows — see [docs/TESTING.md](./docs/TESTING.md) for the exact
+per-platform matrix and its known gaps.
 The source installer below needs a POSIX shell; Git is needed for Git features.
 Mods run with your access: Files reads your workspace, Editor can write files,
 and Changes runs Git, including network operations when requested. Review the
@@ -150,7 +153,7 @@ full flow and merge gate are in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Status
 
-🚧 **v0.0.1 in preparation.** The bundle has not been released or submitted to the gallery. `herdr-app check` covers initial mod rendering, not the complete interaction or platform matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./docs/ROADMAP.md).
+**v0.0.1 (2026-11-12).** Automated checks are green and the interactive workflows were verified live on macOS; Linux and Windows coverage is partial and tracked, with known gaps, in [docs/TESTING.md](./docs/TESTING.md). `herdr-app check` covers initial mod rendering, not the complete interaction matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./docs/ROADMAP.md).
 
 ## License
 
