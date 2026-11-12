@@ -133,7 +133,9 @@ files, commit and make small edits without changing Herdr's theme.
   (`sh scripts/uninstall.sh`, recipe `just uninstall`) deletes exactly the four
   mIDE mod folders and `layouts/herdr-mide.json` from the target app home —
   Herdr's documented removal — leaving `keys.json`, shipped mods and Herdr's
-  own bookkeeping untouched; merged keys are only ever removed by hand.
+  own bookkeeping untouched (including Herdr's per-layout state under
+  `layouts/.state/` and the per-mod `data/` folders it creates for every
+  mod); merged keys are only ever removed by hand.
   A `preview.png` must be a
   reviewed, representative screenshot with no private information.
 

@@ -13,10 +13,12 @@ chmod +x "$TEST_ROOT/poison-bin/herdr-app"
 
 # Fixture: a full install, plus bystanders a person would have.
 HOME="$TEST_ROOT/home"
-mkdir -p "$HOME/mods/files" "$HOME/layouts"
+mkdir -p "$HOME/mods/files" "$HOME/layouts" "$HOME/layouts/.state" "$HOME/data/mide-editor"
 printf 'shipped panel\n' > "$HOME/mods/files/sentinel"
 printf 'person keys\n' > "$HOME/keys.json"
 printf '{"bookkeeping":true}\n' > "$HOME/installed.json"
+printf '{"nodes":{}}\n' > "$HOME/layouts/.state/herdr-mide.json"
+printf 'a saved draft\n' > "$HOME/data/mide-editor/draft"
 PATH="$TEST_ROOT/bin:$PATH" HERDR_APP_HOME="$HOME" sh "$ROOT/install.sh" > "$TEST_ROOT/install-output"
 
 # Every installed mIDE path goes; every bystander stays byte-identical.
@@ -29,6 +31,10 @@ test ! -e "$HOME/layouts/herdr-mide.json"
 test "$(cat "$HOME/mods/files/sentinel")" = 'shipped panel'
 test "$(cat "$HOME/keys.json")" = 'person keys'
 test "$(cat "$HOME/installed.json")" = '{"bookkeeping":true}'
+# Herdr's own bookkeeping survives too: its per-layout state cache and the
+# per-mod data folders it creates for every mod, ours included.
+test "$(cat "$HOME/layouts/.state/herdr-mide.json")" = '{"nodes":{}}'
+test "$(cat "$HOME/data/mide-editor/draft")" = 'a saved draft'
 
 # Running it again is safe: exits cleanly, still touches only mIDE names.
 PATH="$TEST_ROOT/poison-bin:$PATH" HERDR_APP_HOME="$HOME" sh "$ROOT/scripts/uninstall.sh" > "$TEST_ROOT/output-again"
