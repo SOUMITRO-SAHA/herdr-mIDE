@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Community health files for outside contributors: GitHub issue forms (bug report, feature request) with blank issues disabled and an upstream herdr-app contact link, a project Code of Conduct, a SECURITY.md for private vulnerability reporting, and README links to the new files.
 
+### Changed
+
+- The repository root is now the complete, installable Gallery package: Editor and Diff carry AUTO-GENERATED, banner-marked `_shared/syntax.js` copies (`just shared` regenerates them; a `--check` mode fails `just test` on drift), and every mod folder carries the license and notices — installing from the root listing works as-is.
+
+### Removed
+
+- The nested `gallery/herdr-mide/` snapshot: with the root complete it was a duplicate candidate, and Herdr's crawler indexed both folders as separate Gallery listings.
+
 ## [0.0.1] - 2026-11-12
 
 ### Added

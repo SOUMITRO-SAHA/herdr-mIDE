@@ -38,24 +38,21 @@ one or assume a tag alone updates a gallery listing.
    private content. Check the video's audio and visual material for third-party
    rights and notices. Inclusion in the repo is not a substitute for the
    owner's final review.
-4. Run `just bundle`. This creates `dist/herdr-mide/` from the source layout,
-   all four mods, keys, recipe, preview, license, notices and `VERSION`.
-   It materializes shared files inside the two consuming mod copies and puts
-   license and notice copies in each mod folder for gallery-style installs. It
-   refuses an existing destination; choose another with
-   `just bundle dist/herdr-mide-candidate` rather than overwriting
-   unreviewed work. The builder checks that a preview file exists, not its
-   quality or privacy. To select a different reviewed screenshot for the
-   bundle without replacing the README artwork, set `PREVIEW=/path/to/image.png`.
-   `dist/` is ignored and is not itself published. The checked-in
-   `gallery/herdr-mide/` snapshot uses `public/examples/files-git-status.png`;
-   `just test` builds a fresh comparison and fails if the snapshot drifts.
-   To update it, assemble a new bundle in a new staging directory with that
-   preview, review the differences, then replace only the reviewed snapshot
-   as part of the same change. Never overwrite an unreviewed destination.
-5. Inspect the assembled contents, licenses and references. Run `herdr-app
-check` on each **assembled** `mods/<name>` and exercise a clean install
-   from the assembled files in an isolated home. Check name collisions and
+4. Run `just bundle`. The **repository root is the complete, installable
+   package** — `just test` proves it: every generated `_shared` copy matches
+   `shared/syntax.js` via the generator's `--check`, every mod folder carries
+   LICENSE and notices, and a fresh `just bundle` output is byte-identical to
+   the root for all shipped paths. The bundle copy exists for release
+   attachments and smoke staging. It refuses an existing destination; choose
+   another with `just bundle dist/herdr-mide-candidate` rather than
+   overwriting unreviewed work. The builder checks that a preview file
+   exists, not its quality or privacy. The listing preview is the repository
+   `preview.png` (owner-selected artwork). `dist/` is ignored and is not
+   itself published.
+5. Inspect the root package: licenses, notices, references. Run `herdr-app
+check` on each root `mods/<name>` and exercise a clean install with
+   `install.sh` into an isolated home (this was verified live in the
+   `herdr-dev` profile on 2026-11-12). Check name collisions and
    key conflicts; never replace existing user files silently. The source
    `install.sh` is a no-clobber first install, not an upgrade mechanism;
    `just sync` is a destructive development sync for mIDE-owned installed
@@ -104,38 +101,37 @@ the selected file.
 
 ### What Herdr requires vs. where we stand
 
-| Herdr requires                                                                                                   | Our artifact                                                                                                                                                                  | Status                        |
-| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| A public GitHub repository                                                                                       | `SOUMITRO-SAHA/herdr-mIDE` (public)                                                                                                                                           | done                          |
-| One folder laid out like a Herdr home                                                                            | `gallery/herdr-mide/`: `layouts/herdr-mide.json`, `mods/{mide-files,mide-changes,mide-diff,mide-editor}/`                                                                     | done                          |
-| Complete mod folders                                                                                             | The snapshot carries the materialized `_shared/syntax.js` for Editor and Diff — the development tree does not, which is why the snapshot, not the repo root, is the candidate | done                          |
-| `RECIPE.md`, structured (name + intro + preview; What you see; How it behaves; Built from; Watch out; Done when) | `gallery/herdr-mide/RECIPE.md`, all six sections, cross-checked against the files by `just test`                                                                              | done                          |
-| A reviewed screenshot named `preview.png`                                                                        | The owner-approved `public/examples/files-git-status.png` (1920×1080), committed as the snapshot's `preview.png`                                                              | done                          |
-| Optional `keys.json` the installer can merge                                                                     | `gallery/herdr-mide/keys.json` (`cmd/ctrl-shift-e`, `cmd/ctrl-s`), documented as merge-don't-replace                                                                          | done                          |
-| The repo topic `herdr-layout`                                                                                    | Not added — publication act, owner approval required                                                                                                                          | pending approval              |
-| Listing appears within an hour; verify it                                                                        | Not applicable until the topic is added                                                                                                                                       | pending publication           |
-| One build of the recipe                                                                                          | `tests/test-bundle.sh` rebuilds a bundle and fails if the snapshot drifts from the sources                                                                                    | done, enforced by `just test` |
+| Herdr requires                                                                                                   | Our artifact                                                                                                                                         | Status                        |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| A public GitHub repository                                                                                       | `SOUMITRO-SAHA/herdr-mIDE` (public)                                                                                                                  | done                          |
+| One folder laid out like a Herdr home                                                                            | **The repository root**: `layouts/herdr-mide.json`, `mods/{mide-files,mide-changes,mide-diff,mide-editor}/`                                          | done                          |
+| Complete mod folders                                                                                             | Editor and Diff carry AUTO-GENERATED in-tree `_shared/syntax.js`; every mod folder carries LICENSE and notices — the root installs as-is             | done                          |
+| `RECIPE.md`, structured (name + intro + preview; What you see; How it behaves; Built from; Watch out; Done when) | The root `RECIPE.md`, all six sections, cross-checked against the files                                                                              | done                          |
+| A reviewed screenshot named `preview.png`                                                                        | The owner-approved artwork at the root `preview.png` (owner's choice for the listing card; feature screenshots live in `public/examples/`)           | done                          |
+| Optional `keys.json` the installer can merge                                                                     | The root `keys.json` (`cmd/ctrl-shift-e`, `cmd/ctrl-s`), documented as merge-don't-replace                                                           | done                          |
+| The repo topic `herdr-layout`                                                                                    | Added 2026-11-12 with owner approval                                                                                                                 | done                          |
+| Listing appears within an hour; verify it                                                                        | Took longer than an hour; then indexed BOTH layout-shaped folders (see verification log). Restructured so the root is the single complete candidate  | verifying after re-crawl      |
+| One build of the recipe                                                                                          | `tests/test-bundle.sh`: generator `--check` on every shared copy, plus a fresh `just bundle` output byte-identical to the root for all shipped paths | done, enforced by `just test` |
 
-Known ambiguity, handled by verification rather than assumption: this
-repository's root also looks layout-shaped but is **not** a complete package
-(no `_shared/` copies). Herdr documents neither which candidate its discovery
-prefers nor update behavior, so after the topic is added we must verify the
-actual listing and its linked files (step 4 below) and remediate if the wrong
-one was listed.
+The original two-candidate ambiguity is resolved: the root is now the single
+complete candidate, so the crawler's root-indexing behavior (confirmed
+empirically — see the verification log) works in our favor. The stale nested
+listing is expected to disappear on re-crawl; if it lingers, use Herdr's
+"Report this layout" link on that card.
 
 ### Before a publication PR
 
 Local, no approval needed; all gates must be green:
 
-1. `just fmt-check` and `just check` — CI runs the same. `just check`'s
-   bundle test rebuilds the package and fails on drift, so the snapshot is
-   always one build of the recipe.
-2. `herdr-app check` each of the four **assembled** snapshot mods in a fresh
-   isolated home (`HERDR_APP_HOME` at a scratch directory), with pre-existing
-   test keys and layouts retained untouched — the no-clobber behavior Herdr's
-   installer flow relies on.
-3. `gallery/herdr-mide/preview.png` reviewed by the owner; no private
-   content.
+1. `just fmt-check` and `just check` — CI runs the same. `just check` proves
+   the root is the complete package: generator `--check` on every shared
+   copy, license/notices in every mod folder, and a fresh bundle
+   byte-identical to the root for all shipped paths.
+2. `herdr-app check` each of the four root mods in a fresh isolated home
+   (`HERDR_APP_HOME` at a scratch directory), with pre-existing test keys and
+   layouts retained untouched — the no-clobber behavior Herdr's installer
+   flow relies on.
+3. `preview.png` reviewed by the owner; no private content.
 4. `RECIPE.md` cross-checked against the real files (names, sizes, colors,
    behaviors); anything the build does not do must not be claimed.
 
@@ -149,32 +145,32 @@ Record the results in the verification log at the bottom of this file.
    or the GitHub web UI).
 3. Wait up to an hour for discovery.
 4. Verify: the listing exists at `herdr.dev/layouts/<owner>/<repo>`; the
-   preview, recipe link and file listing point at `gallery/herdr-mide/`
-   content (layouts, all four mods with `_shared/`, keys.json) — not at the
-   incomplete repository root. Open the listed files and check.
+   preview, recipe link and file listing point at the repository root's
+   content (layouts, all four mods with `_shared/`, keys.json). Open the
+   listed files and check.
 5. Record the listing URL, date, and what was checked in the verification
-   log. If the wrong candidate was listed, remove the topic, restructure
-   (e.g. move the package to the repository root as the single complete
-   candidate), and repeat steps 2–4 with the owner's approval.
+   log. If a wrong or stale candidate was listed, use Herdr's per-listing
+   "Report this layout" link and, if needed, agree remediation with the
+   owner before touching the topic or structure.
 
 ### Updating a published listing
 
 Herdr documents no mod-version manifest or automatic update flow; treat the
 listing as reflecting the repository content. To update: bump `VERSION` per
-" What is versioned" above, regenerate the snapshot (`PREVIEW=... just
-bundle` into a fresh staging directory, review, then replace
-`gallery/herdr-mide/`), let `just test` prove no drift, merge, and re-verify
-the listing's linked files afterwards. Never move an already published tag;
-tags and GitHub releases are our conventions, not Herdr's.
+" What is versioned" above, make the change at the root (for shared modules:
+edit `shared/`, run `just shared`, let `just test` prove the copies and the
+bundle are exact), merge, and re-verify the listing's linked files
+afterwards. Never move an already published tag; tags and GitHub releases are
+our conventions, not Herdr's.
 
 ### Guardrails
 
 - Nothing publishes, tags, or changes topics without explicit owner approval.
 - Never claim a listing or visual check was verified unless it actually was.
-- The gallery candidate is the snapshot folder only; do not add the topic
-  while the root could be mistaken for the package.
-- Licenses and third-party notices travel inside the snapshot (root and each
-  mod folder) so gallery-style copies keep them.
+- The repository root is the single candidate: keep it complete and
+  installable at all times (tests enforce it).
+- Licenses and third-party notices travel at the root and inside each mod
+  folder so gallery-style copies keep them.
 
 ### Verification log
 
@@ -190,6 +186,23 @@ tags and GitHub releases are our conventions, not Herdr's.
   and Linux hands-on coverage remains partial and tracked in
   [TESTING.md](./TESTING.md); macOS was fully exercised live in the
   `herdr-dev` profile.
+- 2026-11-12: Publication executed with owner approval — topic
+  `herdr-layout` added, tag `v0.0.1` and the GitHub release with the bundle
+  attachment published.
+- 2026-11-12: Discovery indexed BOTH layout-shaped folders as separate
+  listings — the repository root (artwork preview; **broken** installs, no
+  `_shared` copies) and the nested `gallery/herdr-mide/` snapshot (complete).
+  Diagnosis: the crawler indexes repository roots — two repos pushed after
+  ours were listed while ours was skipped past the documented hour. Owner
+  decision: restructure so the root is the single complete package
+  (AUTO-GENERATED `_shared` in-tree via
+  `scripts/materialize-shared.sh`, LICENSE/notices per mod folder) and keep
+  the artwork as the listing preview. `install.sh` verified live in the
+  `herdr-dev` profile against the restructured root: fresh install, four
+  checks green, layout loads with zero mod errors in an isolated core
+  session, no-clobber re-run leaves keys and existing files untouched. The
+  stale nested listing is expected to drop on re-crawl; fallback is Herdr's
+  per-listing report link.
 
 Create the approved `v0.0.1` tag and GitHub release separately, referencing
 the matching source commit and attaching the reviewed assembled bundle if

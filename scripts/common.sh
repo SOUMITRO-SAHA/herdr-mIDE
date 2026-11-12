@@ -15,6 +15,25 @@ BUNDLE_MODS="mide-files mide-changes mide-diff mide-editor"
 MODS="${MODS:-$BUNDLE_MODS}"
 SHARED_MODULES="$REPO_DIR/shared-modules.list"
 
+# Banner written into every generated _shared copy: the files are never
+# edited by hand — shared/ is the source of truth and tests guard the copies.
+shared_banner() {
+  printf '// AUTO-GENERATED FILE — never edit by hand.\n'
+  printf '// Source of truth: %s — regenerate with: sh scripts/materialize-shared.sh\n' "$1"
+}
+
+# Write one generated copy: banner + the canonical source contents.
+# POSIX sh has no `local`, so the internals use names no caller shares.
+generate_shared_copy() {
+  shared_copy_source="$1"
+  shared_copy_target="$2"
+  mkdir -p "$(dirname "$shared_copy_target")"
+  {
+    shared_banner "${shared_copy_source#"$REPO_DIR"/}"
+    cat "$shared_copy_source"
+  } > "$shared_copy_target"
+}
+
 materialize_shared_modules() {
   destination_root="$1"
   mode="$2"
@@ -31,14 +50,18 @@ materialize_shared_modules() {
     source="${source%"$cr"}"
     destination="${destination%"$cr"}"
     destinations="${destinations%"$cr"}"
+    source_path="$REPO_DIR/$source"
     for mod in $destinations; do
       case "$requested_mods" in *" $mod "*) ;; *) continue ;; esac
-      source_path="$REPO_DIR/$source"
       target_path="$destination_root/mods/$mod/$destination"
-      mkdir -p "$(dirname "$target_path")"
-      if [ ! -f "$target_path" ] || { [ "$mode" = "replace" ] && ! cmp -s "$source_path" "$target_path"; }; then
-        cp "$source_path" "$target_path"
-        printf '  + mods/%s/%s\n' "$mod" "$destination"
+      if [ "$mode" = "replace" ] || [ ! -f "$target_path" ]; then
+        generate_shared_copy "$source_path" "$target_path.staged"
+        if cmp -s "$target_path.staged" "$target_path"; then
+          rm -f "$target_path.staged"
+        else
+          mv "$target_path.staged" "$target_path"
+          printf '  + mods/%s/%s\n' "$mod" "$destination"
+        fi
       fi
     done
   done < "$SHARED_MODULES"
