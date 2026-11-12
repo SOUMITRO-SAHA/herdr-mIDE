@@ -7,7 +7,7 @@
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { readdir } from "fs/promises";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, window } from "herdr";
 import { resolveIcon } from "./icons.js";
 import { gitColors } from "./palette.js";
 
@@ -106,13 +106,25 @@ async function directory(path, on) {
   if (!on) {
     // Local listings run in-process through Herdr's fs API: one PowerShell
     // spawn costs seconds on Windows (Defender + .NET startup) and that
-    // dominated every refresh. loadFolder sorts and caps exactly as it did
-    // for shell output.
-    const entries = await readdir(path, { withFileTypes: true });
-    return entries
-      .filter(entry => entry.name !== ".git" && entry.name !== ".DS_Store")
-      .slice(0, 501)
-      .map(entry => ({ name: entry.name, dir: entry.isDirectory() }));
+    // dominated every refresh. The app grants fs reads inside the home
+    // folder only (read_roots([home()]) in its mods policy, every platform
+    // alike); a project outside it — another mounted volume on macOS or
+    // Linux, another drive on Windows — is refused. Those keep the transports
+    // this helper always used, chosen by platform as before: PowerShell on
+    // Windows (the argv transport mangles space- or quote-containing paths,
+    // so the path travels encoded — and stock Windows has no sh), sh on
+    // macOS and Linux. loadFolder sorts and caps exactly as it did for
+    // shell output.
+    try {
+      const entries = await readdir(path, { withFileTypes: true });
+      return entries
+        .filter(entry => entry.name !== ".git" && entry.name !== ".DS_Store")
+        .slice(0, 501)
+        .map(entry => ({ name: entry.name, dir: entry.isDirectory() }));
+    } catch (error) {
+      if (!String(error).includes("outside every granted read root")) throw error;
+      if (window().platform === "windows") return windowsDirectory();
+    }
   }
   const script = 'n=0; for p in "$1"/* "$1"/.[!.]* "$1"/..?*; do [ -e "$p" ] || [ -L "$p" ] || continue; name=${p##*/}; case "$name" in .git|.DS_Store) continue;; esac; if [ -d "$p" ]; then kind=d; else kind=f; fi; printf "%s\\0%s\\0" "$kind" "$name"; n=$((n+1)); [ "$n" -gt 500 ] && break; done; test -d "$1"';
   let r;
