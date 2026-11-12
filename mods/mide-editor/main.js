@@ -20,7 +20,7 @@ import {
   keys,
 } from "herdr";
 import { languageFor, syntaxPalette } from "./_shared/syntax.js";
-import { handleSaveShortcut } from "./save-shortcut.js";
+import { handleSaveShortcut } from "./keybindings.js";
 
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";

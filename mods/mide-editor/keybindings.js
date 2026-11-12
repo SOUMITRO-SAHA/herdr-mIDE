@@ -1,4 +1,6 @@
-// Offer a local default without changing or overriding the person's keys.json.
+// Key handling for mide-editor. The save shortcut offers a local default
+// without changing or overriding the person's keys.json; future bindings for
+// this mod belong here too.
 export function handleSaveShortcut(event, cx, editor, platform, getBindings, getLayout) {
   const modifiers = event.modifiers ?? {};
   const mac = platform === "macos";

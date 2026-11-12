@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { handleSaveShortcut } from "../mods/mide-editor/save-shortcut.js";
+import { handleSaveShortcut } from "../mods/mide-editor/keybindings.js";
 
 const calls = [];
 const cx = { stop_propagation: () => calls.push("stop") };
@@ -65,6 +65,6 @@ assert.equal(
 );
 assert.deepEqual(calls, []);
 const source = readFileSync(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8");
-assert.match(source, /import \{ handleSaveShortcut \} from "\.\/save-shortcut\.js"/);
+assert.match(source, /import \{ handleSaveShortcut \} from "\.\/keybindings\.js"/);
 assert.match(source, /\.track_focus\(this\.handle\)\s*\.on_key_down\(\(e, cx\) => handleSaveShortcut\(/);
-console.log("Editor default save-shortcut tests passed");
+console.log("Editor keybindings tests passed");
