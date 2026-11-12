@@ -7,8 +7,20 @@
 // (ROADMAP Phase 1).
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
-import { props, theme, settings, shared, setShared, readTextFile, writeTextFile, nextCommand, window } from "herdr";
+import {
+  props,
+  theme,
+  settings,
+  shared,
+  setShared,
+  readTextFile,
+  writeTextFile,
+  nextCommand,
+  window,
+  keys,
+} from "herdr";
 import { languageFor, syntaxPalette } from "./_shared/syntax.js";
+import { handleSaveShortcut } from "./keybindings.js";
 
 const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
@@ -340,6 +352,7 @@ export default class MideEditor extends View {
       .font_family(typography.uiFont)
       .text_size(typography.uiSize)
       .track_focus(this.handle)
+      .on_key_down((e, cx) => handleSaveShortcut(e, cx, this, window().platform, keys, () => shared("layout")))
       .child(
         h_flex()
           .h(36)
