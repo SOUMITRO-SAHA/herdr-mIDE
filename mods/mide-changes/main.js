@@ -9,6 +9,7 @@ import { gitColors } from "./palette.js";
 import { toggleStage } from "./stage-action.js";
 import { groupChanges } from "./change-groups.js";
 import { friendlyGitError, gitActionLabel } from "./git-errors.js";
+import { handleCommitShortcut } from "./commit-shortcut.js";
 
 function location(previous) {
   const f = focused(),
@@ -1071,6 +1072,7 @@ export default class MideChanges extends View {
       .text_size(typography.uiSize)
       .track_focus(this.handle)
       .on_key_down((e, cx) => {
+        if (handleCommitShortcut(e, cx, this)) return;
         if (e.key === "escape" && this.typing) {
           this.typing = false;
           this.handle.focus();
