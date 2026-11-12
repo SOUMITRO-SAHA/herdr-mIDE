@@ -27,13 +27,66 @@ async function localListing(platform, path, entries) {
 const win = await localListing("windows", "C:\\smoke dir", [["meeting notes.txt", false], ["資料", true]]);
 assert.deepEqual(win.result, [{ name: "meeting notes.txt", dir: false }, { name: "資料", dir: true }]);
 assert.deepEqual(win.calls.map(c => Object.keys(c)[0]), ["readdir"], "local listings must not spawn a process");
-const mac = await localListing("darwin", "/tmp/smoke", [["a.txt", false]]);
+const mac = await localListing("macos", "/tmp/smoke", [["a.txt", false]]);
 assert.deepEqual(mac.calls.map(c => Object.keys(c)[0]), ["readdir"], "local listings must not spawn a process");
 assert.deepEqual(mac.result, [{ name: "a.txt", dir: false }]);
 
 // .git and .DS_Store are filtered before the 501-entry cap.
 const filtered = await localListing("windows", "C:\\repo", [[".git", true], [".DS_Store", false], ["keep.txt", false]]);
 assert.deepEqual(filtered.result, [{ name: "keep.txt", dir: false }]);
+
+// Herdr's fs API only lists inside its granted read roots — the home folder
+// on every platform (the app grants read_roots([home()]); see its mods
+// policy). A project on another volume is refused in-process; the local
+// listing must then use the platform's own transport, as it did before the
+// in-process fast path: PowerShell on Windows (its argv transport mangles
+// space- or quote-containing paths, so the path travels encoded — and stock
+// Windows has no sh), sh on macOS and Linux.
+const rejected = new Error("/Volumes/work/project is outside every granted read root; add its directory to capabilities.fs.read in the manifest");
+const macFallbackCalls = [];
+const macFallback = createDirectory(
+  async (program, args) => { macFallbackCalls.push({ program, args }); return { code: 0, stdout: "d\0src\0f\0main.js\0" }; },
+  () => ({ platform: "macos" }),
+  async () => { throw rejected; },
+);
+assert.deepEqual(await macFallback("/Volumes/work/project", null),
+  [{ name: "src", dir: true }, { name: "main.js", dir: false }]);
+assert.deepEqual(macFallbackCalls.map(c => c.program), ["sh"],
+  "an out-of-root local listing on macOS must use the sh transport");
+
+const linuxFallbackCalls = [];
+const linuxFallback = createDirectory(
+  async (program, args) => { linuxFallbackCalls.push({ program, args }); return { code: 0, stdout: "d\0src\0" }; },
+  () => ({ platform: "linux" }),
+  async () => { throw rejected; },
+);
+assert.deepEqual(await linuxFallback("/mnt/work", null), [{ name: "src", dir: true }]);
+assert.deepEqual(linuxFallbackCalls.map(c => c.program), ["sh"],
+  "an out-of-root local listing on Linux must use the sh transport");
+
+const winFallbackCalls = [];
+const winFallback = createDirectory(
+  async (program, args) => {
+    winFallbackCalls.push({ program, args });
+    return { code: 0, stdout: '[{"name":"out.txt","dir":false}]' };
+  },
+  () => ({ platform: "windows" }),
+  async () => { throw rejected; },
+);
+assert.deepEqual(await winFallback("D:\\My Projects\\work", null), [{ name: "out.txt", dir: false }]);
+assert.deepEqual(winFallbackCalls.map(c => c.program), ["powershell"],
+  "an out-of-root local listing on Windows must go straight to PowerShell, without an sh probe");
+
+// Other readdir failures (a missing folder) surface; they spawn no shell —
+// in particular no PowerShell spawn on Windows for an ordinary miss.
+const missingCalls = [];
+const missing = createDirectory(
+  async (program, args) => { missingCalls.push({ program, args }); return { code: 0, stdout: "" }; },
+  () => ({ platform: "windows" }),
+  async () => { throw new Error("ENOENT: no such file or directory, scandir"); },
+);
+await assert.rejects(() => missing("/gone", null));
+assert.equal(missingCalls.length, 0, "a missing folder must not spawn a shell");
 
 // Remote listings keep the shell transports: sh first, and on a Windows
 // machine without sh, one encoded PowerShell payload with the path inside.

@@ -79,7 +79,12 @@ files, commit and make small edits without changing Herdr's theme.
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
   `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e`/`ctrl-shift-e`
   and `cmd-s`/`ctrl-s` bindings for manual merging, not automatic replacement.
-- The tree invokes `sh` or PowerShell to list folders. Git is required for
+- Local folder listings inside Herdr's granted read roots (the home folder;
+  the app grants `read_roots([home()])` to every mod on every platform) run
+  in-process through Herdr's fs API. A local folder outside those roots keeps
+  the transports the helper always used, chosen by platform exactly as before:
+  PowerShell on Windows, `sh` on macOS and Linux. Remote machines probe `sh`
+  first and use PowerShell on Windows without it. Git is required for
   status, diff, history, staging, commits, branches and remote operations.
   Fetch, pull and push can contact the configured remote and use the user's
   Git/SSH credentials; commits may run Git hooks. Mods read files outside
@@ -109,8 +114,13 @@ files, commit and make small edits without changing Herdr's theme.
   past 400,000 characters and cannot edit binary files.
 - Folder watch is local; remote views rely on periodic refresh. Editor reads
   and writes locally, so do not rely on it to edit a remote machine's files.
-  Git operations can modify the index, worktree, branches and remote; test
-  them in a disposable repository. Vim mode and hunk staging are not present.
+  Herdr grants its fs API reads inside the home folder only, on every
+  platform: a project outside it (another mounted volume on macOS or Linux,
+  another drive on Windows) is listed through that platform's shell transport
+  instead — PowerShell on Windows, `sh` on macOS and Linux — so those folders
+  need a working shell. Git operations can modify the index, worktree,
+  branches and remote; test them in a disposable repository. Vim mode and
+  hunk staging are not present.
 - Git refresh reads disable optional locks and fsmonitor to avoid triggering
   the folder watcher with their own side effects.
 - The source installer skips existing mod/layout names and prints keys rather
