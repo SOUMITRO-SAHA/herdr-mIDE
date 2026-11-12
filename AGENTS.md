@@ -57,7 +57,9 @@ Instructions for AI coding agents working in this repo.
   profile, **`herdr-dev`**: its own app home and core session, selected by
   pointing `HERDR_APP_HOME` at it (e.g. `HERDR_APP_HOME=~/.config/herdr-dev`)
   for every command that touches a Herdr environment — `just dev`, `just
-sync`, `just status`, `just shot`, `just switch`.
+sync`, `just status`, `just shot`, `just switch`. A separate VM or test
+  machine is not required. Verify the intended dev core session separately:
+  setting `HERDR_APP_HOME` alone does not select a core session.
 - Never run, sync, install, hot-reload, switch layouts or capture screenshots
   against the original production environment (the default `~/.config/herdr-app`
   app home with no `HERDR_APP_HOME` override). Do not point tests at it "just
@@ -66,9 +68,10 @@ sync`, `just status`, `just shot`, `just switch`.
 - Production has exactly one purpose: verifying the live, released version of
   our mods as a person sees them. Touch it only deliberately for that check,
   never as a side effect of development, testing or automation.
-- Disposable fixtures (CI, `just smoke-prepare`) use their own isolated app
-  homes and never production; `just check` stages into temporary directories
-  and touches no app home at all.
+- For local live testing use `herdr-dev`, including when using the disposable
+  Git fixture from `just smoke-prepare`; do not launch a local test window in
+  the fixture's app home. CI uses its own staging home and never production;
+  `just check` stages into temporary directories and touches no app home.
 
 ## Contributing — the issue-first flow
 
