@@ -1,3 +1,5 @@
+// AUTO-GENERATED FILE — never edit by hand.
+// Source of truth: shared/syntax.js — regenerate with: sh scripts/materialize-shared.sh
 const LANG = {
   py: "python",
   ts: "js",

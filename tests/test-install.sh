@@ -12,7 +12,13 @@ PATH="$TEST_ROOT/bin:$PATH" CHECK_LOG="$TEST_ROOT/checks" MODS=mide-files HERDR_
 test ! -e "$TEST_ROOT/home/mods/mide-editor/_shared"
 test "$(cat "$TEST_ROOT/home/mods/mide-editor/sentinel")" = 'existing editor'
 test "$(cat "$TEST_ROOT/home/layouts/herdr-mide.json")" = 'existing layout'
-cmp "$ROOT/shared/syntax.js" "$TEST_ROOT/home/mods/mide-diff/_shared/syntax.js"
+# The installed copy is AUTO-GENERATED: banner + the canonical source body.
+head -2 "$TEST_ROOT/home/mods/mide-diff/_shared/syntax.js" > "$TEST_ROOT/banner"
+. "$ROOT/scripts/common.sh"
+shared_banner "shared/syntax.js" > "$TEST_ROOT/banner-expected"
+cmp "$TEST_ROOT/banner" "$TEST_ROOT/banner-expected"
+tail -n +3 "$TEST_ROOT/home/mods/mide-diff/_shared/syntax.js" > "$TEST_ROOT/body"
+cmp "$ROOT/shared/syntax.js" "$TEST_ROOT/body"
 for mod in mide-files mide-changes mide-diff; do test -f "$TEST_ROOT/home/mods/$mod/main.js"; done
 test "$(wc -l < "$TEST_ROOT/checks" | tr -d ' ')" = 3
 if grep -q '/mide-editor$' "$TEST_ROOT/checks"; then

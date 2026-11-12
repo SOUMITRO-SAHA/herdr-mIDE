@@ -170,9 +170,12 @@ merge gate.
 - Follow TDD for every behavior change: add a focused test, confirm it fails
   before implementing, then run `just test` and `just check`.
 - Keep shared mod logic in one canonical source under `shared/` and list its
-  consuming mods in `shared-modules.list`. The runtime isolates each mod, so
-  materialize local copies under that mod's `_shared/` only in staging or the
-  app home; never generate copies in `mods/` during development.
+  consuming mods in `shared-modules.list`. The consuming mods carry
+  AUTO-GENERATED in-tree `_shared/` copies — banner-marked, regenerated with
+  `sh scripts/materialize-shared.sh` (`--check` guards drift, so stale copies
+  fail `just test`) — because the repository root is the complete Gallery
+  package and must install as-is. Never hand-edit a copy; edit `shared/` and
+  regenerate.
 - Prefer small pure helpers and data-driven mappings over repeated logic or
   mod-specific forks; keep generated outputs reproducible and test their
   materialization.
@@ -187,7 +190,8 @@ core.fsmonitor=false` or the folder watcher refresh loops forever.
 - Version and release the layout and its four dependent mods together; follow
   `VERSION` and `docs/RELEASING.md`. Never publish, tag, or change gallery topics
   without explicit owner approval. Gallery copies need a self-contained
-  assembled bundle, not the incomplete development `mods/` tree.
+  assembled bundle. The repository root is the self-contained Gallery package
+  — keep it installable at all times; tests enforce it.
 - Follow `docs/TESTING.md` for cross-platform checks. Smoke preparation and capture
   never start or stop a window or core; never fake input on a real display or
   claim a visual/interaction test was automated when it was not.

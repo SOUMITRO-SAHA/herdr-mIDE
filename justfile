@@ -30,6 +30,7 @@ help:
     @echo "  just dev      live sync + hot reload (Ctrl-C to stop)"
     @echo "  just sync     one-shot copy into the Herdr app home"
     @echo "  just test     source-tree tests"
+    @echo "  just shared   regenerate the auto-generated _shared copies"
     @echo "  just check    herdr-app check every mod"
     @echo "  just fmt      format the tree (Prettier via Bun)"
     @echo "  just fmt-check  verify formatting; CI enforces this on every PR"
@@ -46,6 +47,9 @@ dev interval=INTERVAL:
 
 sync:
     @./scripts/sync.sh
+
+shared:
+    @sh ./scripts/materialize-shared.sh
 
 test:
     @sh ./tests/test-shared-modules.sh

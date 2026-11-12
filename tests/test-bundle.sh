@@ -12,15 +12,6 @@ diff -r "$TEST_ROOT/first" "$TEST_ROOT/second"
 for mod in mide-files mide-changes mide-diff mide-editor; do
   test -f "$TEST_ROOT/first/mods/$mod/main.js"
   test -f "$TEST_ROOT/first/mods/$mod/mod.json"
-  cmp "$ROOT/LICENSE" "$TEST_ROOT/first/mods/$mod/LICENSE"
-  cmp "$ROOT/THIRD-PARTY-NOTICES.md" "$TEST_ROOT/first/mods/$mod/THIRD-PARTY-NOTICES.md"
-done
-for mod in mide-editor mide-diff; do
-  cmp "$ROOT/shared/syntax.js" "$TEST_ROOT/first/mods/$mod/_shared/syntax.js"
-  test ! -e "$ROOT/mods/$mod/_shared/syntax.js"
-done
-for file in layouts/herdr-mide.json keys.json RECIPE.md preview.png LICENSE THIRD-PARTY-NOTICES.md VERSION; do
-  test -f "$TEST_ROOT/first/$file"
 done
 printf 'keep\n' > "$TEST_ROOT/first/sentinel"
 if PREVIEW="$TEST_ROOT/preview.png" sh "$ROOT/scripts/bundle.sh" "$TEST_ROOT/first"; then
@@ -31,9 +22,15 @@ if PREVIEW="$TEST_ROOT/missing.png" sh "$ROOT/scripts/bundle.sh" "$TEST_ROOT/mis
   echo "bundle unexpectedly accepted a missing preview" >&2; exit 1
 fi
 test ! -e "$TEST_ROOT/missing"
-PREVIEW="$ROOT/public/examples/files-git-status.png" sh "$ROOT/scripts/bundle.sh" "$TEST_ROOT/gallery-expected"
-if ! diff -qr "$TEST_ROOT/gallery-expected" "$ROOT/gallery/herdr-mide"; then
-  echo "Gallery package differs from the assembled source; rebuild it for review" >&2
-  exit 1
-fi
-echo "bundle tests passed"
+
+# The repository root IS the Gallery package. The bundle must be byte-identical
+# to the root for every shipped path, and the root must be complete on its own:
+# auto-generated shared syntax inside the two consuming mods (guarded by the
+# generator's --check), license and notices inside every mod folder, and the
+# package files at the root.
+sh "$ROOT/scripts/materialize-shared.sh" --check
+diff -r -x .DS_Store -x gpui-kit.d.ts -x jsconfig.json "$TEST_ROOT/first/mods" "$ROOT/mods"
+for path in layouts/herdr-mide.json keys.json RECIPE.md VERSION LICENSE THIRD-PARTY-NOTICES.md; do
+  cmp "$TEST_ROOT/first/$path" "$ROOT/$path"
+done
+echo "bundle tests passed (root is the complete package)"

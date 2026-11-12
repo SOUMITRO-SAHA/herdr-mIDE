@@ -82,11 +82,11 @@ The no-clobber installer is not an upgrade tool. `just sync` is for development:
 
 Herdr's native editor and input controls resolve internal colors (including editor background, caret and selection) from the app theme; the current mod API only exposes syntax-color overrides. The native editor's background can therefore differ from Herdr's sidebar. Ayu applies to syntax, while Git colors use the bundled palette; other UI colors follow Herdr.
 
-Do not copy the source `mods/` folders directly: Editor and Diff need generated
-shared files. Use the installer above or a complete, separately assembled
-release bundle. The self-contained [Gallery package](./gallery/herdr-mide/)
-is assembled from the same sources and includes those shared files. Gallery
-publication has not yet happened.
+This repository root **is** the complete, installable package — Editor and Diff
+carry their auto-generated `_shared` syntax (banner-marked; regenerate with
+`just shared`, never by hand) and every mod folder carries the license and
+notices. Use the installer above or copy the layout and mod folders directly.
+Published to the Herdr Gallery on 2026-11-12 (repository topic `herdr-layout`).
 
 ## How it works
 

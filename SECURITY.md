@@ -11,7 +11,8 @@ scope:
 - `mods/mide-files`, `mods/mide-changes`, `mods/mide-diff`,
   `mods/mide-editor`, and their shared sources under `shared/`
 - `install.sh` and `scripts/`
-- the assembled gallery bundle under `gallery/herdr-mide/`
+- the installable package at the repository root, including the
+  auto-generated `mods/*/_shared/` copies
 
 Out of scope: the Herdr app itself — window manager, terminals, agent
 runtime, theme handling. Report those upstream at
