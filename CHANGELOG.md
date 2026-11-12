@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Editor saving works by keyboard out of the box — ⌘S on macOS, Ctrl+S on Windows and Linux — without merging keys.json; a `mod:mide-editor` binding a person already merged keeps precedence, and the Save button, conflict protection and external-edit refusal are unchanged.
 - The Changes commit message accepts Ctrl+Enter on macOS as well as plain Enter, without taking over Cmd+Enter or other platform shortcuts.
 - The Files panel gives the repository's root docs their dedicated theme glyphs instead of a generic markdown page: `AGENTS.md` takes the agent mark, `CHANGELOG.md` the changelog clock, `CONTRIBUTING.md` the contributing clipboard and `ROADMAP.md` the roadmap glyph — exact upstream `fileNames` (v5.39.0), including the `.rst`/`.txt` variants and bare `changelog`/`contributing`. Docs with no upstream mapping (`RECIPE.md`, `RELEASING.md`, `TESTING.md`, `THIRD-PARTY-NOTICES.md`) keep the markdown glyph, now pinned by tests.
 - The Files panel shows the Prettier glyph for the whole Prettier config family instead of only `.prettierignore`: `.prettierrc` and its suffixed variants (`.prettierrc.json`, `.prettierrc.yaml`, `.prettierrc.js`, …), the `.config/prettierrc` convention, and `prettier.config.js`/`.ts`/… files — enumerated from the theme's Cosmiconfig pattern, which the generated map skips. A bare `prettier.config` file keeps the generic settings gear.
