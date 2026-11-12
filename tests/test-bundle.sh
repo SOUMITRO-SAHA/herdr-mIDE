@@ -31,4 +31,9 @@ if PREVIEW="$TEST_ROOT/missing.png" sh "$ROOT/scripts/bundle.sh" "$TEST_ROOT/mis
   echo "bundle unexpectedly accepted a missing preview" >&2; exit 1
 fi
 test ! -e "$TEST_ROOT/missing"
+PREVIEW="$ROOT/public/examples/files-git-status.png" sh "$ROOT/scripts/bundle.sh" "$TEST_ROOT/gallery-expected"
+if ! diff -qr "$TEST_ROOT/gallery-expected" "$ROOT/gallery/herdr-mide"; then
+  echo "Gallery package differs from the assembled source; rebuild it for review" >&2
+  exit 1
+fi
 echo "bundle tests passed"

@@ -11,8 +11,8 @@ checks and `make smoke-prepare` passed on 2026-11-09 (herdr-app 0.1.14,
 hc 0.1.19) after fixing CRLF-checkout and Windows symlink issues, but the
 interactive desktop scenes could not run there yet: while any Herdr window is
 already open, a second `herdr-app` launch exits silently (machine-wide
-single-instance behavior on Windows), so the isolated smoke needs a machine
-or disposable VM with no Herdr window open. Linux still needs testing.
+single-instance behavior on Windows). See the dated matrix below for later
+results and remaining gaps.
 
 Herdr's own approach separates an app home, core session and state for tests;
 its Linux UI sandbox additionally uses a private Weston/Xwayland display. The
@@ -59,77 +59,44 @@ hosted Windows VM: it provisions rsync through the committed adapter,
 installs the released Herdr app, runs `just test` and `just check`, prepares
 the isolated fixture, starts the app in the isolated app home and captures
 the command-driven scenes (screen, files, changes, editor). It does not
-automate pointer interactions; scenes still need the manual or VM-desktop
-work below.
+automate pointer interactions; scenes still need the manual work below.
 
-## Isolated desktop smoke checks
+## Local desktop checks
 
-Use a disposable VM or dedicated test machine on the target OS, with the
-released Herdr and core already available. Isolating the app home and core
-does **not** isolate the installed app binary: Herdr releases may update
-themselves. Never run fake input on a person's real display, and never stop or
-restart an app or core you did not start. No helper here starts or stops either.
+Use the **`herdr-dev` profile** on the target OS; a dedicated VM or test
+machine is not required. Set `HERDR_APP_HOME` to the dev home for every app
+command and separately verify that the app uses the intended dev core session:
+the app-home override alone does not select a core. Never use production as a
+fallback. The app binary is still shared and installed releases may update
+themselves. Never fake input on a person's real display, or stop, restart or
+overwrite an app, core, file or key binding belonging to someone else.
 
-1. Run `just smoke-prepare` from the project. It creates a unique temporary
-   directory, a self-contained staged bundle, a separate app home, a unique
-   core session, private XDG state/config/runtime directories and a disposable
-   Git fixture with one modified and one untracked file. It prints the
-   **absolute scratch directory**. Nothing is installed into your app home.
-   If the Unix socket path is too long, set `TMPDIR` to a shorter private temp
-   directory. The helper uses `/var/tmp` as a shorter Unix fallback.
-2. In the disposable desktop environment, open a **new terminal** and load
-   the generated environment file. Substitute the printed path:
-
-   ```sh
-   # macOS/Linux
-   . "/absolute/scratch/path/env.sh"
-   ```
-
-   On Windows, use `. 'C:\absolute\scratch\path\env.ps1'` in PowerShell.
-   In Git Bash, convert the printed native scratch path to a shell path first,
-   for example `. "$(cygpath -u 'C:\absolute\scratch\path')/env.sh"`.
-   These files set `HERDR_APP_HOME`, `HC_SESSION`, XDG directories and
-   `DO_NOT_TRACK`, and clear inherited core socket/terminal overrides. On
-   Windows both files also isolate `APPDATA` and `LOCALAPPDATA`.
-   Prepare a fresh directory **on each target OS**; do not transfer env files
-   between machines.
-
-3. In that same isolated environment, start the installed `herdr-app` yourself.
-   Complete any first-run prompts, select `herdr-mide`, and open a space at
-   the scratch directory's `fixture/`. Before using any Herdr CLI command,
-   verify that this terminal still has the generated `HERDR_APP_HOME` and
-   `HC_SESSION`. Do not use your normal window, core, or Git repository.
-   On Windows this step fails while any Herdr window is already open: the
-   second launch exits without a new window, socket or isolated state
-   (observed with herdr-app 0.1.14). Use a machine or disposable VM with no
-   Herdr window open for the interactive scenes. On Wayland Linux the second
-   instance runs fine alongside an open window (no single-instance limit,
-   observed with herdr-app 0.1.15), but the isolated `XDG_RUNTIME_DIR` does
-   not contain the compositor socket and `herdr-app` exits with a Wayland
-   connection panic instead of falling back to X11 (Ubuntu 26.04, GNOME).
-   Link the real socket into the smoke runtime directory before launching:
-   `ln -s "/run/user/$(id -u)/wayland-0" "/absolute/scratch/path/r/wayland-0"`.
-4. Exercise each scene below in that test window. From the project in a second
-   terminal, run, replacing the path and scene name each time:
-
-   ```sh
-   just smoke-capture /absolute/scratch/path files
-   ```
-
-   On Windows, pass the printed native path using forward slashes, for example
-   `just smoke-capture "C:/absolute/scratch/path" files`;
-   the Node helper requires an absolute native path rather than `/c/...`.
-   The helper connects **only** to the prepared app home's control socket,
-   requires the `herdr-mide` layout and no reported mod errors, and asks Herdr
-   for a PNG in a new scratch capture directory. It checks the PNG header and
-   dimensions, not its pixels or the interaction's outcome. Inspect each image
-   and the window yourself. Scene names are lowercase letters, digits and
-   hyphens; repeat captures never overwrite earlier ones.
-
-5. When finished, close only the test window and stop only the isolated core
-   session and terminals you started, using the generated environment. Keep or
-   remove the scratch directory only after confirming that nothing in it is
-   still running. The helper deliberately does not delete it.
+1. Run `just smoke-prepare` to make a disposable Git fixture. It prints the
+   scratch directory; use its `fixture/` only for local live checks. The
+   helper also creates an app home and environment files for CI, but **do not
+   source those files or start a local test window in that home**: they select
+   the scratch profile instead of `herdr-dev`. No app or core is launched.
+2. In the dev home, inspect for name collisions before installing the reviewed
+   assembled layout and mods. Do not overwrite existing folders, layouts or
+   keys; resolve conflicts with the owner first. Merge optional keys only with
+   permission. Check each installed mod with `herdr-app check`.
+3. Start or use only an appropriately isolated `herdr-dev` window and its
+   intended dev core. Before commands, verify both `HERDR_APP_HOME` and the
+   core session, including inherited socket or terminal overrides. Open the
+   disposable `fixture/` as a space and select `herdr-mide`. If the window or
+   core cannot be positively identified, stop and ask; never restart another
+   person's app or core. On Windows, Herdr 0.1.14 was observed to refuse a
+   second window while another was open: do not close that window without
+   permission; report the conflict instead.
+4. Exercise the scenes below manually in the dev window. To capture a scene,
+   use `herdr-app shot` with `HERDR_APP_HOME` set to the dev home and a **new,
+   non-existing** filename under a scratch directory. Inspect the image and
+   window yourself; a screenshot is not an interaction or visual assertion.
+   `just smoke-capture` targets the helper's separate app home and is not the
+   local `herdr-dev` capture workflow.
+5. When finished, close or stop only the dev window, core and terminals that
+   you started and are authorized to stop. Preserve the scratch directory until
+   nothing uses it; the preparation helper does not delete it.
 
 ### Scenes and expected results
 
@@ -155,11 +122,10 @@ restart an app or core you did not start. No helper here starts or stops either.
 
 Capture e.g. `files`, `editor`, `changes` and `diff`; record the OS, app/core
 versions, commands, visual results, failures and screenshot paths. On Linux,
-headless pointer automation is appropriate only in an independently
-provisioned private Weston/Xwayland display or VM. On macOS and Windows, use
-an isolated interactive test environment; the current helper does not provide
-native pointer automation. Never report a manual or visual check as passed
-unless it was actually performed.
+use the `herdr-dev` profile for local interaction on every platform. The helper
+does not provide native pointer automation, and agents must not fake input on
+a person's real display. Never report a manual or visual check as passed unless
+it was actually performed.
 
 For each release, record a fresh matrix rather than carrying old passes forward:
 

@@ -42,7 +42,7 @@ for private information before sharing them outside this repo.
 
 - Syntax highlighting, a Save button, optional ⌘S shortcut, and an unsaved indicator.
 - Editor syntax uses Ayu Dark; Git status colors use Zed One Dark values, and diff colors use the bundled palette. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
-- **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./ROADMAP.md)).
+- **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./docs/ROADMAP.md)).
 
 ![Rendered Markdown in the editor Preview tab](public/examples/editor-markdown-preview.png)
 
@@ -81,7 +81,9 @@ Herdr's native editor and input controls resolve internal colors (including edit
 
 Do not copy the source `mods/` folders directly: Editor and Diff need generated
 shared files. Use the installer above or a complete, separately assembled
-release bundle. Gallery publication has not yet happened.
+release bundle. The self-contained [Gallery package](./gallery/herdr-mide/)
+is assembled from the same sources and includes those shared files. Gallery
+publication has not yet happened.
 
 ## How it works
 
@@ -104,7 +106,7 @@ install.sh                first-time installer (never overwrites)
 
 All icons live in `mods/mide-files/icons/` — the single source of truth. File-type and folder icons come from Material Icon Theme (the only icon source).
 
-[RECIPE.md](./RECIPE.md) documents the build for humans and agents. [TESTING.md](./TESTING.md) covers automated and isolated desktop checks across platforms; [RELEASING.md](./RELEASING.md) covers versioning and gallery publication; [ROADMAP.md](./ROADMAP.md) has the plan.
+[RECIPE.md](./RECIPE.md) documents the build for humans and agents. The maintainer guides live in [docs/](./docs): [docs/TESTING.md](./docs/TESTING.md) covers automated and isolated desktop checks across platforms, [docs/RELEASING.md](./docs/RELEASING.md) covers versioning and the Herdr Gallery standard with its publication steps, and [docs/ROADMAP.md](./docs/ROADMAP.md) has the plan.
 
 ## Development
 
@@ -123,7 +125,7 @@ just shot       # screenshot of the window → herdr-shot.png
 just switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 just bundle     # build a copyable layout bundle; needs a reviewed preview.png
 just smoke-prepare  # prepare a disposable app home and Git fixture
-just smoke-capture  # check and capture a user-started test window; see TESTING.md
+just smoke-capture  # check and capture a user-started test window; see docs/TESTING.md
 ```
 
 `preview.png` is the project's preview artwork. `just bundle` packages it for
@@ -148,7 +150,7 @@ full flow and merge gate are in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Status
 
-🚧 **v0.0.1 in preparation.** The bundle has not been released or submitted to the gallery. `herdr-app check` covers initial mod rendering, not the complete interaction or platform matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./ROADMAP.md).
+🚧 **v0.0.1 in preparation.** The bundle has not been released or submitted to the gallery. `herdr-app check` covers initial mod rendering, not the complete interaction or platform matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./docs/ROADMAP.md).
 
 ## License
 

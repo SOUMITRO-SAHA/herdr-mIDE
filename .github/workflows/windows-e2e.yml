@@ -3,7 +3,7 @@
 # Provisioning rsync, installing the released Herdr app, running the
 # automated checks, preparing the isolated smoke fixture, launching the app
 # in the isolated app home, and capturing the command-driven scenes.
-# Pointer interactions are not automated yet; see TESTING.md. Run it with
+# Pointer interactions are not automated yet; see docs/TESTING.md. Run it with
 # `gh workflow run windows-e2e` once it is on the default branch, or add the
 # `windows-e2e` label to a pull request — it never runs on ordinary pushes.
 name: Windows end-to-end smoke
