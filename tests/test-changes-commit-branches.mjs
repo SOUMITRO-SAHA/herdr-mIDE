@@ -11,7 +11,8 @@ try {
   const env = { ...process.env };
   for (const key of Object.keys(env)) if (key.toUpperCase().startsWith("GIT_")) delete env[key];
   Object.assign(env, { GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: globalConfig, GIT_TERMINAL_PROMPT: "0" });
-  const git = (...args) => execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  const git = (...args) =>
+    execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
   git("init", "-q");
   git("config", "user.name", "mIDE Test");
   git("config", "user.email", "mide-test@example.invalid");
@@ -29,26 +30,61 @@ try {
   git("add", "staged.txt");
 
   const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
-  const method = (start, end) => source.slice(source.indexOf(`  ${start}(`), source.indexOf(`  ${end}(`, source.indexOf(`  ${start}(`)));
+  const method = (start, end) =>
+    source.slice(source.indexOf(`  ${start}(`), source.indexOf(`  ${end}(`, source.indexOf(`  ${start}(`)));
   const exec = async (program, args, options) => {
     const result = spawnSync(program, args, { cwd: options.cwd, env, encoding: "utf8" });
     if (result.error) throw result.error;
     return { code: result.status, stdout: result.stdout, stderr: result.stderr };
   };
   const toasts = [];
-  const notify = (toast) => { toasts.push(toast); return `toast-${toasts.length}`; };
+  const notify = toast => {
+    toasts.push(toast);
+    return `toast-${toasts.length}`;
+  };
   const { friendlyGitError, gitActionLabel } = await import("../mods/mide-changes/git-errors.js");
-  const methods = new Function("friendlyGitError", "gitActionLabel", "exec", "notify", `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`)(friendlyGitError, gitActionLabel, exec, notify);
+  const methods = new Function(
+    "friendlyGitError",
+    "gitActionLabel",
+    "exec",
+    "notify",
+    `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`,
+  )(friendlyGitError, gitActionLabel, exec, notify);
   const tasks = [];
-  const cx = { notify() {}, spawn(fn) { tasks.push(fn(cx)); } };
-  const drain = async () => { while (tasks.length) await tasks.shift(); };
+  const cx = {
+    notify() {},
+    spawn(fn) {
+      tasks.push(fn(cx));
+    },
+  };
+  const drain = async () => {
+    while (tasks.length) await tasks.shift();
+  };
   let query = "release test";
   const view = {
-    ...methods, root, on: null, context: "test", currentKey: () => "test",
-    loading: false, busy: false, staged: 1, message: "staged only", branch: initialBranch,
-    files: [{ fresh: false }, { fresh: false }, { fresh: true }], view: "changes", branches: [],
-    input: { set_value() {} }, branchQuery: { value: () => query, set_value(value) { query = value; } },
-    refresh() { this.branch = git("branch", "--show-current"); },
+    ...methods,
+    root,
+    on: null,
+    context: "test",
+    currentKey: () => "test",
+    loading: false,
+    busy: false,
+    staged: 1,
+    message: "staged only",
+    branch: initialBranch,
+    files: [{ fresh: false }, { fresh: false }, { fresh: true }],
+    view: "changes",
+    branches: [],
+    input: { set_value() {} },
+    branchQuery: {
+      value: () => query,
+      set_value(value) {
+        query = value;
+      },
+    },
+    refresh() {
+      this.branch = git("branch", "--show-current");
+    },
   };
   view.commit(cx);
   await drain();
@@ -92,7 +128,8 @@ try {
 
   const other = join(root, "other-clone");
   git("clone", "-q", "--branch", initialBranch, remote, other);
-  const otherGit = (...args) => execFileSync("git", args, { cwd: other, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  const otherGit = (...args) =>
+    execFileSync("git", args, { cwd: other, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
   otherGit("config", "user.name", "mIDE Test");
   otherGit("config", "user.email", "mide-test@example.invalid");
   otherGit("config", "commit.gpgsign", "false");

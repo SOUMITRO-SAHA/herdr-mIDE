@@ -4,51 +4,106 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 
-const source = (await readFile(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8"))
-  .replace(/\r\n/g, "\n")
-  .replace(/^import .*;\n/gm, "")
-  .replace("export default class MideEditor", "class MideEditor") + "\nMideEditor;";
+const source =
+  (await readFile(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8"))
+    .replace(/\r\n/g, "\n")
+    .replace(/^import .*;\n/gm, "")
+    .replace("export default class MideEditor", "class MideEditor") + "\nMideEditor;";
 const controls = new Map();
 const rendered = new Map();
 function element() {
   let id, color;
-  const proxy = new Proxy({}, { get(_target, method) {
-    if (method === "id") return value => { id = value; rendered.set(id, {}); return proxy; };
-    if (method === "text_color") return value => { color = value; if (id) rendered.get(id).color = value; return proxy; };
-    if (method === "child") return value => { if (id && typeof value === "string") rendered.get(id).text = value; return proxy; };
-    if (method === "on_click") return callback => { if (id) controls.set(id, callback); return proxy; };
-    if (method === "when") return (condition, callback) => condition ? callback(proxy) : proxy;
-    return () => proxy;
-  } });
+  const proxy = new Proxy(
+    {},
+    {
+      get(_target, method) {
+        if (method === "id")
+          return value => {
+            id = value;
+            rendered.set(id, {});
+            return proxy;
+          };
+        if (method === "text_color")
+          return value => {
+            color = value;
+            if (id) rendered.get(id).color = value;
+            return proxy;
+          };
+        if (method === "child")
+          return value => {
+            if (id && typeof value === "string") rendered.get(id).text = value;
+            return proxy;
+          };
+        if (method === "on_click")
+          return callback => {
+            if (id) controls.set(id, callback);
+            return proxy;
+          };
+        if (method === "when") return (condition, callback) => (condition ? callback(proxy) : proxy);
+        return () => proxy;
+      },
+    },
+  );
   return proxy;
 }
 let write = async (path, value, expected) => {
-  if (await readFile(path, "utf8") !== expected) throw new Error("File changed outside Herdr");
+  if ((await readFile(path, "utf8")) !== expected) throw new Error("File changed outside Herdr");
   await writeFile(path, value);
 };
 let hintPlatform = "macos";
 const context = {
-  View: class {}, div: element, svg: element, v_flex: element, h_flex: element,
-  Editor: { new: element }, EditorState: {}, TextView: { markdown: element },
-  Checkbox: { new: element }, Popover: { new: element },
-  theme: () => ({ accent: "primary-accent" }), settings: () => ({}), shared: () => false, setShared: () => {},
+  View: class {},
+  div: element,
+  svg: element,
+  v_flex: element,
+  h_flex: element,
+  Editor: { new: element },
+  EditorState: {},
+  TextView: { markdown: element },
+  Checkbox: { new: element },
+  Popover: { new: element },
+  theme: () => ({ accent: "primary-accent" }),
+  settings: () => ({}),
+  shared: () => false,
+  setShared: () => {},
   window: () => ({ platform: hintPlatform }),
-  languageFor: () => "text", syntaxPalette: () => ({}),
-  readTextFile: path => readFile(path, "utf8"), writeTextFile: (...args) => write(...args),
+  languageFor: () => "text",
+  syntaxPalette: () => ({}),
+  readTextFile: path => readFile(path, "utf8"),
+  writeTextFile: (...args) => write(...args),
 };
 const MideEditor = runInNewContext(source, context);
 const pending = [];
 const timers = [];
-const cx = { notify() {}, timer: { after(ms, callback) { timers.push({ ms, callback }); } },
-  spawn(fn) { const promise = fn(cx); pending.push(promise); return promise; } };
+const cx = {
+  notify() {},
+  timer: {
+    after(ms, callback) {
+      timers.push({ ms, callback });
+    },
+  },
+  spawn(fn) {
+    const promise = fn(cx);
+    pending.push(promise);
+    return promise;
+  },
+};
 const root = await mkdtemp(join(tmpdir(), "mide-editor-save-"));
 try {
   const file = join(root, "example.txt");
   await writeFile(file, "original\n");
   let value = "edited\n";
   const editor = new MideEditor();
-  Object.assign(editor, { file, baseline: "original\n", code: { value: () => value }, dirty: true,
-    truncated: false, saving: false, drafts: new Map(), editorMode: "raw" });
+  Object.assign(editor, {
+    file,
+    baseline: "original\n",
+    code: { value: () => value },
+    dirty: true,
+    truncated: false,
+    saving: false,
+    drafts: new Map(),
+    editorMode: "raw",
+  });
 
   editor.render(cx);
   assert.ok(controls.has("mide-editor-save"), "a visible Save control must work without a custom key binding");
@@ -69,7 +124,12 @@ try {
   editor.dirty = true;
   let release;
   const realWrite = write;
-  write = async (...args) => { await new Promise(resolve => { release = resolve; }); return realWrite(...args); };
+  write = async (...args) => {
+    await new Promise(resolve => {
+      release = resolve;
+    });
+    return realWrite(...args);
+  };
   editor.save(cx);
   editor.render(cx);
   assert.equal(rendered.get("mide-editor-save-status").text, "Saving…");

@@ -13,8 +13,13 @@ try {
   writeFileSync(join(scratch, "gitconfig"), "");
   const env = { ...process.env };
   for (const key of Object.keys(env)) if (key.toUpperCase().startsWith("GIT_")) delete env[key];
-  Object.assign(env, { GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: join(scratch, "gitconfig"), GIT_TERMINAL_PROMPT: "0" });
-  const git = (...args) => execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  Object.assign(env, {
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: join(scratch, "gitconfig"),
+    GIT_TERMINAL_PROMPT: "0",
+  });
+  const git = (...args) =>
+    execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   git("init", "-q");
   git("config", "core.hooksPath", join(scratch, "hooks"));
   git("config", "commit.gpgsign", "false");
@@ -22,17 +27,32 @@ try {
   writeFileSync(join(root, "new.txt"), "new file\n");
 
   const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
-  const method = (start, end) => source.slice(source.indexOf(`  ${start}(`), source.indexOf(end, source.indexOf(`  ${start}(`)));
+  const method = (start, end) =>
+    source.slice(source.indexOf(`  ${start}(`), source.indexOf(end, source.indexOf(`  ${start}(`)));
   let releaseStatus, statusCaptured;
-  const captured = new Promise((resolve) => { statusCaptured = resolve; });
-  const blocked = new Promise((resolve) => { releaseStatus = resolve; });
+  const captured = new Promise(resolve => {
+    statusCaptured = resolve;
+  });
+  const blocked = new Promise(resolve => {
+    releaseStatus = resolve;
+  });
   let blockStatus = true;
   const reads = [];
   const exec = async (_command, args) => {
-    if (args.includes("rev-parse") || args.includes("status") || args.includes("diff") || args.includes("branch") || args.includes("rev-list")) reads.push(args);
+    if (
+      args.includes("rev-parse") ||
+      args.includes("status") ||
+      args.includes("diff") ||
+      args.includes("branch") ||
+      args.includes("rev-list")
+    )
+      reads.push(args);
     let result;
-    try { result = { code: 0, stdout: git(...args), stderr: "" }; }
-    catch (error) { result = { code: error.status, stdout: String(error.stdout || ""), stderr: String(error.stderr || "") }; }
+    try {
+      result = { code: 0, stdout: git(...args), stderr: "" };
+    } catch (error) {
+      result = { code: error.status, stdout: String(error.stdout || ""), stderr: String(error.stderr || "") };
+    }
     if (blockStatus && args.includes("status")) {
       blockStatus = false;
       statusCaptured();
@@ -40,12 +60,33 @@ try {
     }
     return result;
   };
-  const makeMethods = new Function("location", "key", "exec", "READ", `return ({${method("refresh", "  // Open the review diff")}, ${method("git", "  stage(file")}})`);
-  const methods = makeMethods(() => ({ cwd: root, on: null }), () => "context", exec, ["--no-optional-locks", "-c", "core.fsmonitor=false"]);
-  const view = { ...methods, context: "context", loading: false, busy: false, files: [], currentKey: () => "context", watch: () => {} };
+  const makeMethods = new Function(
+    "location",
+    "key",
+    "exec",
+    "READ",
+    `return ({${method("refresh", "  // Open the review diff")}, ${method("git", "  stage(file")}})`,
+  );
+  const methods = makeMethods(
+    () => ({ cwd: root, on: null }),
+    () => "context",
+    exec,
+    ["--no-optional-locks", "-c", "core.fsmonitor=false"],
+  );
+  const view = {
+    ...methods,
+    context: "context",
+    loading: false,
+    busy: false,
+    files: [],
+    currentKey: () => "context",
+    watch: () => {},
+  };
   const tasks = [];
-  const cx = { spawn: (fn) => tasks.push(fn(cx)), notify: () => {} };
-  const drain = async () => { while (tasks.length) await tasks.shift(); };
+  const cx = { spawn: fn => tasks.push(fn(cx)), notify: () => {} };
+  const drain = async () => {
+    while (tasks.length) await tasks.shift();
+  };
 
   // Capture the untracked status, then stage before that refresh completes.
   view.refresh(cx);
@@ -55,13 +96,24 @@ try {
   releaseStatus();
   await drain();
   for (const args of reads) {
-    assert.deepEqual(args.slice(0, 3), ["--no-optional-locks", "-c", "core.fsmonitor=false"], "Git reads must not trigger watcher refresh loops");
+    assert.deepEqual(
+      args.slice(0, 3),
+      ["--no-optional-locks", "-c", "core.fsmonitor=false"],
+      "Git reads must not trigger watcher refresh loops",
+    );
   }
   assert.equal(view.files.length, 1);
-  assert.equal(view.files[0].fresh, false, "staged addition must no longer be Git-untracked after an overlapping refresh");
+  assert.equal(
+    view.files[0].fresh,
+    false,
+    "staged addition must no longer be Git-untracked after an overlapping refresh",
+  );
   assert.equal(view.files[0].created, true, "a staged new file stays in the Untracked section");
   assert.equal(view.files[0].staged, true);
-  assert.deepEqual(groupChanges(view.files).untracked.map((file) => file.path), ["new.txt"]);
+  assert.deepEqual(
+    groupChanges(view.files).untracked.map(file => file.path),
+    ["new.txt"],
+  );
   assert.deepEqual(groupChanges(view.files).tracked, []);
 
   writeFileSync(join(root, "new.txt"), "new file\nmore edits\n");
@@ -69,7 +121,11 @@ try {
   await drain();
   assert.equal(view.files[0].staged, true);
   assert.equal(view.files[0].unstaged, true);
-  assert.deepEqual(groupChanges(view.files).untracked.map((file) => file.path), ["new.txt"], "partially staged new files stay in Untracked");
+  assert.deepEqual(
+    groupChanges(view.files).untracked.map(file => file.path),
+    ["new.txt"],
+    "partially staged new files stay in Untracked",
+  );
 
   view.git(cx, ["restore", "--staged", "--", "new.txt"]);
   await drain();
@@ -83,10 +139,17 @@ try {
   writeFileSync(join(root, "existing.txt"), "changed\n");
   view.refresh(cx);
   await drain();
-  assert.deepEqual(groupChanges(view.files).tracked.map((file) => file.path), ["existing.txt"]);
+  assert.deepEqual(
+    groupChanges(view.files).tracked.map(file => file.path),
+    ["existing.txt"],
+  );
   view.git(cx, ["add", "--", "existing.txt"]);
   await drain();
-  assert.deepEqual(groupChanges(view.files).tracked.map((file) => file.path), ["existing.txt"], "staged existing files stay in Tracked");
+  assert.deepEqual(
+    groupChanges(view.files).tracked.map(file => file.path),
+    ["existing.txt"],
+    "staged existing files stay in Tracked",
+  );
   console.log("Changes tracking categorization tests passed");
 } finally {
   rmSync(scratch, { recursive: true, force: true });

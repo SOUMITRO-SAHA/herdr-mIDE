@@ -2,14 +2,31 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { capture, bundleInvocation, createFixture, environmentFiles, fixtureGitEnv, isolatedEnv, parseStatus, sceneName, socketFits } from "../scripts/smoke.mjs";
+import {
+  capture,
+  bundleInvocation,
+  createFixture,
+  environmentFiles,
+  fixtureGitEnv,
+  isolatedEnv,
+  parseStatus,
+  sceneName,
+  socketFits,
+} from "../scripts/smoke.mjs";
 
 const root = join(tmpdir(), "mide-smoke-test");
 const inherited = {
-  PATH: "/test/bin", HOME: "/real/home", HC_SOCKET: "/real/socket",
-  HC_SESSION: "real", HC_TERMINAL_ID: "t1", HC_TERMINAL_SOCKET: "/real/terminal",
-  HC_SCOPE: "real", HERDR_APP_HOME: "/real/app", XDG_RUNTIME_DIR: "/real/runtime",
-  XDG_STATE_HOME: "/real/state", XDG_CONFIG_HOME: "/real/config",
+  PATH: "/test/bin",
+  HOME: "/real/home",
+  HC_SOCKET: "/real/socket",
+  HC_SESSION: "real",
+  HC_TERMINAL_ID: "t1",
+  HC_TERMINAL_SOCKET: "/real/terminal",
+  HC_SCOPE: "real",
+  HERDR_APP_HOME: "/real/app",
+  XDG_RUNTIME_DIR: "/real/runtime",
+  XDG_STATE_HOME: "/real/state",
+  XDG_CONFIG_HOME: "/real/config",
 };
 const env = isolatedEnv(root, "m0123456789", inherited, "darwin");
 assert.equal(env.HERDR_APP_HOME, join(root, "h"));
@@ -31,7 +48,12 @@ assert.match(windowsFiles.shell, /^export LOCALAPPDATA=/m);
 assert.match(windowsFiles.powershell, /^\$env:APPDATA =/m);
 assert.match(windowsFiles.powershell, /^\$env:LOCALAPPDATA =/m);
 assert.match(windowsFiles.shell, /^unset HC_SOCKET HC_TERMINAL_ID HC_TERMINAL_SOCKET HC_SCOPE$/m);
-const gitEnv = fixtureGitEnv(root, { ...env, GIT_DIR: "/real/repo", GIT_OBJECT_DIRECTORY: "/real/objects", GIT_CONFIG_COUNT: "1" });
+const gitEnv = fixtureGitEnv(root, {
+  ...env,
+  GIT_DIR: "/real/repo",
+  GIT_OBJECT_DIRECTORY: "/real/objects",
+  GIT_CONFIG_COUNT: "1",
+});
 for (const key of ["GIT_DIR", "GIT_OBJECT_DIRECTORY", "GIT_CONFIG_COUNT"]) assert.equal(gitEnv[key], undefined);
 assert.equal(gitEnv.GIT_CONFIG_GLOBAL, join(root, "gitconfig"));
 assert.equal(gitEnv.GIT_CONFIG_NOSYSTEM, "1");
@@ -63,7 +85,10 @@ try {
   assert.equal(readFileSync(join(scratch, "fixture", "sample.txt"), "utf8"), "changed\n");
   assert.equal(readFileSync(join(scratch, "fixture", "new.txt"), "utf8"), "new\n");
   mkdirSync(scratchEnv.HERDR_APP_HOME, { recursive: true });
-  writeFileSync(join(scratch, ".mide-smoke.json"), JSON.stringify({ version: 1, root: scratch, session: "m0123456789" }));
+  writeFileSync(
+    join(scratch, ".mide-smoke.json"),
+    JSON.stringify({ version: 1, root: scratch, session: "m0123456789" }),
+  );
   const calls = [];
   const fake = (program, args, actualEnv) => {
     calls.push([program, args[0]]);
@@ -72,15 +97,23 @@ try {
     assert.equal(args[0], "shot");
     const png = Buffer.alloc(24);
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(png);
-    png.writeUInt32BE(1, 16); png.writeUInt32BE(1, 20);
+    png.writeUInt32BE(1, 16);
+    png.writeUInt32BE(1, 20);
     writeFileSync(args[1], png);
     return "";
   };
   const shot = capture(scratch, "files", fake);
   assert.ok(shot.startsWith(join(scratch, "captures")));
-  assert.deepEqual(calls, [["herdr-app", "status"], ["herdr-app", "shot"], ["herdr-app", "status"]]);
+  assert.deepEqual(calls, [
+    ["herdr-app", "status"],
+    ["herdr-app", "shot"],
+    ["herdr-app", "status"],
+  ]);
   assert.throws(() => capture(scratch, "../escape", fake));
-  writeFileSync(join(scratch, ".mide-smoke.json"), JSON.stringify({ version: 1, root: "/wrong", session: "m0123456789" }));
+  writeFileSync(
+    join(scratch, ".mide-smoke.json"),
+    JSON.stringify({ version: 1, root: "/wrong", session: "m0123456789" }),
+  );
   assert.throws(() => capture(scratch, "files", fake));
 } finally {
   rmSync(scratch, { recursive: true, force: true });

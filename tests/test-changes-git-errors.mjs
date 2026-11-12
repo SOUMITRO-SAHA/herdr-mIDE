@@ -30,7 +30,7 @@ assert.equal(friendlyGitError(`Error: ${dirty}`), friendlyGitError(dirty));
 const branches = [
   ["fatal: invalid reference: nope", "No branch named “nope”."],
   ["fatal: a branch named 'x' already exists", "Branch 'x' already exists."],
-  ["fatal: a branch named \"x\" already exists", "Branch \"x\" already exists."],
+  ['fatal: a branch named "x" already exists', 'Branch "x" already exists.'],
   [
     "error: The branch 'old' is not fully merged.\nIf you are sure you want to delete it, run 'git branch -D old'.\nAborting",
     "Branch 'old' has unmerged commits — force-delete it with git branch -D old.",
@@ -44,11 +44,11 @@ for (const [raw, expected] of branches) assert.equal(friendlyGitError(raw), expe
 
 // Anything else keeps git's first meaningful line, as one line: hint and
 // "Aborting" tails dropped, prefix and folded whitespace cleaned.
-assert.equal(friendlyGitError("fatal: cannot lock ref 'refs/heads/x': group writable"), "cannot lock ref 'refs/heads/x': group writable");
 assert.equal(
-  friendlyGitError("warning: some note\nerror: the real failure\nAborting"),
-  "the real failure",
+  friendlyGitError("fatal: cannot lock ref 'refs/heads/x': group writable"),
+  "cannot lock ref 'refs/heads/x': group writable",
 );
+assert.equal(friendlyGitError("warning: some note\nerror: the real failure\nAborting"), "the real failure");
 const long = friendlyGitError(`fatal: ${"x".repeat(300)}`);
 assert.equal(long.length, 180);
 assert.ok(long.endsWith("…"));
