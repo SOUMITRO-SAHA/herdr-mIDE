@@ -150,6 +150,9 @@ someone on an already-claimed issue — comment asking for status and ETA
 instead. Branch `<type>/<issue-number>-<slug>`, commit `type(scope): summary`,
 and keep `just fmt-check`, `just test` and (for mods) `just check` green. The
 full flow and merge gate are in [CONTRIBUTING.md](./CONTRIBUTING.md).
+Everyone works under the [Code of Conduct](./CODE_OF_CONDUCT.md); security
+problems are reported privately as described in [SECURITY.md](./SECURITY.md)
+— never as a public issue.
 
 ## Status
 

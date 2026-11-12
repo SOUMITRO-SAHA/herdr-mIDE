@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Herdr app problems
+    url: https://github.com/herdrdev/herdr-app/issues
+    about: >-
+      Issues with the Herdr app itself — window, terminals, agents, themes or
+      the mod runtime — belong upstream at herdrdev/herdr-app, not here.
