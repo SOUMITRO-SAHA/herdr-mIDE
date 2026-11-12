@@ -6,6 +6,7 @@
 #   just sync      one-shot copy of mods and layout into the app home
 #   just check     herdr-app check on every mod (the runtime's own parser)
 #   just install   first-time install (never overwrites; prints keys to merge)
+#   just uninstall remove the installed mods and layout (never touches keys)
 #   just status    what the window says: layout, focus, errors from mods
 #   just shot      PNG of the window → herdr-shot.png
 #   just switch    show the herdr-mide layout (ctrl-shift-l cycles back)
@@ -35,6 +36,7 @@ help:
     @echo "  just fmt      format the tree (Prettier via Bun)"
     @echo "  just fmt-check  verify formatting; CI enforces this on every PR"
     @echo "  just install  first-time install (install.sh)"
+    @echo "  just uninstall  remove the installed mods and layout"
     @echo "  just status   window state + mod errors"
     @echo "  just shot     window screenshot → herdr-shot.png"
     @echo "  just switch   show the herdr-mide layout (ctrl-shift-l cycles back)"
@@ -68,6 +70,7 @@ test:
     @bun ./tests/test-portable-temp.mjs
     @sh ./tests/test-bundle.sh
     @sh ./tests/test-install.sh
+    @sh ./tests/test-uninstall.sh
 
 fmt:
     @bun run --silent fmt
@@ -80,6 +83,9 @@ check mods=MODS: test
 
 install:
     @./install.sh
+
+uninstall:
+    @./scripts/uninstall.sh
 
 status:
     @herdr-app status

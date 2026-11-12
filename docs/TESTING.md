@@ -47,7 +47,8 @@ and `/c/...` arguments to Cygwin's `/cygdrive/c/...` before exec'ing
 cwRsync's rsync, and maps MSYS's `/tmp` mount (which cwRsync resolves to its
 own missing root) to the Windows temp directory.
 Export `MSYS=winsymlinks:nativestrict` with Windows Developer Mode
-enabled (or run elevated) so the installer test can create real symlinks.
+enabled (or run elevated) so the installer and uninstaller tests can create
+real symlinks.
 `just check` also needs the installed Herdr CLI. Tests use disposable Git
 repositories; remote-action tests use a local bare repository, not the
 network. The mod checker loads and renders the initial state but does not
