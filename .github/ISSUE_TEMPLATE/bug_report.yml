@@ -1,0 +1,58 @@
+name: Bug report
+description: Something in herdr-mIDE is broken, wrong, or behaves differently from the README
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Before filing, please search the open issues
+        for a duplicate and skim [docs/TESTING.md](../blob/main/docs/TESTING.md)
+        for known platform gaps — some behavior is already tracked there.
+
+        herdr-mIDE mods run with your access: Files reads your workspace,
+        Editor can write files, Changes runs Git. Never paste tokens, private
+        repository content, or other secrets into this form.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps starting from a fresh Herdr window — which pane, key, or command.
+      placeholder: |
+        1. Switch to the `herdr-mide` layout
+        2. Click …
+        3. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - Operating system (macOS, Linux, or Windows)
+        - Herdr app version (see the app's version output)
+        - herdr-mIDE version (`cat VERSION` in this repository, or the installed bundle)
+        - Does the default `main` layout show the same problem?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or recordings
+      description: Optional. Review every image for private information before uploading (see the warning in the README).
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: "`just status` output, related issues, when the problem started."
+    validations:
+      required: false

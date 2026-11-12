@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose an addition or change to the herdr-mIDE layout or mods
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature work here starts as an issue: scope is agreed here before any
+        pull request (see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md)).
+        [docs/ROADMAP.md](../blob/main/docs/ROADMAP.md) already lists planned
+        work — vim mode, hunk-level staging, the agent-review flow — please
+        check it before proposing.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and what stands in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What herdr-mIDE should do instead — describe the user-visible behavior ("done when …"), not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, including doing it manually outside herdr-mIDE.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This is about herdr-mIDE's layout or mods, not the Herdr app itself
+          required: true
+        - label: I searched open and closed issues and found no duplicate
+          required: true
