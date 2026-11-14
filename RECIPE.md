@@ -20,7 +20,9 @@ files, commit and make small edits without changing Herdr's theme.
 - Changes has a 36px Changes/History tab strip, a diff summary and stage
   action, followed by Tracked and Untracked groups with tri-state checkboxes.
   Its footer shows the repository, branch and remote action; the Changes tab
-  also has a commit message area. History lists recent commits.
+  also has a commit message area. History lists recent commits. The footer's
+  repository and branch names each shrink with an end ellipsis when the panel
+  is narrow, keeping the remote action visible at the right edge.
 - The branch control opens a searchable popover with the current branch,
   other local branches, delete actions and an option to create a branch.
 - Diff opens beside a terminal or editor with file headers, line numbers,
