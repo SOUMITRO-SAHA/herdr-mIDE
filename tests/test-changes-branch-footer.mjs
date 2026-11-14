@@ -74,6 +74,10 @@ const left = childElements(row).find(element => element?.calls.some(([name]) => 
 assert.ok(left, "the names share a constrained flex item beside the remote action");
 assert.ok(left.calls.some(([name, value]) => name === "min_w" && value === 0));
 assert.ok(left.calls.some(([name]) => name === "overflow_hidden"));
+assert.ok(
+  left.calls.some(([name, value]) => name === "gap" && value === 1),
+  "compact spacing between identity parts",
+);
 const onNamesSize = left.calls.find(([name]) => name === "on_size_change")?.[1];
 assert.equal(typeof onNamesSize, "function", "name limits adapt to the actual remaining width");
 const measureRepo = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-repo-measure"));
@@ -107,6 +111,10 @@ assert.ok(childElements(left).includes(repoLabel), "the repository belongs to th
 // is painted — never on the flex container around it.
 const trigger = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-branch"));
 assert.ok(trigger, "the branch switcher keeps its id");
+assert.ok(
+  trigger.calls.some(([n, value]) => n === "px" && value === 1),
+  "compact branch trigger padding",
+);
 const branchSlot = childElements(left).find(element => element?.calls.some(([name]) => name === "flex_1"));
 assert.ok(branchSlot, "a flex slot constrains the popover, not only its trigger");
 assert.ok(branchSlot.calls.some(([name, value]) => name === "min_w" && value === 0));
@@ -161,12 +169,25 @@ const branchLabel = elements.find(
 );
 assert.ok(branchLabel, "the branch name is painted in the footer");
 assert.ok(
-  branchLabel.calls.some(([n, value]) => n === "w" && value === 112.5),
+  branchLabel.calls.some(([n, value]) => n === "w" && value === 118.5),
   "the label fits inside trigger padding",
 );
 assert.ok(!branchLabel.calls.some(([n]) => n === "flex"), "the branch label must not lay its text out as a flex row");
 
-onSize({ width: 3 }, { notify: () => notifications++ });
+measureBranch.calls.find(([name]) => name === "on_size_change")[1]({ width: 200 }, cx);
+elements.length = 0;
+branchFooter.call(view, {}, { text: n => n });
+const constrainedRepo = elements.find(
+  element =>
+    element.calls.some(([n, v]) => n === "child" && v === repository) && element.calls.some(([n]) => n === "truncate"),
+);
+const expected = footerNameWidths(250 - 12 - 3 - 4, 130, 202);
+assert.ok(
+  constrainedRepo.calls.some(([n, value]) => n === "max_w" && value === expected.repository),
+  "name allocation accounts for compact gaps and trigger padding",
+);
+
+onSize({ width: 1 }, { notify: () => notifications++ });
 elements.length = 0;
 branchFooter.call(view, {}, { text: n => n });
 const tinyLabel = elements.find(

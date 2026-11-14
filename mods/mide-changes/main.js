@@ -951,6 +951,9 @@ export default class MideChanges extends View {
   branchFooter(t, typography) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
     const branch = this.branch ?? (this.root ? "Detached HEAD" : "—");
+    const iconSize = 12;
+    const nameGap = 1;
+    const branchPadding = 1;
     const metrics = this.footerMetrics ?? {};
     const measure = name => (size, cx) => {
       const width = Math.max(0, size.width);
@@ -961,8 +964,8 @@ export default class MideChanges extends View {
     };
     // The action stays outside this budget. Include the icon, three gaps,
     // separator and branch-trigger padding before sharing the remaining space.
-    const available = Math.max(0, (metrics.names ?? 0) - 12 - 18 - (metrics.separator ?? 0));
-    const widths = footerNameWidths(available, metrics.repository ?? 0, (metrics.branch ?? 0) + 8);
+    const available = Math.max(0, (metrics.names ?? 0) - iconSize - 3 * nameGap - (metrics.separator ?? 0));
+    const widths = footerNameWidths(available, metrics.repository ?? 0, (metrics.branch ?? 0) + 2 * branchPadding);
     // Invisible natural-width samples let short names give their unused
     // space to the other label, without guessing from character counts.
     return h_flex()
@@ -1009,9 +1012,9 @@ export default class MideChanges extends View {
           .min_w(0)
           .overflow_hidden()
           .on_size_change(measure("names"))
-          .gap(6)
+          .gap(nameGap)
           .items_center()
-          .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
+          .child(svg("mods/mide-files/icons/git-branch.svg").size(iconSize).flex_none().text_color(t.dim))
           .child(
             div()
               .flex_shrink(0)
@@ -1063,7 +1066,7 @@ export default class MideChanges extends View {
                       .w(this.branchSlotWidth ?? 0)
                       .min_w(0)
                       .h(23)
-                      .px(4)
+                      .px(branchPadding)
                       .flex()
                       .items_center()
                       .overflow_hidden()
@@ -1075,7 +1078,7 @@ export default class MideChanges extends View {
                       .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`)
                       .child(
                         div()
-                          .w(Math.max(0, (this.branchSlotWidth ?? 0) - 8))
+                          .w(Math.max(0, (this.branchSlotWidth ?? 0) - 2 * branchPadding))
                           .truncate()
                           .child(branch),
                       ),
