@@ -10,6 +10,7 @@ import { toggleStage } from "./stage-action.js";
 import { groupChanges } from "./change-groups.js";
 import { friendlyGitError, gitActionLabel } from "./git-errors.js";
 import { handleCommitShortcut } from "./commit-shortcut.js";
+import { footerNameWidths } from "./footer-sizing.js";
 
 function location(previous) {
   const f = focused(),
@@ -949,52 +950,143 @@ export default class MideChanges extends View {
 
   branchFooter(t, typography) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
+    const branch = this.branch ?? (this.root ? "Detached HEAD" : "—");
+    const iconSize = 12;
+    const nameGap = 1;
+    const branchPadding = 1;
+    const metrics = this.footerMetrics ?? {};
+    const measure = name => (size, cx) => {
+      const width = Math.max(0, size.width);
+      if (this.footerMetrics?.[name] !== width) {
+        this.footerMetrics = { ...this.footerMetrics, [name]: width };
+        cx.notify();
+      }
+    };
+    // The action stays outside this budget. Include the icon, three gaps,
+    // separator and branch-trigger padding before sharing the remaining space.
+    const available = Math.max(0, (metrics.names ?? 0) - iconSize - 3 * nameGap - (metrics.separator ?? 0));
+    const widths = footerNameWidths(available, metrics.repository ?? 0, (metrics.branch ?? 0) + 2 * branchPadding);
+    // Invisible natural-width samples let short names give their unused
+    // space to the other label, without guessing from character counts.
     return h_flex()
       .h(30)
       .flex_none()
+      .relative()
       .px(10)
       .gap(6)
       .items_center()
+      .justify_between()
       .border_t(1)
       .border_color(t.border)
-      .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
-      .child(div().max_w(110).min_w(0).text_size(typography.text(10)).text_color(t.dim).truncate().child(repository))
-      .child(div().text_size(typography.text(10)).text_color(t.dim).child("/"))
       .child(
-        Popover.new("mide-branch-picker-menu")
-          .open(this.branchMenuOpen)
-          .anchor("bottom_left")
-          .on_open_change((open, cx) => {
-            this.branchMenuOpen = open;
-            if (open) {
-              this.note = null;
-              this.branchQuery.set_value("");
-              this.branchQuery.focus();
-              this.loadBranches(cx);
-            }
-            cx.notify();
-          })
-          .trigger(
+        h_flex()
+          .absolute()
+          .left(0)
+          .top(0)
+          .w(10000)
+          .h(0)
+          .opacity(0)
+          .child(
             div()
-              .id("mide-branch")
+              .id("mide-repo-measure")
+              .flex_none()
+              .whitespace_nowrap()
+              .text_size(typography.text(10))
+              .on_size_change(measure("repository"))
+              .child(repository),
+          )
+          .child(
+            div()
+              .id("mide-branch-measure")
+              .flex_none()
+              .whitespace_nowrap()
+              .text_size(typography.text(10))
+              .on_size_change(measure("branch"))
+              .child(branch),
+          ),
+      )
+      .child(
+        h_flex()
+          .id("mide-footer-names")
+          .flex_1()
+          .min_w(0)
+          .overflow_hidden()
+          .on_size_change(measure("names"))
+          .gap(nameGap)
+          .items_center()
+          .child(svg("mods/mide-files/icons/git-branch.svg").size(iconSize).flex_none().text_color(t.dim))
+          .child(
+            div()
+              .flex_shrink(0)
+              .max_w(widths.repository)
+              .text_size(typography.text(10))
+              .text_color(t.dim)
+              .truncate()
+              .child(repository),
+          )
+          .child(
+            div()
+              .id("mide-footer-separator")
+              .flex_none()
+              .text_size(typography.text(10))
+              .text_color(t.dim)
+              .on_size_change(measure("separator"))
+              .child("/"),
+          )
+          .child(
+            h_flex()
+              .id("mide-branch-slot")
               .flex_1()
               .min_w(0)
-              .h(23)
-              .px(4)
-              .flex()
-              .items_center()
-              .rounded(5)
-              .text_size(typography.text(10))
-              .text_color(this.branch ? t.foreground : t.dim)
-              .truncate()
-              .cursor_pointer()
-              .hover(s => s.bg(t.hover))
-              .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`)
-              .child(this.branch ?? (this.root ? "Detached HEAD" : "—")),
-          )
-          .content(this.branchPicker(t, typography)),
+              .overflow_hidden()
+              .on_size_change((size, cx) => {
+                const width = Math.max(0, size.width);
+                if (width !== this.branchSlotWidth) {
+                  this.branchSlotWidth = width;
+                  cx.notify();
+                }
+              })
+              .child(
+                Popover.new("mide-branch-picker-menu")
+                  .open(this.branchMenuOpen)
+                  .anchor("bottom_left")
+                  .on_open_change((open, cx) => {
+                    this.branchMenuOpen = open;
+                    if (open) {
+                      this.note = null;
+                      this.branchQuery.set_value("");
+                      this.branchQuery.focus();
+                      this.loadBranches(cx);
+                    }
+                    cx.notify();
+                  })
+                  .trigger(
+                    div()
+                      .id("mide-branch")
+                      .w(this.branchSlotWidth ?? 0)
+                      .min_w(0)
+                      .h(23)
+                      .px(branchPadding)
+                      .flex()
+                      .items_center()
+                      .overflow_hidden()
+                      .rounded(5)
+                      .text_size(typography.text(10))
+                      .text_color(this.branch ? t.foreground : t.dim)
+                      .cursor_pointer()
+                      .hover(s => s.bg(t.hover))
+                      .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`)
+                      .child(
+                        div()
+                          .w(Math.max(0, (this.branchSlotWidth ?? 0) - 2 * branchPadding))
+                          .truncate()
+                          .child(branch),
+                      ),
+                  )
+                  .content(this.branchPicker(t, typography)),
+              ),
+          ),
       )
-      .child(div().flex_1())
       .child(this.remoteActions(t, typography));
   }
 

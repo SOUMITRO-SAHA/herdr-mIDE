@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Changes footer now uses compact spacing and truncates repository and branch names only when needed, while keeping Fetch/Pull/Push visible at the right edge. Short names leave their unused room for longer names, and both gain room when the panel widens.
+
 ### Added
 
 - An uninstaller for the installed bundle: `just uninstall` (or `sh scripts/uninstall.sh`, honoring `HERDR_APP_HOME`) deletes exactly the four mIDE mods and `layouts/herdr-mide.json` from the target app home — Herdr's documented removal mechanism — and nothing else. It is idempotent, removes symlinks without touching their targets, never edits `keys.json` (it reprints the optional bindings for manual review), leaves Herdr's own bookkeeping (per-layout state, per-mod `data/` folders) alone, and a test (`tests/test-uninstall.sh`) proves bystanders stay byte-identical.
