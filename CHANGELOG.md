@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The Changes footer no longer breaks with long branch names: the repository and branch names each truncate with an ellipsis as the panel narrows, so the repository stays readable and Fetch/Pull/Push stays anchored at the right edge instead of being pushed out of view.
+- The Changes footer no longer breaks with long branch names: the repository and branch names each truncate with an ellipsis as the panel narrows, and each sits in its own shrinkable wrapper so neither collapses out of the row — the repository stays readable and Fetch/Pull/Push stays anchored at the right edge instead of being pushed out of view.
 
 ### Added
 

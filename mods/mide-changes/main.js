@@ -966,7 +966,19 @@ export default class MideChanges extends View {
           .gap(6)
           .items_center()
           .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
-          .child(div().min_w(0).text_size(typography.text(10)).text_color(t.dim).truncate().child(repository))
+          .child(
+            div()
+              .min_w(0)
+              .child(
+                div()
+                  .min_w(0)
+                  .overflow_hidden()
+                  .text_size(typography.text(10))
+                  .text_color(t.dim)
+                  .truncate()
+                  .child(repository),
+              ),
+          )
           .child(div().flex_none().text_size(typography.text(10)).text_color(t.dim).child("/"))
           .child(
             Popover.new("mide-branch-picker-menu")
@@ -1000,6 +1012,7 @@ export default class MideChanges extends View {
                   .child(
                     div()
                       .min_w(0)
+                      .overflow_hidden()
                       .truncate()
                       .child(this.branch ?? (this.root ? "Detached HEAD" : "—")),
                   ),

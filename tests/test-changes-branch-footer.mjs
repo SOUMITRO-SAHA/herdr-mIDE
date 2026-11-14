@@ -99,8 +99,26 @@ for (const [name, element] of [
     element.calls.some(([n]) => n === "min_w"),
     `the ${name} label may shrink`,
   );
+  assert.ok(
+    element.calls.some(([n]) => n === "overflow_hidden"),
+    `the ${name} label clips its own line`,
+  );
   assert.ok(!element.calls.some(([n]) => n === "flex"), `the ${name} label must not lay its text out as a flex row`);
 }
+
+// Each name part sits in a plain shrinkable wrapper — no text, no truncation
+// of its own — so the shrink algorithm weighs repository and branch equally.
+// An un-wrapped text part carries the text's own unbreakable width into the
+// row and is frozen or flattened asymmetrically.
+const pureWrapper = element =>
+  element.calls.length === 2 &&
+  element.calls.some(([n]) => n === "min_w") &&
+  element.calls.some(([n, v]) => n === "child" && typeof v !== "string");
+assert.equal(
+  elements.filter(pureWrapper).length,
+  1,
+  "the repository name sits in its own shrinkable wrapper, like the branch switcher",
+);
 
 // The switcher is the press target: it clips what overflows it, while the
 // ellipsis lives on the label inside.
