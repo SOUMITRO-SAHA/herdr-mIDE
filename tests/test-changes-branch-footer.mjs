@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { footerNameWidths } from "../mods/mide-changes/footer-sizing.js";
 
 const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
 const start = source.indexOf("  branchFooter(");
@@ -33,12 +34,21 @@ const tracked = () => {
   return element;
 };
 
-const branchFooter = new Function("div", "v_flex", "h_flex", "svg", "Popover", `return ({${footer}}).branchFooter`)(
+const branchFooter = new Function(
+  "div",
+  "v_flex",
+  "h_flex",
+  "svg",
+  "Popover",
+  "footerNameWidths",
+  `return ({${footer}}).branchFooter`,
+)(
   () => tracked(),
   () => tracked(),
   () => tracked(),
   () => tracked(),
   { new: () => tracked() },
+  footerNameWidths,
 );
 const view = {
   root: `/workspace/${repository}`,
@@ -66,6 +76,12 @@ assert.ok(left.calls.some(([name, value]) => name === "min_w" && value === 0));
 assert.ok(left.calls.some(([name]) => name === "overflow_hidden"));
 const onNamesSize = left.calls.find(([name]) => name === "on_size_change")?.[1];
 assert.equal(typeof onNamesSize, "function", "name limits adapt to the actual remaining width");
+const measureRepo = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-repo-measure"));
+const measureBranch = elements.find(element =>
+  element.calls.some(([n, v]) => n === "id" && v === "mide-branch-measure"),
+);
+const separator = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-footer-separator"));
+assert.ok(measureRepo && measureBranch && separator, "intrinsic text widths and separator are measured");
 const remote = childElements(row).at(-1);
 assert.ok(remote, "the remote action remains a direct child of the footer");
 
@@ -100,18 +116,28 @@ assert.ok(popover.calls.some(([name, child]) => name === "trigger" && child === 
 const onSize = branchSlot.calls.find(([name]) => name === "on_size_change")?.[1];
 assert.equal(typeof onSize, "function", "the slot reports its actual available width");
 let notifications = 0;
+const cx = { notify: () => notifications++ };
+onNamesSize({ width: 250 }, cx);
+measureRepo.calls.find(([name]) => name === "on_size_change")[1]({ width: 130 }, cx);
+measureBranch.calls.find(([name]) => name === "on_size_change")[1]({ width: 35 }, cx);
+separator.calls.find(([name]) => name === "on_size_change")[1]({ width: 4 }, cx);
+onSize({ width: 120.5 }, { notify: () => notifications++ });
+assert.equal(notifications, 5, "size changes cause a redraw");
 onNamesSize({ width: 250 }, { notify: () => notifications++ });
-onSize({ width: 120 }, { notify: () => notifications++ });
-assert.equal(notifications, 2, "size changes cause a redraw");
-onNamesSize({ width: 250 }, { notify: () => notifications++ });
-onSize({ width: 120 }, { notify: () => notifications++ });
-assert.equal(notifications, 2, "unchanged sizes do not cause repeated redraws");
+onSize({ width: 120.5 }, { notify: () => notifications++ });
+assert.equal(notifications, 5, "unchanged sizes do not cause repeated redraws");
 elements.length = 0;
 branchFooter.call(view, {}, { text: n => n });
-const resizedRepo = elements.find(element => element.calls.some(([n, v]) => n === "child" && v === repository));
-assert.ok(resizedRepo.calls.some(([n, value]) => n === "max_w" && value === 100));
+const resizedRepo = elements.find(
+  element =>
+    element.calls.some(([n, v]) => n === "child" && v === repository) && element.calls.some(([n]) => n === "truncate"),
+);
+assert.ok(
+  resizedRepo.calls.some(([n, value]) => n === "max_w" && value === 130),
+  "short branch leaves room for the whole repository",
+);
 const resizedTrigger = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-branch"));
-assert.ok(resizedTrigger.calls.some(([n, value]) => n === "w" && value === 120));
+assert.ok(resizedTrigger.calls.some(([n, value]) => n === "w" && value === 120.5));
 assert.ok(
   trigger.calls.some(([n]) => n === "overflow_hidden"),
   "the switcher clips overflowing text",
@@ -135,7 +161,7 @@ const branchLabel = elements.find(
 );
 assert.ok(branchLabel, "the branch name is painted in the footer");
 assert.ok(
-  branchLabel.calls.some(([n, value]) => n === "w" && value === 112),
+  branchLabel.calls.some(([n, value]) => n === "w" && value === 112.5),
   "the label fits inside trigger padding",
 );
 assert.ok(!branchLabel.calls.some(([n]) => n === "flex"), "the branch label must not lay its text out as a flex row");
@@ -143,7 +169,10 @@ assert.ok(!branchLabel.calls.some(([n]) => n === "flex"), "the branch label must
 onSize({ width: 3 }, { notify: () => notifications++ });
 elements.length = 0;
 branchFooter.call(view, {}, { text: n => n });
-const tinyLabel = elements.find(element => element.calls.some(([n, v]) => n === "child" && v === branch));
+const tinyLabel = elements.find(
+  element =>
+    element.calls.some(([n, v]) => n === "child" && v === branch) && element.calls.some(([n]) => n === "truncate"),
+);
 assert.ok(
   tinyLabel.calls.some(([n, value]) => n === "w" && value === 0),
   "tiny widths never produce negative sizes",

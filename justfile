@@ -60,6 +60,7 @@ test:
     @bun ./tests/test-changes-tracking.mjs
     @bun ./tests/test-changes-commit-branches.mjs
     @bun ./tests/test-changes-commit-shortcut.mjs
+    @bun ./tests/test-changes-footer-sizing.mjs
     @bun ./tests/test-changes-branch-footer.mjs
     @bun ./tests/test-file-icons.mjs
     @bun ./tests/test-file-directory.mjs

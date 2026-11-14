@@ -10,6 +10,7 @@ import { toggleStage } from "./stage-action.js";
 import { groupChanges } from "./change-groups.js";
 import { friendlyGitError, gitActionLabel } from "./git-errors.js";
 import { handleCommitShortcut } from "./commit-shortcut.js";
+import { footerNameWidths } from "./footer-sizing.js";
 
 function location(previous) {
   const f = focused(),
@@ -949,12 +950,25 @@ export default class MideChanges extends View {
 
   branchFooter(t, typography) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
-    // Popover does not pass flex sizing through to its trigger. Measure the
-    // space left by the remote button and the branch slot after layout so the
-    // text itself receives a real width for ellipsis.
+    const branch = this.branch ?? (this.root ? "Detached HEAD" : "—");
+    const metrics = this.footerMetrics ?? {};
+    const measure = name => (size, cx) => {
+      const width = Math.max(0, size.width);
+      if (this.footerMetrics?.[name] !== width) {
+        this.footerMetrics = { ...this.footerMetrics, [name]: width };
+        cx.notify();
+      }
+    };
+    // The action stays outside this budget. Include the icon, three gaps,
+    // separator and branch-trigger padding before sharing the remaining space.
+    const available = Math.max(0, (metrics.names ?? 0) - 12 - 18 - (metrics.separator ?? 0));
+    const widths = footerNameWidths(available, metrics.repository ?? 0, (metrics.branch ?? 0) + 8);
+    // Invisible natural-width samples let short names give their unused
+    // space to the other label, without guessing from character counts.
     return h_flex()
       .h(30)
       .flex_none()
+      .relative()
       .px(10)
       .gap(6)
       .items_center()
@@ -963,30 +977,59 @@ export default class MideChanges extends View {
       .border_color(t.border)
       .child(
         h_flex()
+          .absolute()
+          .left(0)
+          .top(0)
+          .w(10000)
+          .h(0)
+          .opacity(0)
+          .child(
+            div()
+              .id("mide-repo-measure")
+              .flex_none()
+              .whitespace_nowrap()
+              .text_size(typography.text(10))
+              .on_size_change(measure("repository"))
+              .child(repository),
+          )
+          .child(
+            div()
+              .id("mide-branch-measure")
+              .flex_none()
+              .whitespace_nowrap()
+              .text_size(typography.text(10))
+              .on_size_change(measure("branch"))
+              .child(branch),
+          ),
+      )
+      .child(
+        h_flex()
           .id("mide-footer-names")
           .flex_1()
           .min_w(0)
           .overflow_hidden()
-          .on_size_change((size, cx) => {
-            const width = Math.max(0, Math.floor(size.width));
-            if (width !== this.footerNamesWidth) {
-              this.footerNamesWidth = width;
-              cx.notify();
-            }
-          })
+          .on_size_change(measure("names"))
           .gap(6)
           .items_center()
           .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
           .child(
             div()
               .flex_shrink(0)
-              .max_w(Math.floor((this.footerNamesWidth ?? 0) * 0.4))
+              .max_w(widths.repository)
               .text_size(typography.text(10))
               .text_color(t.dim)
               .truncate()
               .child(repository),
           )
-          .child(div().flex_none().text_size(typography.text(10)).text_color(t.dim).child("/"))
+          .child(
+            div()
+              .id("mide-footer-separator")
+              .flex_none()
+              .text_size(typography.text(10))
+              .text_color(t.dim)
+              .on_size_change(measure("separator"))
+              .child("/"),
+          )
           .child(
             h_flex()
               .id("mide-branch-slot")
@@ -994,7 +1037,7 @@ export default class MideChanges extends View {
               .min_w(0)
               .overflow_hidden()
               .on_size_change((size, cx) => {
-                const width = Math.max(0, Math.floor(size.width));
+                const width = Math.max(0, size.width);
                 if (width !== this.branchSlotWidth) {
                   this.branchSlotWidth = width;
                   cx.notify();
@@ -1034,7 +1077,7 @@ export default class MideChanges extends View {
                         div()
                           .w(Math.max(0, (this.branchSlotWidth ?? 0) - 8))
                           .truncate()
-                          .child(this.branch ?? (this.root ? "Detached HEAD" : "—")),
+                          .child(branch),
                       ),
                   )
                   .content(this.branchPicker(t, typography)),

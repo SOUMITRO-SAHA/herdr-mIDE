@@ -22,9 +22,8 @@ files, commit and make small edits without changing Herdr's theme.
   Its footer shows the repository, branch and remote action; the Changes tab
   also has a commit message area. History lists recent commits. The footer's
   repository and branch names use an end ellipsis when their available space
-  runs out, keeping the remote action visible at the right edge. The repository
-  uses at most 40% of the space left beside the remote action; the branch uses
-  the remaining space.
+  runs out, keeping the remote action visible at the right edge. Names that fit
+  are shown in full; a short name leaves its unused space for the other.
 - The branch control opens a searchable popover with the current branch,
   other local branches, delete actions and an option to create a branch.
 - Diff opens beside a terminal or editor with file headers, line numbers,
