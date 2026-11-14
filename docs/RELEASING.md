@@ -110,7 +110,7 @@ the selected file.
 | A reviewed screenshot named `preview.png`                                                                        | The owner-approved artwork at the root `preview.png` (owner's choice for the listing card; feature screenshots live in `public/examples/`)           | done                          |
 | Optional `keys.json` the installer can merge                                                                     | The root `keys.json` (`cmd/ctrl-shift-e`, `cmd/ctrl-s`), documented as merge-don't-replace                                                           | done                          |
 | The repo topic `herdr-layout`                                                                                    | Added 2026-11-12 with owner approval                                                                                                                 | done                          |
-| Listing appears within an hour; verify it                                                                        | Took longer than an hour; then indexed BOTH layout-shaped folders (see verification log). Restructured so the root is the single complete candidate  | verifying after re-crawl      |
+| Listing appears within an hour; verify it                                                                        | Re-crawl completed 2026-11-14: the single root card is live and correct, the stale nested card is gone (see verification log)                        | listing verified 2026-11-14   |
 | One build of the recipe                                                                                          | `tests/test-bundle.sh`: generator `--check` on every shared copy, plus a fresh `just bundle` output byte-identical to the root for all shipped paths | done, enforced by `just test` |
 
 The original two-candidate ambiguity is resolved: the root is now the single
@@ -203,6 +203,27 @@ our conventions, not Herdr's.
   session, no-clobber re-run leaves keys and existing files untouched. The
   stale nested listing is expected to drop on re-crawl; fallback is Herdr's
   per-listing report link.
+- 2026-11-14: Listing verified after the re-crawl, in a real browser against
+  the rendered Gallery (herdr.dev is a client-side app — every URL serves the
+  same HTML shell, so this was checked rendered, not by URL status codes).
+  Observed, all on the single root card (`layouts:soumitro-saha/herdr-mide/`,
+  the only mIDE card among all 1218 indexed cards; the stale
+  `gallery/herdr-mide` card is gone — no report needed): card metadata
+  correct (name `herdr-mIDE`, owner, blurb, ★ 3); the listing links the
+  repository ROOT (`View on GitHub` and the "Tell your agent" copy line both
+  point at `github.com/SOUMITRO-SAHA/herdr-mIDE/tree/main`, which carries
+  RECIPE.md, `preview.png`, `layouts/herdr-mide.json` and the four mods with
+  their AUTO-GENERATED `_shared` copies); the hosted card preview
+  (`assets.herdr.dev/previews/a72aa2d5….png`) is byte-identical (`cmp`) to
+  the repository root `preview.png` (1672×941, the owner-approved artwork);
+  crawler recency confirmed (card `data-updated` 2026-11-14T15:29:47Z,
+  minutes before the check). One Herdr-side item still pending: the
+  crawler-rendered recipe page
+  (`herdr.dev/layouts/SOUMITRO-SAHA/herdr-mIDE/`) had not been ingested at
+  check time — the URL renders the site fallback and the card's
+  "Read the recipe" button stays hidden. Expected to follow on a later crawl
+  pass; if it lingers, the fallback is Herdr's per-listing report link with
+  owner approval.
 
 Create the approved `v0.0.1` tag and GitHub release separately, referencing
 the matching source commit and attaching the reviewed assembled bundle if
