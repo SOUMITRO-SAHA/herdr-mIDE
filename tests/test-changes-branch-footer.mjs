@@ -29,7 +29,7 @@ const tracked = () => {
         },
     },
   );
-  elements.push({ calls });
+  elements.push({ calls, element });
   return element;
 };
 
@@ -40,90 +40,78 @@ const branchFooter = new Function("div", "v_flex", "h_flex", "svg", "Popover", `
   () => tracked(),
   { new: () => tracked() },
 );
-branchFooter.call(
-  {
-    root: `/workspace/${repository}`,
-    branch,
-    branchMenuOpen: false,
-    branchQuery: { set_value: () => {}, focus: () => {} },
-    remoteActions: () => tracked(),
-    branchPicker: () => tracked(),
-  },
-  {},
-  { text: n => n },
-);
+const view = {
+  root: `/workspace/${repository}`,
+  branch,
+  branchMenuOpen: false,
+  branchQuery: { set_value: () => {}, focus: () => {} },
+  remoteActions: () => tracked(),
+  branchPicker: () => tracked(),
+};
+branchFooter.call(view, {}, { text: n => n });
 
-const byStyle = style => elements.filter(element => element.calls.some(([name]) => name === style));
-
-// The row hands its free space to one branch-context group and anchors the
-// remote actions at the far edge — no spacer child competes for space.
+// The row reserves the remote action's intrinsic width before assigning the
+// remaining width to the names, including the popover's own layout wrapper.
 const row = elements.find(element => element.calls.some(([name]) => name === "border_t"));
 assert.ok(row, "the footer row keeps its top border");
 assert.ok(
   row.calls.some(([name]) => name === "justify_between"),
   "the remote actions sit via justify_between",
 );
-assert.equal(byStyle("flex_1").length, 1, "exactly one element grows into the free space: the branch-context group");
-const group = byStyle("flex_1")[0];
-assert.ok(
-  group.calls.some(([name]) => name === "overflow_hidden"),
-  "the group clips its children",
-);
-assert.ok(
-  group.calls.some(([name]) => name === "min_w"),
-  "the group may shrink below its content",
-);
-assert.ok(
-  !elements.some(element => element.calls.some(([name]) => name === "max_w")),
-  "names shrink proportionally — a fixed cap would freeze one of them",
-);
+const childElements = element =>
+  element.calls.filter(([name]) => name === "child").map(([, child]) => elements.find(e => e.element === child));
+const left = childElements(row).find(element => element?.calls.some(([name]) => name === "flex_1"));
+assert.ok(left, "the names share a constrained flex item beside the remote action");
+assert.ok(left.calls.some(([name, value]) => name === "min_w" && value === 0));
+assert.ok(left.calls.some(([name]) => name === "overflow_hidden"));
+const onNamesSize = left.calls.find(([name]) => name === "on_size_change")?.[1];
+assert.equal(typeof onNamesSize, "function", "name limits adapt to the actual remaining width");
+const remote = childElements(row).at(-1);
+assert.ok(remote, "the remote action remains a direct child of the footer");
 
-// The repository and branch labels truncate where the text is painted: on a
-// plain element that may shrink, never on the flex container around it.
-const label = element =>
-  element.calls.some(([name]) => name === "truncate") &&
-  element.calls.some(([name, value]) => name === "child" && typeof value === "string");
+// Keep the repository visible without allowing a long name to take the row.
 const repoLabel = elements.find(
-  element => label(element) && element.calls.some(([n, v]) => n === "child" && v === repository),
-);
-const branchLabel = elements.find(
-  element => label(element) && element.calls.some(([n, v]) => n === "child" && v === branch),
+  element =>
+    element.calls.some(([n, v]) => n === "child" && v === repository) && element.calls.some(([n]) => n === "truncate"),
 );
 assert.ok(repoLabel, "the repository name is painted in the footer");
-assert.ok(branchLabel, "the branch name is painted in the footer");
-for (const [name, element] of [
-  ["repository", repoLabel],
-  ["branch", branchLabel],
-]) {
-  assert.ok(
-    element.calls.some(([n]) => n === "min_w"),
-    `the ${name} label may shrink`,
-  );
-  assert.ok(
-    element.calls.some(([n]) => n === "overflow_hidden"),
-    `the ${name} label clips its own line`,
-  );
-  assert.ok(!element.calls.some(([n]) => n === "flex"), `the ${name} label must not lay its text out as a flex row`);
-}
-
-// Each name part sits in a plain shrinkable wrapper — no text, no truncation
-// of its own — so the shrink algorithm weighs repository and branch equally.
-// An un-wrapped text part carries the text's own unbreakable width into the
-// row and is frozen or flattened asymmetrically.
-const pureWrapper = element =>
-  element.calls.length === 2 &&
-  element.calls.some(([n]) => n === "min_w") &&
-  element.calls.some(([n, v]) => n === "child" && typeof v !== "string");
-assert.equal(
-  elements.filter(pureWrapper).length,
-  1,
-  "the repository name sits in its own shrinkable wrapper, like the branch switcher",
+assert.ok(
+  repoLabel.calls.some(([n, v]) => n === "flex_shrink" && v === 0),
+  "the repository box stays visible",
 );
+assert.ok(
+  repoLabel.calls.some(([n]) => n === "max_w"),
+  "the repository box is capped so long names truncate",
+);
+assert.ok(!repoLabel.calls.some(([n]) => n === "min_w"), "the repository box must not carry the collapsing min_w(0)");
+assert.ok(!repoLabel.calls.some(([n]) => n === "flex"), "the repository label must not lay its text out as a flex row");
+assert.ok(childElements(left).includes(repoLabel), "the repository belongs to the constrained names group");
 
-// The switcher is the press target: it clips what overflows it, while the
-// ellipsis lives on the label inside.
+// The switcher takes the row's leftover space and ellipsizes where the text
+// is painted — never on the flex container around it.
 const trigger = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-branch"));
 assert.ok(trigger, "the branch switcher keeps its id");
+const branchSlot = childElements(left).find(element => element?.calls.some(([name]) => name === "flex_1"));
+assert.ok(branchSlot, "a flex slot constrains the popover, not only its trigger");
+assert.ok(branchSlot.calls.some(([name, value]) => name === "min_w" && value === 0));
+assert.ok(branchSlot.calls.some(([name]) => name === "overflow_hidden"));
+const popover = childElements(branchSlot)[0];
+assert.ok(popover.calls.some(([name, child]) => name === "trigger" && child === trigger.element));
+const onSize = branchSlot.calls.find(([name]) => name === "on_size_change")?.[1];
+assert.equal(typeof onSize, "function", "the slot reports its actual available width");
+let notifications = 0;
+onNamesSize({ width: 250 }, { notify: () => notifications++ });
+onSize({ width: 120 }, { notify: () => notifications++ });
+assert.equal(notifications, 2, "size changes cause a redraw");
+onNamesSize({ width: 250 }, { notify: () => notifications++ });
+onSize({ width: 120 }, { notify: () => notifications++ });
+assert.equal(notifications, 2, "unchanged sizes do not cause repeated redraws");
+elements.length = 0;
+branchFooter.call(view, {}, { text: n => n });
+const resizedRepo = elements.find(element => element.calls.some(([n, v]) => n === "child" && v === repository));
+assert.ok(resizedRepo.calls.some(([n, value]) => n === "max_w" && value === 100));
+const resizedTrigger = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-branch"));
+assert.ok(resizedTrigger.calls.some(([n, value]) => n === "w" && value === 120));
 assert.ok(
   trigger.calls.some(([n]) => n === "overflow_hidden"),
   "the switcher clips overflowing text",
@@ -141,6 +129,26 @@ assert.ok(
   trigger.calls.some(([n]) => n === "hover"),
   "the switcher keeps its hover state",
 );
+const branchLabel = elements.find(
+  element =>
+    element.calls.some(([n, v]) => n === "child" && v === branch) && element.calls.some(([n]) => n === "truncate"),
+);
+assert.ok(branchLabel, "the branch name is painted in the footer");
+assert.ok(
+  branchLabel.calls.some(([n, value]) => n === "w" && value === 112),
+  "the label fits inside trigger padding",
+);
+assert.ok(!branchLabel.calls.some(([n]) => n === "flex"), "the branch label must not lay its text out as a flex row");
+
+onSize({ width: 3 }, { notify: () => notifications++ });
+elements.length = 0;
+branchFooter.call(view, {}, { text: n => n });
+const tinyLabel = elements.find(element => element.calls.some(([n, v]) => n === "child" && v === branch));
+assert.ok(
+  tinyLabel.calls.some(([n, value]) => n === "w" && value === 0),
+  "tiny widths never produce negative sizes",
+);
+
 assert.match(footer, /accessibility_label\(`Switch branch/);
 assert.match(footer, /\.content\(this\.branchPicker\(t, typography\)\)/, "the picker still opens from the switcher");
 

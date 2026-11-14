@@ -949,6 +949,9 @@ export default class MideChanges extends View {
 
   branchFooter(t, typography) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
+    // Popover does not pass flex sizing through to its trigger. Measure the
+    // space left by the remote button and the branch slot after layout so the
+    // text itself receives a real width for ellipsis.
     return h_flex()
       .h(30)
       .flex_none()
@@ -960,64 +963,82 @@ export default class MideChanges extends View {
       .border_color(t.border)
       .child(
         h_flex()
+          .id("mide-footer-names")
           .flex_1()
           .min_w(0)
           .overflow_hidden()
+          .on_size_change((size, cx) => {
+            const width = Math.max(0, Math.floor(size.width));
+            if (width !== this.footerNamesWidth) {
+              this.footerNamesWidth = width;
+              cx.notify();
+            }
+          })
           .gap(6)
           .items_center()
           .child(svg("mods/mide-files/icons/git-branch.svg").size(12).flex_none().text_color(t.dim))
           .child(
             div()
-              .min_w(0)
-              .child(
-                div()
-                  .min_w(0)
-                  .overflow_hidden()
-                  .text_size(typography.text(10))
-                  .text_color(t.dim)
-                  .truncate()
-                  .child(repository),
-              ),
+              .flex_shrink(0)
+              .max_w(Math.floor((this.footerNamesWidth ?? 0) * 0.4))
+              .text_size(typography.text(10))
+              .text_color(t.dim)
+              .truncate()
+              .child(repository),
           )
           .child(div().flex_none().text_size(typography.text(10)).text_color(t.dim).child("/"))
           .child(
-            Popover.new("mide-branch-picker-menu")
-              .open(this.branchMenuOpen)
-              .anchor("bottom_left")
-              .on_open_change((open, cx) => {
-                this.branchMenuOpen = open;
-                if (open) {
-                  this.note = null;
-                  this.branchQuery.set_value("");
-                  this.branchQuery.focus();
-                  this.loadBranches(cx);
+            h_flex()
+              .id("mide-branch-slot")
+              .flex_1()
+              .min_w(0)
+              .overflow_hidden()
+              .on_size_change((size, cx) => {
+                const width = Math.max(0, Math.floor(size.width));
+                if (width !== this.branchSlotWidth) {
+                  this.branchSlotWidth = width;
+                  cx.notify();
                 }
-                cx.notify();
               })
-              .trigger(
-                div()
-                  .id("mide-branch")
-                  .min_w(0)
-                  .h(23)
-                  .px(4)
-                  .flex()
-                  .items_center()
-                  .overflow_hidden()
-                  .rounded(5)
-                  .text_size(typography.text(10))
-                  .text_color(this.branch ? t.foreground : t.dim)
-                  .cursor_pointer()
-                  .hover(s => s.bg(t.hover))
-                  .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`)
-                  .child(
+              .child(
+                Popover.new("mide-branch-picker-menu")
+                  .open(this.branchMenuOpen)
+                  .anchor("bottom_left")
+                  .on_open_change((open, cx) => {
+                    this.branchMenuOpen = open;
+                    if (open) {
+                      this.note = null;
+                      this.branchQuery.set_value("");
+                      this.branchQuery.focus();
+                      this.loadBranches(cx);
+                    }
+                    cx.notify();
+                  })
+                  .trigger(
                     div()
+                      .id("mide-branch")
+                      .w(this.branchSlotWidth ?? 0)
                       .min_w(0)
+                      .h(23)
+                      .px(4)
+                      .flex()
+                      .items_center()
                       .overflow_hidden()
-                      .truncate()
-                      .child(this.branch ?? (this.root ? "Detached HEAD" : "—")),
-                  ),
-              )
-              .content(this.branchPicker(t, typography)),
+                      .rounded(5)
+                      .text_size(typography.text(10))
+                      .text_color(this.branch ? t.foreground : t.dim)
+                      .cursor_pointer()
+                      .hover(s => s.bg(t.hover))
+                      .accessibility_label(`Switch branch${this.branch ? `, current ${this.branch}` : ""}`)
+                      .child(
+                        div()
+                          .w(Math.max(0, (this.branchSlotWidth ?? 0) - 8))
+                          .truncate()
+                          .child(this.branch ?? (this.root ? "Detached HEAD" : "—")),
+                      ),
+                  )
+                  .content(this.branchPicker(t, typography)),
+              ),
           ),
       )
       .child(this.remoteActions(t, typography));
