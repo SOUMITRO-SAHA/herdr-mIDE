@@ -56,6 +56,7 @@ shared:
 test:
     @sh ./tests/test-shared-modules.sh
     @bun ./tests/test-syntax-config.mjs
+    @bun ./tests/test-syntax-markdown.mjs
     @bun ./tests/test-changes-stage-review.mjs
     @bun ./tests/test-changes-tracking.mjs
     @bun ./tests/test-changes-commit-branches.mjs

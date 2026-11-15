@@ -1,2 +1,3 @@
 # source path, destination path within each mod, then the destination mods
 shared/syntax.js _shared/syntax.js mide-editor mide-diff
+shared/syntax/markdown.js _shared/syntax/markdown.js mide-editor mide-diff

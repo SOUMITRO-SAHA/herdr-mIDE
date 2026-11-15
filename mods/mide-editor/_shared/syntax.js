@@ -1,5 +1,16 @@
 // AUTO-GENERATED FILE — never edit by hand.
 // Source of truth: shared/syntax.js — regenerate with: sh scripts/materialize-shared.sh
+// Per-language tokenizer registry, keyed by languageFor()'s result. Each
+// language lives in its own module under shared/syntax/ and exports the
+// generic contract: tokenizeLine(line, state, context) returning UTF-16 runs
+// for one line and mutating state for cross-line constructs. Languages
+// without a dedicated module keep the generic tokenizer below — nothing
+// regresses. One language per PR (issue #33).
+import { tokenizeLine as markdownTokenizeLine } from "./syntax/markdown.js";
+const LANGUAGE_MODULES = {
+  markdown: { tokenizeLine: markdownTokenizeLine },
+};
+
 const LANG = {
   py: "python",
   ts: "js",
@@ -139,47 +150,7 @@ const appendRun = (runs, start, end, scope) => {
   else runs.push({ start, end, scope });
 };
 
-function markdownRuns(line) {
-  const runs = [];
-  if (/^\s{0,3}#{1,6}(?:\s|$)/.test(line)) {
-    appendRun(runs, 0, line.length, "heading");
-    return runs;
-  }
-
-  for (let index = 0; index < line.length;) {
-    const remaining = line.slice(index);
-    const code = /^(`+)(.*?)\1/.exec(remaining);
-    if (code) {
-      appendRun(runs, index, index + code[0].length, "markup.raw");
-      index += code[0].length;
-      continue;
-    }
-    const strong = /^(\*\*|__)(?=\S)(.+?)\1/.exec(remaining);
-    if (strong) {
-      appendRun(runs, index, index + strong[0].length, "markup.bold");
-      index += strong[0].length;
-      continue;
-    }
-    const emphasis = /^([*_])(?=\S)(.+?)\1/.exec(remaining);
-    if (emphasis) {
-      appendRun(runs, index, index + emphasis[0].length, "markup.italic");
-      index += emphasis[0].length;
-      continue;
-    }
-    const uri = /^\]\(([^)]+)\)/.exec(remaining);
-    if (uri) {
-      appendRun(runs, index + 2, index + uri[0].length - 1, "link_uri");
-      index += uri[0].length;
-      continue;
-    }
-    index++;
-  }
-  return runs;
-}
-
-function tokenizeLine(line, language, state) {
-  if (language === "markdown") return markdownRuns(line);
-
+function genericTokenizeLine(line, language, state) {
   const runs = [];
   const add = (start, end, scope) => appendRun(runs, start, end, scope);
   const html = language === "html" || language === "xml" || language === "svg";
@@ -328,21 +299,38 @@ function tokenizeLine(line, language, state) {
   return runs;
 }
 
+// Dispatch to the language's own module when one is registered; the generic
+// tokenizer is the fallback. `context` carries the scan position and lets
+// language modules re-enter the registry (e.g. fenced code blocks).
+const tokenizeWith = (line, language, state, context) => {
+  const module = LANGUAGE_MODULES[language];
+  if (module) return module.tokenizeLine(line, state, context);
+  return genericTokenizeLine(line, language, state);
+};
+
 // Returns 1-based source lines and UTF-16 ranges, matching JavaScript string
 // slicing and the editor's line numbers. Only requested lines are returned,
-// but all preceding lines are scanned so multiline comments/strings stay right.
+// but all preceding lines are scanned so multiline comments/strings — and the
+// per-language modules' fenced code blocks — stay right.
 export const highlightLines = (source, language, requestedLines) => {
-  const lines = String(source ?? "").split("\n");
+  const lines = String(source ?? "")
+    .split("\n")
+    .map(line => (line.endsWith("\r") ? line.slice(0, -1) : line));
   const requested = new Set(
     (requestedLines ?? []).filter(line => Number.isInteger(line) && line > 0 && line <= lines.length),
   );
   if (!requested.size) return [];
 
   const state = { blockEnd: null, multilineQuote: null };
+  const context = {
+    index: 0,
+    lines,
+    tokenize: (line, innerLanguage, innerState) => tokenizeWith(line, innerLanguage, innerState, context),
+  };
   const highlighted = [];
   for (let index = 0; index < lines.length; index++) {
-    const line = lines[index].endsWith("\r") ? lines[index].slice(0, -1) : lines[index];
-    const runs = tokenizeLine(line, language, state);
+    context.index = index;
+    const runs = tokenizeWith(lines[index], language, state, context);
     const lineNumber = index + 1;
     if (requested.has(lineNumber)) highlighted.push({ line: lineNumber, runs });
   }

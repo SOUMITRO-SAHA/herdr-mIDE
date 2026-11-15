@@ -13,12 +13,14 @@ materialize_shared_modules "$TEST_ROOT" replace mide-editor mide-diff
 # Generated copies carry the AUTO-GENERATED banner followed by the canonical
 # source; verify both halves of every generated file.
 for mod in mide-editor mide-diff; do
-  generated="$TEST_ROOT/mods/$mod/_shared/syntax.js"
-  head -2 "$generated" > "$TEST_ROOT/banner"
-  shared_banner "shared/syntax.js" > "$TEST_ROOT/banner-expected"
-  cmp "$TEST_ROOT/banner" "$TEST_ROOT/banner-expected"
-  tail -n +3 "$generated" > "$TEST_ROOT/body"
-  cmp "$REPO_DIR/shared/syntax.js" "$TEST_ROOT/body"
+  for shared in shared/syntax.js shared/syntax/markdown.js; do
+    generated="$TEST_ROOT/mods/$mod/_shared/${shared#shared/}"
+    head -2 "$generated" > "$TEST_ROOT/banner"
+    shared_banner "$shared" > "$TEST_ROOT/banner-expected"
+    cmp "$TEST_ROOT/banner" "$TEST_ROOT/banner-expected"
+    tail -n +3 "$generated" > "$TEST_ROOT/body"
+    cmp "$REPO_DIR/$shared" "$TEST_ROOT/body"
+  done
 done
 
 # The in-tree copies in the repository root — the Gallery package — must match
@@ -30,6 +32,7 @@ materialize_shared_modules "$TEST_ROOT" missing mide-editor mide-diff
 grep -q 'local modification' "$TEST_ROOT/mods/mide-editor/_shared/syntax.js"
 materialize_shared_modules "$TEST_ROOT" replace mide-editor mide-diff
 head -2 "$TEST_ROOT/mods/mide-editor/_shared/syntax.js" > "$TEST_ROOT/banner"
+shared_banner "shared/syntax.js" > "$TEST_ROOT/banner-expected"
 cmp "$TEST_ROOT/banner" "$TEST_ROOT/banner-expected"
 
 # A CRLF checkout (Windows core.autocrlf) must not break materialization.
