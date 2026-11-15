@@ -33,7 +33,8 @@ const html = highlightLines('<main id="x">Hi</main>', "html", [1])[0].runs;
 assert.ok(html.some(run => run.scope === "type" && run.start === 1 && run.end === 5));
 assert.ok(html.some(run => run.scope === "keyword" && run.start === 6 && run.end === 8));
 assert.ok(html.some(run => run.scope === "string" && run.start === 9 && run.end === 12));
-assert.equal(syntaxPalette().keyword, "#ff8f40");
+assert.equal(syntaxPalette().keyword, "#ff8f3f");
+assert.equal(syntaxPalette().link_uri, "#aad84c");
 assert.notEqual(syntaxPalette(), syntaxPalette());
 
 const ayuReference = JSON.parse(await readFile(new URL("../themes/ayu-dark.json", import.meta.url), "utf8"));

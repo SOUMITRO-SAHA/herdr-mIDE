@@ -7,7 +7,7 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, VirtualListScrollHandle, v_virtual_list } from "gpui-base";
 import { props, shared, exec, readTextFile, watchFolder, theme, settings, nextCommand } from "herdr";
 import { gitColors } from "./palette.js";
-import { highlightLines, languageFor, syntaxPalette, syntaxSegments } from "./_shared/syntax.js";
+import { highlightLines, languageFor, syntaxEffects, syntaxPalette, syntaxSegments } from "./_shared/syntax.js";
 
 const READ = ["--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "diff.autoRefreshIndex=false"];
 const MAX_LINES = 6000,
@@ -459,7 +459,7 @@ export default class MideDiff extends View {
   }
 
   codeCell(text, runs, fallback) {
-    const segments = syntaxSegments(text, runs, fallback, syntaxColors);
+    const segments = syntaxSegments(text, runs, fallback, syntaxColors, syntaxEffects());
     return h_flex()
       .flex_1()
       .min_w(0)
@@ -467,7 +467,16 @@ export default class MideDiff extends View {
       .items_center()
       .overflow_hidden()
       .whitespace_nowrap()
-      .children(segments.map(segment => div().flex_none().text_color(segment.color).child(segment.text)));
+      .children(
+        segments.map(segment =>
+          div()
+            .flex_none()
+            .text_color(segment.color)
+            .when(segment.bold, el => el.font_bold())
+            .when(segment.italic, el => el.italic())
+            .child(segment.text),
+        ),
+      );
   }
 
   fileHeader(file, t, typography, minWidth = null) {

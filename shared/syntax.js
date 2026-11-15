@@ -32,28 +32,52 @@ export const languageFor = file => {
   return LANG[ext] ?? ext;
 };
 
-// Canonical mIDE syntax palette. The editor and Diff both consume this table;
-// keep syntax colors out of individual mods and themes to avoid drift.
+// Canonical mIDE syntax palette — the color values are Zed's Ayu Dark theme
+// (assets/themes/ayu/ayu.json in zed-industries/zed) so Markdown and code
+// render like Zed. The editor and Diff both consume this table; keep syntax
+// colors out of individual mods and themes to avoid drift.
 const SYNTAX_COLORS = Object.freeze({
-  keyword: "#ff8f40",
-  string: "#aad94c",
-  comment: "#5a6673",
-  function: "#ffb454",
+  keyword: "#ff8f3f",
+  string: "#a9d94b",
+  comment: "#5c6773",
+  function: "#ffb353",
   type: "#59c2ff",
   number: "#d2a6ff",
   constant: "#d2a6ff",
   boolean: "#d2a6ff",
-  variable: "#ffb454",
+  variable: "#bfbdb6",
   operator: "#f29668",
-  punctuation: "#8b939e",
-  heading: "#aad94c",
-  "markup.raw": "#f29668",
-  "markup.bold": "#f07178",
-  "markup.italic": "#f07178",
-  link_uri: "#39bae6",
+  punctuation: "#a6a5a0",
+  heading: "#bfbdb6",
+  title: "#bfbdb6",
+  emphasis: "#5ac1fe",
+  "emphasis.strong": "#5ac1fe",
+  link_text: "#fe8f40",
+  link_uri: "#aad84c",
+  "text.literal": "#fe8f40",
+  "markup.raw": "#fe8f40",
+  "markup.bold": "#5ac1fe",
+  "markup.italic": "#5ac1fe",
 });
 
 export const syntaxPalette = () => Object.freeze({ ...SYNTAX_COLORS });
+
+// Font effects per scope, mirroring Zed's Ayu theme entries: headings and
+// strong emphasis render bold, link text renders italic (emphasis does not —
+// Ayu Dark sets its font_style to null). Looked up with the same
+// longest-prefix rule as colors, in syntaxSegments.
+const SYNTAX_EFFECTS = Object.freeze({
+  title: Object.freeze({ weight: 700 }),
+  heading: Object.freeze({ weight: 700 }),
+  "emphasis.strong": Object.freeze({ weight: 700 }),
+  link_text: Object.freeze({ italic: true }),
+});
+
+export const syntaxEffects = () => {
+  const copy = {};
+  for (const [scope, effect] of Object.entries(SYNTAX_EFFECTS)) copy[scope] = { ...effect };
+  return copy;
+};
 
 const KEYWORDS = new Set(
   (
@@ -138,6 +162,24 @@ const SLASH_COMMENT_LANGUAGES = new Set([
   "tsx",
   "zig",
 ]);
+
+// Languages a Markdown fence can inject — Zed resolves the info string to a
+// registered grammar and renders unknown ones plain, so the same rule lives
+// here: the alias table plus every language the generic tokenizer knows.
+const FENCE_ALIASES = { golang: "go", "c++": "cpp", objc: "c" };
+const FENCE_LANGUAGES = new Set([
+  ...Object.keys(LANG),
+  ...Object.values(LANG),
+  ...HASH_COMMENT_LANGUAGES,
+  ...DASH_COMMENT_LANGUAGES,
+  ...SLASH_COMMENT_LANGUAGES,
+]);
+export const fenceLanguage = info => {
+  const word = info.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (!word) return null;
+  const language = FENCE_ALIASES[word] ?? word;
+  return FENCE_LANGUAGES.has(language) ? language : null;
+};
 
 const isWordStart = char => Boolean(char && /[A-Za-z_$]/.test(char));
 const isWordPart = char => Boolean(char && /[A-Za-z0-9_$]/.test(char));
@@ -324,6 +366,7 @@ export const highlightLines = (source, language, requestedLines) => {
     index: 0,
     lines,
     tokenize: (line, innerLanguage, innerState) => tokenizeWith(line, innerLanguage, innerState, context),
+    resolveLanguage: fenceLanguage,
   };
   const highlighted = [];
   for (let index = 0; index < lines.length; index++) {
@@ -335,23 +378,26 @@ export const highlightLines = (source, language, requestedLines) => {
   return highlighted;
 };
 
-const colorForScope = (scope, colors, fallbackColor) => {
+const resolveScope = (scope, table) => {
   let name = scope;
   while (name) {
-    if (colors[name]) return colors[name];
+    if (table[name]) return table[name];
     const separator = name.lastIndexOf(".");
     name = separator < 0 ? "" : name.slice(0, separator);
   }
-  return fallbackColor;
+  return null;
 };
 
-export const syntaxSegments = (text, runs, fallbackColor, colors = {}) => {
+// Returns colored segments for one line. `effects` (from syntaxEffects()) adds
+// Zed-style font effects: weight >= 700 becomes bold, italic becomes italic.
+export const syntaxSegments = (text, runs, fallbackColor, colors = {}, effects = {}) => {
   const segments = [];
-  const append = (start, end, color) => {
+  const append = (start, end, color, bold, italic) => {
     if (start >= end) return;
     const previous = segments[segments.length - 1];
-    if (previous?.color === color) previous.parts.push(text.slice(start, end));
-    else segments.push({ parts: [text.slice(start, end)], color });
+    if (previous?.color === color && previous?.bold === bold && previous?.italic === italic)
+      previous.parts.push(text.slice(start, end));
+    else segments.push({ parts: [text.slice(start, end)], color, bold, italic });
   };
 
   let cursor = 0;
@@ -359,10 +405,23 @@ export const syntaxSegments = (text, runs, fallbackColor, colors = {}) => {
     if (!Number.isFinite(run?.start) || !Number.isFinite(run?.end)) continue;
     const start = Math.max(cursor, Math.min(text.length, Math.trunc(run.start)));
     const end = Math.max(start, Math.min(text.length, Math.trunc(run.end)));
-    if (start > cursor) append(cursor, start, fallbackColor);
-    append(start, end, colorForScope(run.scope, colors, fallbackColor));
+    if (start > cursor) append(cursor, start, fallbackColor, false, false);
+    const color = resolveScope(run.scope, colors) ?? fallbackColor;
+    const effect = resolveScope(run.scope, effects);
+    append(
+      start,
+      end,
+      typeof color === "string" ? color : fallbackColor,
+      Boolean(effect?.weight && effect.weight >= 700),
+      Boolean(effect?.italic),
+    );
     cursor = end;
   }
-  if (cursor < text.length) append(cursor, text.length, fallbackColor);
-  return segments.map(({ parts, color }) => ({ text: parts.join(""), color }));
+  if (cursor < text.length) append(cursor, text.length, fallbackColor, false, false);
+  return segments.map(({ parts, color, bold, italic }) => {
+    const segment = { text: parts.join(""), color };
+    if (bold) segment.bold = true;
+    if (italic) segment.italic = true;
+    return segment;
+  });
 };

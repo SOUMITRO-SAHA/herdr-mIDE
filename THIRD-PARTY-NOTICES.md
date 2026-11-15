@@ -66,8 +66,10 @@ The Ayu Dark palette is adapted from the Ayu editor theme, version 1.6.0:
 Kurghinyan. It is licensed under the MIT License. The adopted syntax colors
 are kept once in mIDE's `shared/syntax.js`; Git UI color mappings remain in
 the mIDE mods, and the git status values themselves are Zed One Dark's
-(next section). The reference JSON omits syntax values so they cannot drift
-from the shared palette;
+(next section). The syntax hex values follow Zed's Ayu Dark rendering of the
+palette (zed-industries/zed `assets/themes/ayu/ayu.json`, GPL-3.0 — see the
+Zed section below), so Markdown and code render like Zed. The reference JSON
+omits syntax values so they cannot drift from the shared palette;
 no reference-IDE theme file, code, or assets are included.
 
 > MIT License
@@ -92,7 +94,7 @@ no reference-IDE theme file, code, or assets are included.
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
 
-## Zed One Dark git-status colors
+## Zed One Dark git-status colors and Markdown syntax rules
 
 The git status colors — `git_added` `#a1c181`, `git_deleted` `#d07277`,
 and `git_modified`/`git_conflict` `#dec184`, defined in
@@ -100,11 +102,16 @@ and `git_modified`/`git_conflict` `#dec184`, defined in
 `mide-changes` and `mide-diff` — are taken from the One Dark theme of the
 [zed editor](https://github.com/zed-industries/zed)
 (`assets/themes/one/one.json`: `created` `#a1c181ff`, `deleted`
-`#d07277ff`, `modified`/`conflict` `#dec184ff`). The zed repository is
-licensed under
+`#d07277ff`, `modified`/`conflict` `#dec184ff`). Additionally, the Markdown
+coloring rules in `shared/syntax/markdown.js` (which captures map to which
+palette scope, what stays plain, and how fence content injects the inner
+language) were studied from zed's Markdown grammar queries, and the syntax
+palette values follow zed's Ayu Dark theme (`assets/themes/ayu/ayu.json`) —
+those color values are upstream Ayu's, credited in the section above. The
+zed repository is licensed under
 [GPL-3.0](https://github.com/zed-industries/zed/blob/main/LICENSE);
-only these color values were adopted — no zed code, theme files, or
-icons are included in this repository.
+only these color values and behavioral rules were adopted — no zed code,
+query files, theme files, or icons are included in this repository.
 
 ## Herdr shipped mods (Apache-2.0)
 
