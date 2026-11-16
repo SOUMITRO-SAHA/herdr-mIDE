@@ -103,7 +103,7 @@ and `git_modified`/`git_conflict` `#dec184`, defined in
 [zed editor](https://github.com/zed-industries/zed)
 (`assets/themes/one/one.json`: `created` `#a1c181ff`, `deleted`
 `#d07277ff`, `modified`/`conflict` `#dec184ff`). Additionally, the Markdown
-coloring rules in `shared/syntax/markdown.js` (which captures map to which
+coloring rules in `shared/syntax.js` (which captures map to which
 palette scope, what stays plain, and how fence content injects the inner
 language) were studied from zed's Markdown grammar queries, and the syntax
 palette values follow zed's Ayu Dark theme (`assets/themes/ayu/ayu.json`) —
