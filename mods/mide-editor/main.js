@@ -6,7 +6,18 @@
 // cursor or selection API, so modal editing arrives as a custom editor core
 // (ROADMAP Phase 1).
 import { View, div, svg } from "gpui-kit";
-import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
+import {
+  v_flex,
+  h_flex,
+  Editor,
+  EditorState,
+  TextView,
+  Checkbox,
+  Popover,
+  Scrollbar,
+  VirtualListScrollHandle,
+  v_virtual_list,
+} from "gpui-base";
 import {
   props,
   theme,
@@ -19,7 +30,7 @@ import {
   window,
   keys,
 } from "herdr";
-import { languageFor, syntaxPalette } from "./_shared/syntax.js";
+import { highlightLines, languageFor, syntaxEffects, syntaxPalette, syntaxSegments } from "./_shared/syntax.js";
 import { handleSaveShortcut } from "./keybindings.js";
 
 const MAX = 400000;
@@ -58,6 +69,11 @@ export default class MideEditor extends View {
     this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.settingsOpen = false;
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
+    // Markdown Raw mode renders the shared tokenizer's Zed-style reading
+    // view; `rawEditing` swaps to the host editor for changes.
+    this.rawEditing = false;
+    this.reading = null;
+    this.readingScroll = VirtualListScrollHandle.new();
     this.load(props()?.file ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
@@ -81,6 +97,7 @@ export default class MideEditor extends View {
       if (this.code !== code) return;
       this.dirty = true;
       this.saved = false;
+      this.reading = null;
       cx.notify();
     });
     return code;
@@ -92,6 +109,8 @@ export default class MideEditor extends View {
     this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true;
     this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
+    this.rawEditing = false;
+    this.reading = null;
     this.file = file ?? null;
     this.baseline = null;
     this.truncated = false;
@@ -309,6 +328,140 @@ export default class MideEditor extends View {
     cx.notify();
   }
 
+  // Markdown Raw mode's reading view: the shared tokenizer's Zed-exact
+  // rendering (virtualized rows, line-number gutter, font effects). The host
+  // editor's public syntax palette has no markdown scopes, so editing is one
+  // toggle away instead of rendered here.
+  buildReading() {
+    const value = this.code ? this.code.value() : "";
+    const lines = value.split("\n");
+    this.reading = highlightLines(
+      value,
+      "markdown",
+      lines.map((_, index) => index + 1),
+    ).map(({ line, runs }) => ({
+      line,
+      text: lines[line - 1] ?? "",
+      runs,
+    }));
+    this.readingWidth = lines.reduce((max, text) => Math.max(max, text.length), 0);
+  }
+
+  readingView(t, typography) {
+    if (!this.reading) this.buildReading();
+    const count = this.reading.length;
+    const lineHeight = Math.max(1, Math.round(typography.size * 1.45));
+    const digits = String(Math.max(count, 1)).length;
+    const gutter = Math.ceil((digits + 2) * typography.size * 0.62);
+    const contentWidth = Math.ceil(this.readingWidth * typography.size * 0.62) + gutter + typography.size * 2;
+    return v_flex()
+      .id("mide-editor-reading")
+      .flex_1()
+      .min_h(0)
+      .min_w(0)
+      .relative()
+      .font_family(typography.font)
+      .text_size(typography.size)
+      .text_color(t.foreground)
+      .bg(t.background)
+      .child(
+        div()
+          .id("mide-editor-reading-x")
+          .size_full()
+          .overflow_x_scrollbar()
+          .mode("hover")
+          .child(
+            div()
+              .w_full()
+              .min_w(contentWidth)
+              .h_full()
+              .child(
+                v_virtual_list(
+                  "mide-editor-reading-list",
+                  count,
+                  lineHeight,
+                  index => `l${index}`,
+                  range =>
+                    this.reading
+                      .slice(range.start, range.end)
+                      .map(entry => this.readingRow(entry, t, typography, lineHeight, gutter)),
+                )
+                  .track_scroll(this.readingScroll)
+                  .size_full(),
+              ),
+          ),
+      )
+      .child(
+        Scrollbar.vertical("mide-editor-reading-list")
+          .viewport_from_layout()
+          .absolute()
+          .top(0)
+          .right(0)
+          .bottom(12)
+          .w(12),
+      );
+  }
+
+  readingRow(entry, t, typography, lineHeight, gutter) {
+    const segments = syntaxSegments(entry.text, entry.runs, t.foreground, syntaxPalette(), syntaxEffects());
+    return h_flex()
+      .h(lineHeight)
+      .flex_none()
+      .items_center()
+      .whitespace_nowrap()
+      .child(
+        div()
+          .w(gutter)
+          .flex_none()
+          .pr(typography.size)
+          .text_size(typography.size)
+          .text_color(t.dim)
+          .text_right()
+          .child(String(entry.line)),
+      )
+      .child(
+        h_flex()
+          .flex_none()
+          .whitespace_nowrap()
+          .children(
+            segments.map(segment =>
+              div()
+                .flex_none()
+                .text_color(segment.color)
+                .when(segment.bold, el => el.font_bold())
+                .when(segment.italic, el => el.italic())
+                .child(segment.text),
+            ),
+          ),
+      );
+  }
+
+  readingToggle(t, typography) {
+    const editing = this.rawEditing;
+    return div()
+      .id("mide-editor-reading-toggle")
+      .h(24)
+      .px(8)
+      .flex_none()
+      .flex()
+      .items_center()
+      .rounded(6)
+      .border_1()
+      .border_color(t.border)
+      .bg(t.raised)
+      .text_size(typography.text(10))
+      .text_color(t.muted)
+      .cursor_pointer()
+      .hover(s => s.bg(t.hover).text_color(t.foreground))
+      .accessibility_label(editing ? "Back to the reading view" : "Edit this markdown file")
+      .on_click((_e, cx) => {
+        this.rawEditing = !editing;
+        this.reading = null;
+        cx.notify();
+      })
+      .child(editing ? "View" : "Edit");
+  }
+
   markdownTab(mode, label, t, typography) {
     const active = this.editorMode === mode;
     return div()
@@ -386,6 +539,7 @@ export default class MideEditor extends View {
                 .child(this.markdownTab("preview", "Preview", t, typography)),
             ),
           )
+          .when(markdown && this.editorMode === "raw", el => el.child(this.readingToggle(t, typography)))
           .child(
             Popover.new("mide-editor-settings-menu")
               .open(this.settingsOpen)
@@ -460,7 +614,9 @@ export default class MideEditor extends View {
                       .font_weight(400)
                       .line_height(1.65),
                   )
-              : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
+              : markdown && !this.rawEditing
+                ? this.readingView(t, typography)
+                : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
             : div()
                 .flex_1()
                 .min_h(0)

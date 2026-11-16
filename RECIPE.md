@@ -36,7 +36,10 @@ files, commit and make small edits without changing Herdr's theme.
   inline code, orange italic link text with green URIs; bare URLs and
   strikethrough stay plain. Editor opens beside a terminal or below Diff,
   with a 36px header, unsaved dot, optional Markdown Raw/Preview tabs,
-  Settings menu and 28px footer with Save.
+  Settings menu and 28px footer with Save. Raw markdown renders the same
+  Zed-exact reading view — bold headings, gray gutter numbers, colored
+  fences and links — with an Edit toggle that swaps to the host editor for
+  changes (⌘S or the Save control still write).
 - Panel controls use Herdr's interface font and colors. Editor and diff text
   use the terminal font; their syntax uses mIDE's Ayu palette. The layout does
   not change the user's selected theme.
@@ -69,7 +72,10 @@ files, commit and make small edits without changing Herdr's theme.
   Windows and Linux save by default, and a `mod:mide-editor` binding the
   person already merged keeps precedence. An external edit causes a save error instead of an overwrite;
   Reload discards the draft. Word wrap and the Markdown Preview default are
-  persistent settings, with Markdown opening in Raw by default.
+  persistent settings, with Markdown opening in Raw by default. Raw markdown
+  starts in the Zed-exact reading view; the Edit toggle swaps to the host
+  editor (where Word wrap applies) and View returns, rebuilding from the
+  edited buffer.
 
 ## Built from
 
