@@ -254,4 +254,15 @@ assert.ok(has(python, "constant", 4, 8));
 assert.ok(has(python, "comment", 10, 16));
 assert.ok(has(highlightLines('say "hi"', "txt", [1])[0].runs, "string", 4, 8));
 
+// Large inputs stay fast: the inline scanner must not stall or regress to
+// per-character substring copying (the host interrupts slow render scripts).
+const big = [
+  ...Array.from({ length: 4000 }, (_, i) => `${i}. **bold** *em* [link](https://example.com/x) \`code\``),
+  "x".repeat(30000),
+].join("\n");
+const started = performance.now();
+highlightLines(big, "markdown", [1, 2000, 4001]);
+const elapsed = performance.now() - started;
+assert.ok(elapsed < 2000, `large markdown input highlighted in ${Math.round(elapsed)}ms (must stay well under 2s)`);
+
 console.log("shared markdown syntax tests passed");

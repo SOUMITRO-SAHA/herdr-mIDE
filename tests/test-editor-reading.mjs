@@ -15,6 +15,9 @@ import {
 // so it can never match). Reading view: virtualized rows with a line-number
 // gutter, colored segments, and Zed's font effects; an Edit toggle swaps to
 // the host editor for changes; non-markdown files and Preview are unchanged.
+// The reading cache is built off the render path — in load and on click —
+// because the host interrupts scripts that highlight while painting.
+let highlightCalls = 0;
 const source =
   (await readFile(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8"))
     .replace(/\r\n/g, "\n")
@@ -106,7 +109,9 @@ const context = {
       return element();
     },
   },
-  EditorState: {},
+  EditorState: {
+    new: options => ({ value: () => options?.value ?? "", on() {}, release() {} }),
+  },
   TextView: {
     markdown: () => {
       markdownCalls += 1;
@@ -143,21 +148,27 @@ const context = {
   keys: {},
   props: () => undefined,
   nextCommand: async () => undefined,
-  readTextFile: async () => "",
+  readTextFile: async () => MD,
   writeTextFile: async () => {},
   languageFor,
   fenceLanguage,
   syntaxPalette,
   syntaxEffects,
   syntaxSegments,
-  highlightLines,
+  highlightLines: (...args) => {
+    highlightCalls += 1;
+    return highlightLines(...args);
+  },
 };
 const MideEditor = runInNewContext(source, context);
+const pending = [];
 const cx = {
   notify() {},
   timer: { after() {} },
   spawn(fn) {
-    return fn(cx);
+    const promise = fn(cx);
+    pending.push(promise);
+    return promise;
   },
 };
 
@@ -190,6 +201,9 @@ Object.assign(editor, {
   reading: null,
 });
 
+// Real flow: load builds the cache off the render path; render only reads it.
+editor.buildReading();
+highlightCalls = 0;
 const renderedRoot = editor.render(cx);
 const root = renderedRoot.self ?? renderedRoot;
 const find = (parent, id) => {
@@ -209,6 +223,7 @@ assert.equal(readingList.virtual.count, 7);
 assert.equal(readingList.virtual.itemHeight, 20, "line height follows the editor font size");
 assert.equal(editorNewCalls, 0, "the host editor is not rendered in reading mode");
 assert.ok(controls.has("mide-editor-reading-toggle"), "an Edit toggle is present");
+assert.equal(highlightCalls, 0, "render never highlights — the cache was built off the render path");
 
 const rows = readingList.virtual.builder({ start: 0, end: 7 });
 assert.equal(rows.length, 7);
@@ -254,11 +269,21 @@ assert.ok(editorNewCalls > 0, "the Edit toggle swaps to the host editor");
 const toggleText = flatten(find(editRoot, "mide-editor-reading-toggle")).find(kid => kid.text);
 assert.equal(toggleText?.text, "View", "the toggle offers the way back");
 
-editor.code = codeStub(MD);
+editor.code = codeStub(MD + "\nEdited after the fact.");
 controls.get("mide-editor-reading-toggle")(null, cx);
 const backRoot = editor.render(cx).self ?? editor.render(cx);
 const rebuilt = find(backRoot, "mide-editor-reading-list");
 assert.ok(rebuilt?.virtual, "the toggle returns to the reading view");
+assert.equal(rebuilt.virtual.count, 8, "the cache rebuilt from the edited buffer");
+assert.ok(highlightCalls > 0, "the toggle built the cache off the render path");
+
+// The Raw tab click also builds the cache before rendering.
+Object.assign(editor, { editorMode: "preview", reading: null });
+editor.render(cx);
+highlightCalls = 0;
+controls.get("mide-editor-raw")(null, cx);
+assert.equal(editor.editorMode, "raw");
+assert.ok(editor.reading, "the Raw tab built the cache in the click handler");
 
 // Non-markdown files keep the host editor with no reading view or toggle.
 editorNewCalls = 0;
@@ -274,9 +299,11 @@ markdownCalls = 0;
 editor.render(cx);
 assert.ok(markdownCalls > 0, "preview still renders TextView markdown");
 
-// Switching files leaves editing mode.
-Object.assign(editor, { file: "other.md", rawEditing: true, editorMode: "raw", reading: null });
-editor.load("other.md", cx);
+// A freshly loaded markdown file builds its cache in the load task.
+Object.assign(editor, { file: "doc.md", editorMode: "raw", rawEditing: true, reading: null });
+editor.load("doc.md", cx);
+await pending.pop();
 assert.equal(editor.rawEditing, false, "a freshly opened file starts in the reading view");
+assert.equal(editor.reading?.length, MD.split("\n").length, "load built the reading cache");
 
 console.log("editor markdown reading view tests passed");

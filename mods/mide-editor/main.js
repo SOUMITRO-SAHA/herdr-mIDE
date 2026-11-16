@@ -145,6 +145,7 @@ export default class MideEditor extends View {
         this.baseline = text;
         this.truncated = text.length > MAX;
         this.code = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file);
+        if (languageFor(file) === "markdown") this.buildReading();
       } catch {
         if (this.file === file) this.error = "Cannot open this file (binary, too large, or unreadable)";
       } finally {
@@ -324,17 +325,23 @@ export default class MideEditor extends View {
   setMarkdownPreviewDefault(enabled, cx) {
     this.markdownPreviewDefault = Boolean(enabled);
     setShared(MARKDOWN_PREVIEW_SETTING, this.markdownPreviewDefault);
-    if (languageFor(this.file ?? "") === "markdown") this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
+    if (languageFor(this.file ?? "") === "markdown") {
+      this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
+      if (this.editorMode === "raw") this.buildReading();
+    }
     cx.notify();
   }
 
   // Markdown Raw mode's reading view: the shared tokenizer's Zed-exact
-  // rendering (virtualized rows, line-number gutter, font effects). The host
-  // editor's public syntax palette has no markdown scopes, so editing is one
-  // toggle away instead of rendered here.
+  // rendering (virtualized rows, line-number gutter, font effects). The
+  // cache is built off the render path — in load and on click — because the
+  // host interrupts scripts that do heavy work while painting; render only
+  // reads it. The host editor's public syntax palette has no markdown
+  // scopes, so editing is one toggle away instead of rendered here.
   buildReading() {
+    // Diff caps long lines for the same reason: bounded regex work.
     const value = this.code ? this.code.value() : "";
-    const lines = value.split("\n");
+    const lines = value.split("\n").map(line => (line.length > 4000 ? `${line.slice(0, 4000)}…` : line));
     this.reading = highlightLines(
       value,
       "markdown",
@@ -348,7 +355,7 @@ export default class MideEditor extends View {
   }
 
   readingView(t, typography) {
-    if (!this.reading) this.buildReading();
+    if (!this.reading) return v_flex().id("mide-editor-reading").flex_1().min_h(0).min_w(0).bg(t.background);
     const count = this.reading.length;
     const lineHeight = Math.max(1, Math.round(typography.size * 1.45));
     const digits = String(Math.max(count, 1)).length;
@@ -456,7 +463,8 @@ export default class MideEditor extends View {
       .accessibility_label(editing ? "Back to the reading view" : "Edit this markdown file")
       .on_click((_e, cx) => {
         this.rawEditing = !editing;
-        this.reading = null;
+        if (this.rawEditing) this.reading = null;
+        else this.buildReading();
         cx.notify();
       })
       .child(editing ? "View" : "Edit");
@@ -480,6 +488,9 @@ export default class MideEditor extends View {
           .hover(s => s.bg(t.hover))
           .on_click((_e, cx) => {
             this.editorMode = mode;
+            // The reading cache is built off the render path — the host
+            // interrupts scripts that highlight while painting.
+            if (mode === "raw") this.buildReading();
             cx.notify();
           }),
       )
