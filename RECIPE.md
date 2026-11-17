@@ -149,6 +149,8 @@ files, commit and make small edits without changing Herdr's theme.
 
 ## Watch out
 
+- **Automation testing** and **E2E** in this project mean [`e2e/`](./e2e/) on
+  `herdr-dev` ([`e2e/README.md`](./e2e/README.md)), not `just test` alone.
 - This is one layout with four dependent mods, not four independent gallery
   mods. The repository root is the complete, copyable package — its mods carry
   the generated `_shared` copies in-tree. Its Git UI also

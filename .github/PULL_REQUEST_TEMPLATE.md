@@ -18,7 +18,8 @@ What changes, and why it matters to the people using herdr-mIDE.
 - [ ] `just test` green
 - [ ] `just check` green (required when mods changed; tick N/A in the notes otherwise)
 - [ ] Failing test added first for behavior changes (TDD per AGENTS.md)
-- [ ] Live verification ran in the `herdr-dev` profile only — or is noted as not done
+- [ ] **E2E / automation testing** on `herdr-dev` ([`e2e/`](../e2e/), TESTING.md scenes, or N/A with reason) — never production
+- [ ] `just test` / `just check` are not a substitute for E2E when the change is user-visible in Herdr
 - [ ] `CHANGELOG.md` (Unreleased) updated for user-facing changes
 - [ ] `RECIPE.md` / `THIRD-PARTY-NOTICES.md` updated if behavior, assets or credits changed
 
