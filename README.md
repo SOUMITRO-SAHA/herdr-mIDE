@@ -103,7 +103,8 @@ mods/mide-editor/         editor pane · save · shared mIDE syntax palette
 themes/ayu-dark.json      Ayu reference palette (MIT; not installed as a host theme)
 keys.json                 optional bindings: cmd/ctrl-shift-e editor split, cmd/ctrl-s save
 mods/mide-files/icons/    all icons: material/ (file types) · folder/chevron glyphs
-justfile                  the entry point: dev, sync, test, check, install, uninstall, status, shot, switch, bundle, smoke-*
+e2e/                      automation testing (E2E): scripts + gitignored screenshots on herdr-dev
+justfile                  the entry point: dev, sync, test, check, e2e-*, install, uninstall, status, shot, switch, bundle, smoke-*
 VERSION                   version of the complete layout + four-mod bundle
 scripts/                  the logic behind the commands (shared common.sh)
 install.sh                first-time installer (never overwrites)
@@ -111,7 +112,7 @@ install.sh                first-time installer (never overwrites)
 
 All icons live in `mods/mide-files/icons/` — the single source of truth. File-type and folder icons come from Material Icon Theme (the only icon source).
 
-[RECIPE.md](./RECIPE.md) documents the build for humans and agents. The maintainer guides live in [docs/](./docs): [docs/TESTING.md](./docs/TESTING.md) covers automated and isolated desktop checks across platforms, [docs/RELEASING.md](./docs/RELEASING.md) covers versioning and the Herdr Gallery standard with its publication steps, and [docs/ROADMAP.md](./docs/ROADMAP.md) has the plan.
+[RECIPE.md](./RECIPE.md) documents the build for humans and agents. The maintainer guides live in [docs/](./docs): [e2e/README.md](./e2e/README.md) defines **automation testing** / **E2E** (live `herdr-dev` scripts), [docs/TESTING.md](./docs/TESTING.md) covers automated checks plus manual and platform scenes, [docs/RELEASING.md](./docs/RELEASING.md) covers versioning and the Herdr Gallery standard with its publication steps, and [docs/ROADMAP.md](./docs/ROADMAP.md) has the plan.
 
 ## Development
 
@@ -132,7 +133,11 @@ just switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 just bundle     # build a copyable layout bundle; needs a reviewed preview.png
 just smoke-prepare  # prepare a disposable app home and Git fixture
 just smoke-capture  # check and capture a user-started test window; see docs/TESTING.md
+just e2e-files-context <run-id>  # automation testing: Files context menus on herdr-dev; see e2e/
 ```
+
+**Automation testing** / **E2E** = [`e2e/`](./e2e/) on `HERDR_APP_HOME=~/.config/herdr-dev`
+(not `just test` alone). Details and vocabulary: [e2e/README.md](./e2e/README.md).
 
 `preview.png` is the project's preview artwork. `just bundle` packages it for
 Herdr's gallery; it only checks that the file exists, so review the image,
@@ -140,7 +145,7 @@ other screenshots and demo video for private information before publishing.
 
 The typical loop: `just dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `just status`; `just shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `just dev interval=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
-Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot copy) and `uninstall.sh` (remove the installed bundle) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. New scripts belong there, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
+Scripts live in `scripts/` — `dev.sh` (the watch loop), `sync.sh` (one-shot copy) and `uninstall.sh` (remove the installed bundle) share `common.sh`, which defines the app home, the sync rules and the mod list exactly once. **Live Herdr UI automation** belongs in [`e2e/scripts/`](./e2e/scripts/), not `scripts/` (see [`e2e/README.md`](./e2e/README.md)). Other helper scripts stay in `scripts/`, called from the justfile; only `install.sh` (the no-clobber installer) stays at the root beside it.
 
 `shared/syntax.js` owns mIDE's single syntax palette and lightweight tokenizer; the editor and Diff consume it through generated mod-local copies. It uses the documented `EditorState` syntax option and tokenizes Diff lines locally, without depending on extra host APIs. Git status/diff UI colors remain mod-specific. `themes/ayu-dark.json` is a non-runtime Ayu reference and intentionally does not duplicate syntax colors.
 

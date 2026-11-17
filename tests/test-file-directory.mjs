@@ -5,12 +5,20 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
+import { utf16leBase64 } from "../mods/mide-files/file-actions.js";
 
 const source = await readFile(new URL("../mods/mide-files/main.js", import.meta.url), "utf8");
 const start = source.indexOf("async function directory(");
 const end = source.indexOf("\nexport default class", start);
 assert.ok(start >= 0 && end > start, "directory listing helper must exist");
-const createDirectory = new Function("exec", "window", "readdir", `${source.slice(start, end)}\nreturn directory;`);
+const createDirectory = new Function(
+  "exec",
+  "window",
+  "readdir",
+  "utf16leBase64",
+  `${source.slice(start, end)}\nreturn directory;`,
+);
+const directoryWithEncoding = (...args) => createDirectory(...args, utf16leBase64);
 
 const dirents = list => list.map(([name, dir]) => ({ name, isDirectory: () => dir }));
 
@@ -22,7 +30,7 @@ async function localListing(platform, path, entries) {
     calls.push({ program, args });
     return { code: 0, stdout: "[]" };
   };
-  const directory = createDirectory(
+  const directory = directoryWithEncoding(
     exec,
     () => ({ platform }),
     async p => (calls.push({ readdir: p }), dirents(entries)),
@@ -71,7 +79,7 @@ const rejected = new Error(
   "/Volumes/work/project is outside every granted read root; add its directory to capabilities.fs.read in the manifest",
 );
 const macFallbackCalls = [];
-const macFallback = createDirectory(
+const macFallback = directoryWithEncoding(
   async (program, args) => {
     macFallbackCalls.push({ program, args });
     return { code: 0, stdout: "d\0src\0f\0main.js\0" };
@@ -92,7 +100,7 @@ assert.deepEqual(
 );
 
 const linuxFallbackCalls = [];
-const linuxFallback = createDirectory(
+const linuxFallback = directoryWithEncoding(
   async (program, args) => {
     linuxFallbackCalls.push({ program, args });
     return { code: 0, stdout: "d\0src\0" };
@@ -110,7 +118,7 @@ assert.deepEqual(
 );
 
 const winFallbackCalls = [];
-const winFallback = createDirectory(
+const winFallback = directoryWithEncoding(
   async (program, args) => {
     winFallbackCalls.push({ program, args });
     return { code: 0, stdout: '[{"name":"out.txt","dir":false}]' };
@@ -130,7 +138,7 @@ assert.deepEqual(
 // Other readdir failures (a missing folder) surface; they spawn no shell —
 // in particular no PowerShell spawn on Windows for an ordinary miss.
 const missingCalls = [];
-const missing = createDirectory(
+const missing = directoryWithEncoding(
   async (program, args) => {
     missingCalls.push({ program, args });
     return { code: 0, stdout: "" };
@@ -151,7 +159,7 @@ const remoteExec = async (program, args) => {
   if (program === "sh") throw new Error("cannot start sh: program not found");
   return { code: 0, stdout: '[{"name":"remote.txt","dir":false}]' };
 };
-const remoteDirectory = createDirectory(
+const remoteDirectory = directoryWithEncoding(
   remoteExec,
   () => ({ platform: "windows" }),
   async () => [],
@@ -180,7 +188,7 @@ const shExec = async (program, args) => {
   shCalls.push({ program, args });
   return { code: 0, stdout: "f\0file.txt\0" };
 };
-const macRemote = createDirectory(
+const macRemote = directoryWithEncoding(
   shExec,
   () => ({ platform: "darwin" }),
   async () => [],
@@ -205,7 +213,7 @@ if (process.platform === "win32") {
         if (r.error) reject(r.error);
         else resolve({ code: r.status, stdout: r.stdout, stderr: r.stderr });
       });
-    const directory = createDirectory(
+    const directory = directoryWithEncoding(
       real,
       () => ({ platform: "windows" }),
       p => fs.readdir(p, { withFileTypes: true }),
@@ -218,7 +226,7 @@ if (process.platform === "win32") {
       [{ name: "sub dir", dir: true }],
     );
     // The remote fallback still works against the real PowerShell.
-    const gated = createDirectory(
+    const gated = directoryWithEncoding(
       async (program, args) => {
         if (program === "sh") throw new Error("cannot start sh: program not found");
         return real(program, args);

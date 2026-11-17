@@ -7,7 +7,7 @@ import { runInNewContext } from "node:vm";
 // space cwd in backslash form.
 const source =
   (await readFile(new URL("../mods/mide-files/main.js", import.meta.url), "utf8"))
-    .replace(/^import .*;\n/gm, "")
+    .replace(/^import[^;]*?;\n/gm, "")
     .replace(/\r\n/g, "\n")
     .replace("export default class MideFiles", "class MideFiles") + "\nMideFiles;";
 
@@ -38,6 +38,13 @@ const context = {
   settings: () => ({}),
   setShared: () => {},
   run: () => {},
+  props: () => undefined,
+  nextCommand: () => new Promise(() => {}),
+  shared: () => null,
+  openOverlay: () => "overlay",
+  closeOverlay: () => {},
+  notify: () => {},
+  writeTextFile: async () => {},
   resolveIcon: () => null,
   gitColors: () => ({}),
   readdir: async () =>

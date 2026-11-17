@@ -97,6 +97,9 @@ function element() {
 
 let editorNewCalls = 0;
 let markdownCalls = 0;
+const codeOptions = [],
+  readRequests = [],
+  writes = [];
 const context = {
   View: class {},
   div: element,
@@ -110,7 +113,10 @@ const context = {
     },
   },
   EditorState: {
-    new: options => ({ value: () => options?.value ?? "", on() {}, release() {} }),
+    new: options => {
+      codeOptions.push(options);
+      return { value: () => options?.value ?? "", on() {}, release() {} };
+    },
   },
   TextView: {
     markdown: () => {
@@ -148,8 +154,8 @@ const context = {
   keys: {},
   props: () => undefined,
   nextCommand: async () => undefined,
-  readTextFile: async () => MD,
-  writeTextFile: async () => {},
+  readTextFile: async (file, options) => (readRequests.push({ file, options }), MD),
+  writeTextFile: async (...args) => writes.push(args),
   languageFor,
   fenceLanguage,
   syntaxPalette,
@@ -301,9 +307,22 @@ assert.ok(markdownCalls > 0, "preview still renders TextView markdown");
 
 // A freshly loaded markdown file builds its cache in the load task.
 Object.assign(editor, { file: "doc.md", editorMode: "raw", rawEditing: true, reading: null });
-editor.load("doc.md", cx);
+editor.load("doc.md", null, cx);
 await pending.pop();
 assert.equal(editor.rawEditing, false, "a freshly opened file starts in the reading view");
 assert.equal(editor.reading?.length, MD.split("\n").length, "load built the reading cache");
+
+editor.load("/remote/repo/new file.txt", "build-machine", cx);
+await pending.pop();
+assert.equal(readRequests.at(-1).file, "/remote/repo/new file.txt");
+assert.equal(readRequests.at(-1).options.on, "build-machine", "remote opens read from the target machine");
+assert.equal(codeOptions.at(-1).readonly, true, "remote files open read-only without a public remote write API");
+assert.equal(editor.on, "build-machine");
+editor.save(cx);
+assert.match(editor.note, /read-only/);
+assert.equal(writes.length, 0, "saving a remote buffer must never write to the local machine");
+const remoteRoot = editor.render(cx);
+assert.equal(find(remoteRoot, "mide-editor-save"), null, "remote files do not show a Save action");
+assert.equal(find(remoteRoot, "mide-editor-save-status").text, "Remote · read-only");
 
 console.log("editor markdown reading view tests passed");

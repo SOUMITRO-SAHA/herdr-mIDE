@@ -1,23 +1,45 @@
 ---
 name: herdr-mide-e2e
 description: >-
-  End-to-end verification of herdr-mIDE mods against a live Herdr window on
-  the herdr-dev profile. Covers just dev/sync/check/status/shot/switch, Herdr
-  CLI skills (herdr-app --skill, hc --skill), app-home AGENTS.md and type
-  stubs, and docs/TESTING.md scenes. Use when changing mIDE mods or layout,
-  when the user asks for live, smoke, or e2e testing, or before claiming UI
-  behavior is verified.
+  Automation testing and E2E for herdr-mIDE on herdr-dev (e2e/ scripts — not
+  just test alone). Live verification via just dev/sync/check/status/shot/switch,
+  Herdr CLI skills, app-home types, docs/TESTING.md scenes. Use when changing
+  mods or layout, when the user asks for live, smoke, or e2e testing, or before
+  claiming UI behavior is verified.
 compatibility: Used by the AI coding agent building this project (not loaded by herdr-mIDE).
 metadata:
   author: localfirstai
-  version: "1.0"
+  version: "1.1"
 ---
 
 # herdr-mIDE end-to-end testing
 
+When the user says **automation testing** or **E2E testing**, they mean
+[`e2e/`](../../../e2e/) on **`herdr-dev`** — read the terminology table in
+[`e2e/README.md`](../../../e2e/README.md) first. `just test` / `just check` are
+**automated checks**, not E2E.
+
 This skill wires Cursor agents into the same workflow people use to validate
 mIDE in a real Herdr window. It does **not** replace Herdr’s own manuals —
-load those when driving the window or core.
+load those when driving the window or core. It aligns with
+[`AGENTS.md`](../../../AGENTS.md) and [`docs/TESTING.md`](../../../docs/TESTING.md).
+
+## `e2e/` layout (automation testing)
+
+| Path | Role |
+|------|------|
+| `e2e/scripts/` | Herdr UI automation entrypoints (`just e2e-*`) |
+| `e2e/screenshots/<run-id>/` | Gitignored PNG + status JSON (`E2E_RUN`) |
+| `e2e/scripts/lib/herdr-dev.sh` | Dev profile guard, PID, start window |
+| `e2e/local.env` | Gitignored machine overrides (`local.env.example`) |
+
+```sh
+E2E_RUN=my-feature just e2e-files-context my-feature
+# or
+HERDR_APP_HOME=~/.config/herdr-dev E2E_RUN=my-run ./e2e/scripts/files-context-menus.sh
+```
+
+Target the dev Herdr **process** when production and dev windows are both open.
 
 ## Herdr manuals (read on demand)
 
@@ -95,8 +117,8 @@ UI. A broken save keeps the last good mod; errors appear in `status`.
 
 Open the mIDE repo (or `just smoke-prepare` fixture) as a **space** and
 exercise panels manually per `docs/TESTING.md` (Files, Editor, Changes, Diff,
-branches, safety). Do not claim a scene passed without doing it or inspecting
-a fresh capture.
+branches, safety). Prefer an `e2e/` script when one exists for the feature.
+Do not claim a scene passed without doing it or inspecting a fresh capture.
 
 ## Command-driven checks (agents)
 
@@ -129,15 +151,16 @@ a **user-started** window in that home; see `docs/TESTING.md`.
 1. `just test` and `just check` green.
 2. `HERDR_APP_HOME=~/.config/herdr-dev just status` reports no mod errors on
    `herdr-mide`.
-3. At least one `just shot` or explicit `herdr-app shot` reviewed for the
-   affected UI (or manual scene from `docs/TESTING.md` performed and
-   described).
+3. **E2E / automation testing** when user-visible: `e2e/` script run and/or
+   manual scene from `docs/TESTING.md`, with reviewed capture under
+   `e2e/screenshots/<run-id>/` or `just shot` / `herdr-app shot`.
 4. Report what was **not** verified (interactions, deferred list rows, etc.).
 
 ## Quick reference
 
 | Goal | Command |
 |------|---------|
+| Automation testing (E2E) | `E2E_RUN=<id> just e2e-files-context <id>` — see `e2e/README.md` |
 | Copy mods into dev home | `HERDR_APP_HOME=~/.config/herdr-dev just sync` |
 | Watch + hot reload | `HERDR_APP_HOME=~/.config/herdr-dev just dev` |
 | Runtime parser check | `just check` |

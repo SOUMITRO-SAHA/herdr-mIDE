@@ -1,5 +1,28 @@
 # Testing herdr-mIDE
 
+## Terminology (read this first)
+
+In issues, PRs, and agent instructions, **automation testing** and **E2E
+testing** mean the same thing here: the [`e2e/`](../e2e/) setup — scripts under
+`e2e/scripts/`, outputs under `e2e/screenshots/<run-id>/`, always on the
+**`herdr-dev`** profile (`HERDR_APP_HOME=~/.config/herdr-dev`). Start from
+[`e2e/README.md`](../e2e/README.md) and `just e2e-*` recipes in the root
+`justfile`.
+
+That is **not** the same as:
+
+- **Automated checks** — `just test`, `just check`, `just fmt-check` (Bun +
+  temp staging + `herdr-app check`; required on every PR, but they do not
+  exercise most interactions).
+- **Smoke workflow** — `just smoke-prepare` / `just smoke-capture` (disposable
+  isolated app home for CI; see below).
+
+For a user-facing feature, “tested end-to-end” means automated checks are green
+**and** the relevant `e2e/` script and/or manual scenes below were run on
+`herdr-dev`, with captures or notes in the PR.
+
+## Platform workflow
+
 Use this workflow on each target **macOS, Linux and Windows** machine. It
 does not build, install or modify Herdr itself. Run it only against a released,
 already-installed `herdr-app` and `hc`; record their versions and the OS with
@@ -17,8 +40,9 @@ results and remaining gaps.
 Herdr's own approach separates an app home, core session and state for tests;
 its Linux UI sandbox additionally uses a private Weston/Xwayland display. The
 sibling `herdr-app/scripts/sandbox` also builds Herdr even when given another
-binary, so **do not run it from this project**. Our helpers do not automate
-pointer or keyboard input and do not launch, stop or modify Herdr or a core.
+binary, so **do not run it from this project**. Scripts in [`e2e/`](../e2e/) may
+drive pointer/keyboard on **`herdr-dev` only** (see `e2e/README.md`); smoke and
+check helpers still do not launch, stop or modify someone else's Herdr or core.
 
 ## Automated checks
 
@@ -91,10 +115,11 @@ overwrite an app, core, file or key binding belonging to someone else.
    permission; report the conflict instead.
 4. Exercise the scenes below manually in the dev window. To capture a scene,
    use `herdr-app shot` with `HERDR_APP_HOME` set to the dev home and a **new,
-   non-existing** filename under a scratch directory. Inspect the image and
-   window yourself; a screenshot is not an interaction or visual assertion.
-   `just smoke-capture` targets the helper's separate app home and is not the
-   local `herdr-dev` capture workflow.
+   non-existing** filename under a scratch directory, or run the curated scripts
+   in [`e2e/`](../e2e/) (outputs go to `e2e/screenshots/<run-id>/`, gitignored).
+   Inspect the image and window yourself; a screenshot is not an interaction or
+   visual assertion. `just smoke-capture` targets the helper's separate app home
+   and is not the local `herdr-dev` capture workflow.
 5. When finished, close or stop only the dev window, core and terminals that
    you started and are authorized to stop. Preserve the scratch directory until
    nothing uses it; the preparation helper does not delete it.
