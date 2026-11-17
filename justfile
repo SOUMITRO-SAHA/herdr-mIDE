@@ -64,6 +64,8 @@ test:
     @bun ./tests/test-changes-footer-sizing.mjs
     @bun ./tests/test-changes-branch-footer.mjs
     @bun ./tests/test-file-icons.mjs
+    @bun ./tests/test-file-actions.mjs
+    @bun ./tests/test-file-context-menu.mjs
     @bun ./tests/test-file-directory.mjs
     @bun ./tests/test-diff-assets.mjs
     @bun ./tests/test-editor-save.mjs

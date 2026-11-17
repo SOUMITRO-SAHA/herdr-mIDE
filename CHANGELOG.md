@@ -10,8 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The Changes footer now uses compact spacing and truncates repository and branch names only when needed, while keeping Fetch/Pull/Push visible at the right edge. Short names leave their unused room for longer names, and both gain room when the panel widens.
+- PowerShell `-EncodedCommand` now encodes non-BMP path characters as UTF-16 surrogate pairs, preserving emoji and other supplementary Unicode in Windows file paths.
 
 ### Added
+
+- Files rows now have a pointer-anchored context menu for Open, Reveal, copying absolute/relative paths and names, plus Open in New Tab for folders. New File/New Folder appear in the menu and on the tree root; they create an inline name row, validate names before creating, refuse existing targets, and open new files in the editor. Optional `cmd-n`/`ctrl-n` and `cmd-shift-n`/`ctrl-shift-n` bindings are printed for manual merge, with shortcut hints shown only when the matching Files bindings are active. Remote menus omit local Reveal; remote creation uses `exec`, and opened remote files are read-only because the released write API is local-only.
 
 - Markdown in Diff **and the Editor's Raw mode** now colors exactly like Zed, per its Markdown grammars and Ayu Dark theme: headings and thematic breaks render as bold text, fenced code blocks highlight in their inner language while fence markers and info strings stay gray, list/quote/table-pipe punctuation is gray, emphasis is blue (strong adds bold), inline code spans are orange, and link text is orange italic with green URIs — bare URLs and strikethrough stay plain, and unknown-language fences render plain. Raw markdown opens as a Zed-style reading view (virtualized rows, line-number gutter, real bold and italics) because the host editor's public syntax palette has no markdown scopes; an Edit toggle swaps to the host editor for changes with ⌘S intact. The markdown tokenizer lives in the one canonical `shared/syntax.js` alongside the generic tokenizer it extends (the per-language registry keys off `languageFor()`; languages without an entry keep the generic tokenizer, so nothing regresses), carries Zed's font effects through `syntaxEffects()`, and the whole Ayu palette was aligned to Zed's exact hex values. Rust and further languages follow as their own PRs.
 

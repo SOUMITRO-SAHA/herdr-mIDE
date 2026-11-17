@@ -5,11 +5,22 @@
 // Folder listing adapts Herdr's shipped `files` mod (Apache-2.0):
 // same sh/PowerShell helpers, same lazy expansion, same bounded reads.
 import { View, div, svg, image } from "gpui-kit";
-import { v_flex, h_flex } from "gpui-base";
+import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { readdir } from "fs/promises";
 import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, window } from "herdr";
+import { props, nextCommand, shared, openOverlay, closeOverlay, notify, writeTextFile, keys } from "herdr";
 import { resolveIcon } from "./icons.js";
 import { gitColors } from "./palette.js";
+import {
+  contextMenuActions,
+  creationFolder,
+  createAbsolutePath,
+  createShellCommands,
+  revealCommand,
+  shortcutHint,
+  utf16leBase64,
+  validateCreateName,
+} from "./file-actions.js";
 
 function location(previous) {
   const f = focused(),
@@ -53,6 +64,7 @@ function statusMark(xy) {
 
 const ICONS = "mods/mide-files/icons";
 const MATERIAL = "mods/mide-files/icons/material";
+const FILE_ACTION_REQUEST = "mide.files.action.request";
 const interfaceTypography = () => {
   const current = settings(),
     size = current.ui_font_size ?? 13;
@@ -63,43 +75,6 @@ const interfaceTypography = () => {
 // and its resolution order (exact name, then longest dotted suffix, then
 // prefix, then the theme's plain file glyph).
 async function directory(path, on) {
-  // RFC 4648 base64 of the script's UTF-16LE bytes, built without the
-  // runtime Buffer: its base64/utf16le output is rejected by PowerShell
-  // (-EncodedCommand) on Windows, so every byte is produced here.
-  const utf16leBase64 = text => {
-    const bytes = [];
-    for (let i = 0; i < text.length; i++) {
-      const unit = text.charCodeAt(i);
-      if (unit >= 0xd800 && unit <= 0xdbff && i + 1 < text.length) {
-        const next = text.charCodeAt(i + 1);
-        if (next >= 0xdc00 && next <= 0xdfff) {
-          const point = 0x10000 + ((unit - 0xd800) << 10) + (next - 0xdc00);
-          bytes.push(point & 255, (point >> 8) & 255, (point >> 16) & 255, (point >>> 24) & 255);
-          i++;
-          continue;
-        }
-      }
-      bytes.push(unit & 255, (unit >> 8) & 255);
-    }
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let out = "";
-    for (let i = 0; i + 2 < bytes.length; i += 3) {
-      const chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-      out +=
-        alphabet[(chunk >> 18) & 63] +
-        alphabet[(chunk >> 12) & 63] +
-        alphabet[(chunk >> 6) & 63] +
-        alphabet[chunk & 63];
-    }
-    const rest = bytes.length % 3;
-    if (rest === 1)
-      out += alphabet[bytes[bytes.length - 1] >> 2] + alphabet[(bytes[bytes.length - 1] << 4) & 63] + "==";
-    else if (rest === 2) {
-      const chunk = (bytes[bytes.length - 2] << 8) | bytes[bytes.length - 1];
-      out += alphabet[(chunk >> 10) & 63] + alphabet[(chunk >> 4) & 63] + alphabet[(chunk << 2) & 63] + "=";
-    }
-    return out;
-  };
   const windowsDirectory = async () => {
     // Windows argv transport mangles arguments containing spaces or quotes,
     // so the whole listing travels as one -EncodedCommand payload with the
@@ -160,6 +135,11 @@ async function directory(path, on) {
 
 export default class MideFiles extends View {
   init(_props, cx) {
+    const initial = props();
+    if (initial?.contextMenu) {
+      this.contextMenu = { ...initial.contextMenu, overlay: initial.overlay };
+      return;
+    }
     this.saved = new Map();
     this.entries = new Map();
     this.folders = new Set();
@@ -168,8 +148,283 @@ export default class MideFiles extends View {
     this.folderMarks = new Map();
     this.ignored = new Set();
     this.ignoredDirs = [];
+    this.selected = null;
+    this.pendingCreate = null;
+    this.createInput = null;
+    this.createNote = null;
+    this.createBusy = false;
+    this.listenCommands(cx);
     this.refresh(cx);
     cx.timer.every(10000, cx => this.refresh(cx));
+  }
+
+  listenCommands(cx) {
+    cx.spawn(async cx => {
+      for (;;) {
+        const command = await nextCommand(),
+          name = typeof command === "string" ? command : command?.name;
+        if (!["new-file", "new-folder", "open", "toggle"].includes(name)) continue;
+        const request = shared(FILE_ACTION_REQUEST),
+          fromMenu =
+            request?.action === name &&
+            request.space === this.context?.space &&
+            slash(request.root) === slash(this.root);
+        if (fromMenu) {
+          setShared(FILE_ACTION_REQUEST, null);
+          this.selected = { path: request.path, rowKind: request.rowKind };
+        }
+        if (name === "new-file" || name === "new-folder") {
+          this.startCreate(name === "new-file" ? "file" : "folder", cx);
+        } else {
+          if (!fromMenu) continue;
+          if (name === "open") this.open(request.path, cx);
+          else this.toggle(request.path, cx);
+        }
+      }
+    });
+  }
+
+  showContextMenu(row, at) {
+    if (!this.root) return;
+    this.selected = { path: row.path, rowKind: row.rowKind };
+    const actions = contextMenuActions({ rowKind: row.rowKind, remote: Boolean(this.on) }),
+      height = actions.length * 34 + 8;
+    openOverlay({
+      mod: "mide-files",
+      props: {
+        contextMenu: {
+          ...row,
+          root: this.root,
+          on: this.on,
+          space: this.context?.space,
+          platform: window().platform,
+        },
+      },
+      kind: "popup",
+      width: 244,
+      height,
+      at,
+    });
+  }
+
+  dispatchMenuAction(action, cx) {
+    const menu = this.contextMenu,
+      absolute = createAbsolutePath(menu.root, "", menu.path),
+      name = menu.path.split("/").pop();
+    if (action === "copy-absolute-path") {
+      cx.write_to_clipboard(absolute);
+      closeOverlay(menu.overlay);
+      return;
+    }
+    if (action === "copy-relative-path") {
+      cx.write_to_clipboard(menu.path);
+      closeOverlay(menu.overlay);
+      return;
+    }
+    if (action === "copy-name") {
+      cx.write_to_clipboard(name);
+      closeOverlay(menu.overlay);
+      return;
+    }
+    if (action === "open-in-new-tab") {
+      closeOverlay(menu.overlay);
+      try {
+        run("tab.new", { ...(menu.space ? { space: menu.space } : {}), folder: absolute });
+      } catch (error) {
+        notify({ title: "Couldn't open folder in a new tab", body: String(error), level: "error" });
+      }
+      return;
+    }
+    if (action === "reveal") {
+      const command = revealCommand(menu.platform, absolute, menu.rowKind);
+      closeOverlay(menu.overlay);
+      cx.spawn(async () => {
+        try {
+          const result = await exec(command.program, command.args);
+          if (result.code !== 0)
+            notify({
+              title: "Couldn't reveal this item",
+              body: result.stderr || "The file manager returned an error",
+              level: "error",
+            });
+        } catch (error) {
+          notify({ title: "Couldn't reveal this item", body: String(error), level: "error" });
+        }
+      });
+      return;
+    }
+    const targetAction = action === "open" && menu.rowKind === "folder" ? "toggle" : action;
+    setShared(FILE_ACTION_REQUEST, {
+      action: targetAction,
+      path: menu.path,
+      rowKind: menu.rowKind,
+      root: menu.root,
+      space: menu.space,
+    });
+    closeOverlay(menu.overlay);
+    run(`mide-files.${targetAction}`);
+  }
+
+  renderContextMenu(typography) {
+    const menu = this.contextMenu,
+      t = { ...theme(), ...gitColors },
+      actions = contextMenuActions({ rowKind: menu.rowKind, remote: Boolean(menu.on) }),
+      labels = {
+        open: "Open",
+        "new-file": "New File",
+        "new-folder": "New Folder",
+        reveal:
+          menu.platform === "macos"
+            ? "Reveal in Finder"
+            : menu.platform === "windows"
+              ? "Show in Explorer"
+              : "Reveal in File Manager",
+        "copy-absolute-path": "Copy Absolute Path",
+        "copy-relative-path": "Copy Relative Path",
+        "copy-name": "Copy Name",
+        "open-in-new-tab": "Open in New Tab",
+      },
+      bindings = keys(),
+      hint = {
+        "new-file": shortcutHint(bindings, "new-file", menu.platform),
+        "new-folder": shortcutHint(bindings, "new-folder", menu.platform),
+      };
+    const children = [];
+    for (const action of actions) {
+      if (action === "reveal" || action === "copy-absolute-path" || action === "open-in-new-tab")
+        children.push(div().h(1).my(2).bg(t.border));
+      children.push(
+        h_flex()
+          .id(`mide-files-menu-${action}`)
+          .h(28)
+          .px(8)
+          .gap(12)
+          .items_center()
+          .justify_between()
+          .rounded(5)
+          .cursor_pointer()
+          .hover(s => s.bg(t.hover))
+          .on_click((_event, cx) => this.dispatchMenuAction(action, cx))
+          .child(div().flex_1().min_w(0).child(labels[action]))
+          .when(Boolean(hint[action]), el =>
+            el.child(div().text_size(typography.text(10)).text_color(t.dim).child(hint[action])),
+          ),
+      );
+    }
+    return v_flex()
+      .id("mide-files-context-menu")
+      .min_w(220)
+      .p(4)
+      .gap(2)
+      .rounded(7)
+      .border_1()
+      .border_color(t.border)
+      .bg(t.chrome)
+      .text_color(t.foreground)
+      .font_family(typography.font)
+      .text_size(typography.size)
+      .children(children);
+  }
+
+  startCreate(kind, cx) {
+    if (!this.root) {
+      notify({ title: "No folder open", body: "Open a workspace folder before creating files.", level: "error" });
+      return;
+    }
+    if (this.createBusy) return;
+    if (this.pendingCreate) this.cancelCreate(cx);
+    const selection = this.selected ?? { path: "", rowKind: "root" },
+      folder = creationFolder(selection.path, selection.rowKind);
+    this.pendingCreate = { kind, folder };
+    this.createNote = null;
+    this.createBusy = false;
+    this.createInput = InputState.new({ placeholder: kind === "file" ? "New file name" : "New folder name" });
+    this.createInput.on("change", (_event, cx) => {
+      this.createNote = null;
+      cx.notify();
+    });
+    this.createInput.on("submit", (_event, cx) => this.commitCreate(cx));
+    this.createInput.on("blur", (_event, cx) => {
+      if (this.pendingCreate && !this.createBusy) this.commitCreate(cx);
+    });
+    this.createInput.focus();
+    if (folder && !this.folders.has(folder)) this.toggle(folder, cx);
+    cx.notify();
+  }
+
+  cancelCreate(cx) {
+    if (this.createBusy) return;
+    this.createInput?.release();
+    this.pendingCreate = null;
+    this.createInput = null;
+    this.createNote = null;
+    this.createBusy = false;
+    cx.notify();
+  }
+
+  async createWithShell(path, kind, on) {
+    const commands = createShellCommands(path, kind);
+    let command;
+    if (on) {
+      try {
+        command = commands.posix;
+        const result = await exec(command.program, command.args, { on });
+        if (result.code !== 0) throw new Error(result.stderr || "The create command failed");
+        return;
+      } catch (error) {
+        if (!String(error).includes("cannot start sh: program not found")) throw error;
+        command = commands.windows;
+      }
+    } else command = window().platform === "windows" ? commands.windows : commands.posix;
+    const result = await exec(command.program, command.args, { on });
+    if (result.code !== 0) throw new Error(result.stderr || "The create command failed");
+  }
+
+  commitCreate(cx) {
+    if (!this.pendingCreate || !this.createInput || this.createBusy) return;
+    const { kind, folder } = this.pendingCreate,
+      name = this.createInput.value(),
+      existing = (this.entries.get(folder) ?? []).map(entry => entry.name),
+      caseSensitive = !this.on && window().platform === "linux",
+      error = validateCreateName(name, existing, caseSensitive);
+    if (error) {
+      this.createNote = error;
+      this.createInput.focus();
+      cx.notify();
+      return;
+    }
+    const path = createAbsolutePath(this.root, folder, name),
+      relative = folder ? `${folder}/${name}` : name,
+      context = this.context,
+      on = this.on;
+    this.createBusy = true;
+    this.createNote = "Creating…";
+    cx.spawn(async cx => {
+      try {
+        // Released writeTextFile is local-only. Remote empty files use the
+        // documented exec API with a create-new operation rather than touch
+        // or a shell string containing the user-supplied path.
+        if (kind === "file" && !on) await writeTextFile(path, "", null);
+        else await this.createWithShell(path, kind, on);
+        if (!this.current(context)) return;
+        this.selected = { path: relative, rowKind: kind === "folder" ? "folder" : "file" };
+        this.pendingCreate = null;
+        this.createInput?.release();
+        this.createInput = null;
+        this.createNote = null;
+        this.createBusy = false;
+        this.refresh(cx);
+        if (kind === "file") this.open(relative, cx);
+      } catch (error) {
+        if (this.current(context)) {
+          this.createBusy = false;
+          this.createNote = `Couldn't create ${kind}: ${String(error).replace(/^Error:\s*/, "")}`;
+          this.createInput?.focus();
+        }
+      } finally {
+        cx.notify();
+      }
+    });
   }
 
   watch(root, cx) {
@@ -211,6 +466,12 @@ export default class MideFiles extends View {
       { cwd, on } = loc,
       next = key(loc);
     if (next !== this.context?.key) {
+      this.createInput?.release();
+      this.pendingCreate = null;
+      this.createInput = null;
+      this.createNote = null;
+      this.createBusy = false;
+      this.selected = null;
       if (this.context) this.saved.set(this.context.key, { folders: this.folders });
       const saved = this.saved.get(next);
       this.context = { key: next, ...loc };
@@ -371,7 +632,7 @@ export default class MideFiles extends View {
     const focus = focused(),
       tab = focus?.tab;
     const inTab = panes().filter(p => p.tab === tab);
-    const request = { file };
+    const request = { file, on: this.on ?? null };
     setShared("mide.editor.request", request);
 
     const existing = inTab.find(p => p.mod === "mide-editor");
@@ -389,18 +650,22 @@ export default class MideFiles extends View {
     const direction = diff ? "down" : "right";
     if (target) run("pane.split", { direction, pane: target.pane, mod: "mide-editor", props: request });
     else {
-      const space = spaces().find(s => s.id === focus?.space) ?? spaces().find(s => s.active);
+      const space =
+        spaces().find(s => s.id === this.context?.space) ??
+        spaces().find(s => s.id === focus?.space) ??
+        spaces().find(s => s.active);
       run("tab.new", {
         name: `Editor · ${path.split("/").pop()}`,
         ...(space ? { space: space.id } : {}),
         mod: "mide-editor",
-        props: { file },
+        props: request,
       });
     }
   }
 
   rows(prefix, depth, out, t, typography) {
     if (out.length >= TOTAL || depth > 40) return out;
+    if (this.pendingCreate?.folder === prefix) out.push(this.createInputRow(depth, t, typography));
     for (const entry of this.entries.get(prefix) ?? []) {
       if (out.length >= TOTAL) break;
       const path = prefix ? `${prefix}/${entry.name}` : entry.name,
@@ -424,7 +689,18 @@ export default class MideFiles extends View {
           .rounded(7)
           .cursor_pointer()
           .hover(s => s.bg(t.hover))
-          .on_click((_e, cx) => (entry.dir ? this.toggle(path, cx) : this.open(path, cx)))
+          .on_click((_e, cx) => {
+            this.selected = { path, rowKind: entry.dir ? "folder" : "file" };
+            if (entry.dir) this.toggle(path, cx);
+            else this.open(path, cx);
+          })
+          .on_mouse_down("right", (event, cx) => {
+            cx.stop_propagation();
+            this.showContextMenu(
+              { path, rowKind: entry.dir ? "folder" : "file" },
+              { x: event.position.x, y: event.position.y },
+            );
+          })
           .child(
             entry.dir
               ? svg(`${ICONS}/chevron-${open ? "down" : "right"}.svg`)
@@ -454,11 +730,63 @@ export default class MideFiles extends View {
     return out;
   }
 
+  createInputRow(depth, t, typography) {
+    const errorColor = t.git_deleted ?? t.ansi1 ?? t.accent;
+    return v_flex()
+      .id("mide-files-create-row")
+      .flex_none()
+      .pl(8 + depth * 18)
+      .pr(8)
+      .gap(2)
+      .child(
+        h_flex()
+          .h(26)
+          .flex_none()
+          .gap(7)
+          .items_center()
+          .child(div().w(12).flex_none())
+          .child(
+            this.pendingCreate.kind === "file"
+              ? image(`${MATERIAL}/file.svg`).w(16).h(16).flex_none()
+              : svg(`${ICONS}/folder.svg`).size(16).flex_none().text_color(t.accent),
+          )
+          .child(
+            Input.new(this.createInput)
+              .id("mide-files-create-input")
+              .on_key_down((event, cx) => {
+                if (event.key === "escape") {
+                  cx.stop_propagation();
+                  this.cancelCreate(cx);
+                }
+              })
+              .h(24)
+              .flex_1()
+              .min_w(0)
+              .px(5)
+              .rounded(4)
+              .border_1()
+              .border_color(this.createNote && this.createNote !== "Creating…" ? errorColor : t.accent)
+              .text_size(typography.text(12))
+              .text_color(t.foreground),
+          ),
+      )
+      .when(Boolean(this.createNote), el =>
+        el.child(
+          div()
+            .pl(35)
+            .text_size(typography.text(10))
+            .text_color(this.createNote === "Creating…" ? t.dim : errorColor)
+            .child(this.createNote),
+        ),
+      );
+  }
+
   render(cx) {
-    if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
     const host = theme(),
       t = { ...host, ...gitColors, background: host.chrome },
       typography = interfaceTypography();
+    if (this.contextMenu) return this.renderContextMenu(typography);
+    if (key(location(this.context)) !== this.context?.key) this.refresh(cx);
     return v_flex()
       .id("mide-files")
       .size_full()
@@ -499,15 +827,22 @@ export default class MideFiles extends View {
           .min_h(0)
           .overflow_y_scrollbar()
           .p(6)
+          .on_mouse_down("right", (event, _cx) => {
+            if (!this.pendingCreate)
+              this.showContextMenu({ path: "", rowKind: "root" }, { x: event.position.x, y: event.position.y });
+          })
           .children(this.rows("", 0, [], t, typography))
-          .when(Boolean(this.error) || !this.entries.get("")?.length, el =>
-            el.child(
-              div()
-                .p(8)
-                .text_size(typography.text(12))
-                .text_color(t.dim)
-                .child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder")),
-            ),
+          .when(
+            Boolean(this.error) ||
+              (!this.entries.get("")?.length && !(this.pendingCreate && this.pendingCreate.folder === "")),
+            el =>
+              el.child(
+                div()
+                  .p(8)
+                  .text_size(typography.text(12))
+                  .text_color(t.dim)
+                  .child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder")),
+              ),
           )
           .when(this.limited, el =>
             el.child(

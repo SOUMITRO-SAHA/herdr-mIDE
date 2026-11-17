@@ -16,7 +16,9 @@ files, commit and make small edits without changing Herdr's theme.
   contents; their glyphs and names reflect the most severe change underneath.
   File-type icons are colored; changed names show a status letter. Ignored
   names are dimmed. Git colors are green `#a1c181`, red `#d07277`, and
-  yellow `#dec184` for modified or conflicted entries.
+  yellow `#dec184` for modified or conflicted entries. Right-clicking a row
+  opens a compact, theme-colored menu at the pointer; its New File/New Folder
+  actions put a single-line name input into the tree.
 - Changes has a 36px Changes/History tab strip, a diff summary and stage
   action, followed by Tracked and Untracked groups with tri-state checkboxes.
   Its footer shows the repository, branch and remote action; the Changes tab
@@ -49,6 +51,15 @@ files, commit and make small edits without changing Herdr's theme.
 - Click folders to expand them and files to open or reuse the current tab's
   editor. Unsaved drafts stay available while switching files in that editor.
   File and Git information refresh on local folder changes and every 10 seconds.
+- Right-click a file for Open, Reveal in Finder/Explorer/file manager, Copy
+  Absolute Path, Copy Relative Path and Copy Name. Folders add Open in New Tab.
+  The root background offers New File and New Folder. New actions create beside
+  a file, inside a folder, or at the root; Enter and blur confirm, Escape
+  cancels, and invalid or duplicate names stay visible beside the input. A
+  created file opens in the editor. `cmd-n`/`ctrl-n` create files and
+  `cmd-shift-n`/`ctrl-shift-n` create folders when the optional
+  `mod:mide-files` bindings have been merged; menu hints appear only when those
+  exact bindings are active. Remote rows omit local file-manager Reveal.
 - In Changes, clicking a file opens its diff; its checkbox stages or unstages
   it without opening Diff. Group checkboxes and Stage All/Unstage All act on
   their respective files. History displays up to 100 recent commits.
@@ -75,7 +86,8 @@ files, commit and make small edits without changing Herdr's theme.
   persistent settings, with Markdown opening in Raw by default. Raw markdown
   starts in the Zed-exact reading view; the Edit toggle swaps to the host
   editor (where Word wrap applies) and View returns, rebuilding from the
-  edited buffer.
+  edited buffer. Remote files open in a read-only editor view: the released
+  write API is local-only.
 
 ## Built from
 
@@ -85,18 +97,24 @@ files, commit and make small edits without changing Herdr's theme.
   `workspace-status`). The `files` and `changes` blocks load the mIDE mods;
   the other named mods are shipped by Herdr.
 - Four cooperating folders, all with `place: none` in `mod.json`:
-  `mide-files` lists the tree and opens the editor; `mide-changes` handles
+  `mide-files` lists the tree, opens pointer popups, creates files/folders and
+  opens the editor; `mide-changes` handles
   status, staging, commits, branches and remote Git actions; `mide-diff`
-  displays comparisons; `mide-editor` edits and saves files. Changes, Diff
-  and Editor opt into focus. Editor receives `{file}`; Diff receives a
+  displays comparisons; `mide-editor` edits and saves files. Files, Changes,
+  Diff and Editor opt into focus. Editor receives `{file, on?}` and reads remote
+  files through `readTextFile(..., {on})`; Diff receives a
   request including `{root, files, selectedPath, on, branch, title}`. The
   panel mods derive their location from the focused workspace.
 - Mods use `gpui-kit`, `gpui-base` and Herdr's `spaces`, `panes`, `focused`,
-  `props`, `settings`, `theme`, `window`, `shared`, `setShared`, `exec`, `watchFolder`,
-  `notify`, `readTextFile`, `writeTextFile`, `nextCommand` and `run`. Commands include
+  `props`, `settings`, `theme`, `window`, `shared`, `setShared`, `keys`,
+  `openOverlay`, `closeOverlay`, `exec`, `watchFolder`, `notify`,
+  `readTextFile`, `writeTextFile`, `nextCommand` and `run`. File creation uses
+  `writeTextFile(path, "", null)` locally and `exec` with an argument-vector
+  shell command remotely (the released `writeTextFile` has no `on` option).
+  Commands include
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
-  `mide-diff.open`. `keys.json` supplies optional `cmd-shift-e`/`ctrl-shift-e`
-  and `cmd-s`/`ctrl-s` bindings for manual merging, not automatic replacement.
+  `mide-diff.open`. `keys.json` supplies optional editor and Files shortcuts
+  for manual merging, not automatic replacement.
 - Local folder listings inside Herdr's granted read roots (the home folder;
   the app grants `read_roots([home()])` to every mod on every platform) run
   in-process through Herdr's fs API. A local folder outside those roots keeps
@@ -137,7 +155,8 @@ files, commit and make small edits without changing Herdr's theme.
   conflicted files have limited views. Editor refuses to save files truncated
   past 400,000 characters and cannot edit binary files.
 - Folder watch is local; remote views rely on periodic refresh. Editor reads
-  and writes locally, so do not rely on it to edit a remote machine's files.
+  remote files but is read-only there because the released write API has no
+  remote-machine argument.
   Herdr grants its fs API reads inside the home folder only, on every
   platform: a project outside it (another mounted volume on macOS or Linux,
   another drive on Windows) is listed through that platform's shell transport
@@ -149,7 +168,9 @@ files, commit and make small edits without changing Herdr's theme.
   the folder watcher with their own side effects.
 - The source installer skips existing mod/layout names and prints keys rather
   than overwriting them; it is not an upgrade tool. Review name and shortcut
-  conflicts before installing or manually updating. Uninstalling
+  conflicts before installing or manually updating. Context menu popup,
+  clipboard, and file creation behavior rely on Herdr's public mod APIs.
+  Uninstalling
   (`sh scripts/uninstall.sh`, recipe `just uninstall`) deletes exactly the four
   mIDE mod folders and `layouts/herdr-mide.json` from the target app home —
   Herdr's documented removal — leaving `keys.json`, shipped mods and Herdr's
@@ -166,6 +187,9 @@ files, commit and make small edits without changing Herdr's theme.
   local testing; a separate VM or test machine is not required.
 - In a disposable Git repository, Files expands and marks changes; editing and
   saving works, and an external edit is not silently overwritten.
+- Right-click file/folder rows show only valid actions; copy and Reveal target
+  the chosen item. New File/Folder confirm, cancel, reject duplicates, and
+  refresh the tree; optional shortcuts are printed for a manual keys merge.
 - Changes stages and unstages files and groups; a commit with staged changes
   includes the staged content. With no staged changes, a tracked-only commit
   excludes untracked files.

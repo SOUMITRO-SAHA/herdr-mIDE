@@ -6,5 +6,11 @@
   "mod:mide-editor": {
     "cmd-s": "mide-editor.save",
     "ctrl-s": "mide-editor.save"
+  },
+  "mod:mide-files": {
+    "cmd-n": "mide-files.new-file",
+    "cmd-shift-n": "mide-files.new-folder",
+    "ctrl-n": "mide-files.new-file",
+    "ctrl-shift-n": "mide-files.new-folder"
   }
 }
