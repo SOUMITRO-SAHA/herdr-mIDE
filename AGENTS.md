@@ -72,6 +72,10 @@ sync`, `just status`, `just shot`, `just switch`. A separate VM or test
   Git fixture from `just smoke-prepare`; do not launch a local test window in
   the fixture's app home. CI uses its own staging home and never production;
   `just check` stages into temporary directories and touches no app home.
+- **For agent-driven live and e2e verification, use the `herdr-mide-e2e`
+  skill first** (`.cursor/skills/herdr-mide-e2e/SKILL.md`, mirrored under
+  `.opencode/skills/`). Herdr’s own window and core manuals come from
+  `herdr-app --skill`, `hc --skill`, and `$HERDR_APP_HOME/AGENTS.md`.
 
 ## Contributing — the issue-first flow
 
