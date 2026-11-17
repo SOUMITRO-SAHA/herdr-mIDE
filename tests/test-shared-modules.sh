@@ -30,6 +30,7 @@ materialize_shared_modules "$TEST_ROOT" missing mide-editor mide-diff
 grep -q 'local modification' "$TEST_ROOT/mods/mide-editor/_shared/syntax.js"
 materialize_shared_modules "$TEST_ROOT" replace mide-editor mide-diff
 head -2 "$TEST_ROOT/mods/mide-editor/_shared/syntax.js" > "$TEST_ROOT/banner"
+shared_banner "shared/syntax.js" > "$TEST_ROOT/banner-expected"
 cmp "$TEST_ROOT/banner" "$TEST_ROOT/banner-expected"
 
 # A CRLF checkout (Windows core.autocrlf) must not break materialization.
