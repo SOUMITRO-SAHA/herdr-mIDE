@@ -93,8 +93,8 @@ sync`, `just status`, `just shot`, `just switch`. A separate VM or test
   do not click or activate Herdr by bundle id alone.
 - `just test` / `just check` remain the required gates; `e2e/` supplements manual
   scenes in [`docs/TESTING.md`](./docs/TESTING.md), it does not replace them.
-- Prefer `just e2e-files-context` (or the script named in `e2e/README.md`) over
-  ad-hoc copies under `scripts/`. Do not move `scripts/smoke.mjs`, `check.sh`,
+- Prefer `just e2e-files-context`, `just e2e-editor-markdown`, or the script
+  named in `e2e/README.md` over ad-hoc copies under `scripts/`. Do not move `scripts/smoke.mjs`, `check.sh`,
   `dev.sh`, or `sync.sh` into `e2e/` — see the boundary table in `e2e/README.md`.
 
 ## Contributing — the issue-first flow

@@ -45,6 +45,7 @@ help:
     @echo "  just smoke-prepare  prepare a separate app home; see TESTING.md"
     @echo "  just smoke-capture  capture a scene from a user-started test window"
     @echo "  just e2e-files-context  dev-only Files context-menu automation; see e2e/"
+    @echo "  just e2e-editor-markdown  dev-only Editor Markdown Raw automation; see e2e/"
 
 dev interval=INTERVAL:
     @INTERVAL="{{interval}}" ./scripts/dev.sh
@@ -120,3 +121,10 @@ e2e-files-context run="local":
     export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
     export E2E_RUN="{{run}}"
     exec ./e2e/scripts/files-context-menus.sh
+
+e2e-editor-markdown run="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
+    export E2E_RUN="{{run}}"
+    exec ./e2e/scripts/editor-markdown-raw.sh

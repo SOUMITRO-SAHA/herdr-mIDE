@@ -91,9 +91,10 @@ process whose environment includes `HERDR_APP_HOME=…/herdr-dev` (see
 
 ## Available scripts
 
-| Script                                                             | Purpose                                                                                                                   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| [`scripts/files-context-menus.sh`](scripts/files-context-menus.sh) | Files panel: show panel, right-click root/folder/file rows, `herdr-app shot` + status JSON (macOS; targets dev PID only). |
+| Script                                                             | Purpose                                                                                                                       |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [`scripts/files-context-menus.sh`](scripts/files-context-menus.sh) | Files panel: show panel, right-click root/folder/file rows, `herdr-app shot` + status JSON (macOS; targets dev PID only).     |
+| [`scripts/editor-markdown-raw.sh`](scripts/editor-markdown-raw.sh) | Editor: open a `.md` via `tab.new`, capture Raw (Raw + Preview only, no Edit toggle); optional Preview click (macOS dev PID). |
 
 Run via `just` when a recipe exists (see root `justfile`), or directly:
 
