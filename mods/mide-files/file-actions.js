@@ -10,33 +10,43 @@ export function contextMenuActions({ rowKind, remote = false }) {
 }
 
 export function shortcutHint(bindings, action, platform) {
-  const chord =
-    action === "new-file"
-      ? platform === "macos"
-        ? "cmd-n"
-        : "ctrl-n"
-      : action === "new-folder"
-        ? platform === "macos"
-          ? "cmd-shift-n"
-          : "ctrl-shift-n"
-        : null;
+  const shortcut = {
+    "new-file": {
+      macos: ["cmd-n", "⌘N"],
+      linux: ["ctrl-n", "Ctrl+N"],
+      windows: ["ctrl-n", "Ctrl+N"],
+    },
+    "new-folder": {
+      macos: ["alt-cmd-n", "⌥⌘N"],
+      linux: ["alt-ctrl-n", "Ctrl+Alt+N"],
+      windows: ["alt-n", "Alt+N"],
+    },
+    reveal: {
+      macos: ["alt-cmd-r", "⌥⌘R"],
+      linux: ["ctrl-alt-r", "Ctrl+Alt+R"],
+      windows: ["ctrl-alt-r", "Ctrl+Alt+R"],
+    },
+    "copy-absolute-path": {
+      macos: ["alt-cmd-c", "⌥⌘C"],
+      linux: ["ctrl-alt-c", "Ctrl+Alt+C"],
+      windows: ["alt-shift-c", "Alt+Shift+C"],
+    },
+    "copy-relative-path": {
+      macos: ["alt-cmd-shift-c", "⌥⌘⇧C"],
+      linux: ["ctrl-alt-shift-c", "Ctrl+Alt+Shift+C"],
+    },
+  }[action]?.[platform];
   if (
-    !chord ||
+    !shortcut ||
     !bindings.some(
       binding =>
         binding.section === "mod:mide-files" &&
-        binding.keys.trim().split(/\s+/)[0].toLowerCase() === chord &&
+        binding.keys.trim().toLowerCase() === shortcut[0] &&
         binding.action === `mide-files.${action}`,
     )
   )
     return null;
-  return action === "new-file"
-    ? platform === "macos"
-      ? "⌘N"
-      : "Ctrl+N"
-    : platform === "macos"
-      ? "⌘⇧N"
-      : "Ctrl+Shift+N";
+  return shortcut[1];
 }
 
 export function creationFolder(path, rowKind) {

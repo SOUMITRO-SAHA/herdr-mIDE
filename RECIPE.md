@@ -57,9 +57,13 @@ files, commit and make small edits without changing Herdr's theme.
   a file, inside a folder, or at the root; Enter and blur confirm, Escape
   cancels, and invalid or duplicate names stay visible beside the input. A
   created file opens in the editor. `cmd-n`/`ctrl-n` create files and
-  `cmd-shift-n`/`ctrl-shift-n` create folders when the optional
-  `mod:mide-files` bindings have been merged; menu hints appear only when those
-  exact bindings are active. Remote rows omit local file-manager Reveal.
+  Zed-style `alt-cmd-n` (macOS), `alt-ctrl-n` (Linux), or `alt-n` (Windows)
+  create folders when the optional `mod:mide-files` bindings have been merged.
+  The menu right-aligns active shortcuts for New File, New Folder, Reveal,
+  Copy Absolute Path and Copy Relative Path; it does not imply shortcuts that
+  are not active. Copy Name and Open in New Tab have no assigned shortcut;
+  Windows has no Copy Relative Path shortcut. Remote rows omit local
+  file-manager Reveal.
 - In Changes, clicking a file opens its diff; its checkbox stages or unstages
   it without opening Diff. Group checkboxes and Stage All/Unstage All act on
   their respective files. History displays up to 100 recent commits.
@@ -114,7 +118,11 @@ files, commit and make small edits without changing Herdr's theme.
   Commands include
   `pane.split`, `tab.new`, `mide-editor.open`, `mide-editor.save` and
   `mide-diff.open`. `keys.json` supplies optional editor and Files shortcuts
-  for manual merging, not automatic replacement.
+  for manual merging, not automatic replacement. Zed-style Files bindings are
+  `cmd-n`/`alt-cmd-n`, `alt-cmd-r`, `alt-cmd-c` and `alt-cmd-shift-c` on
+  macOS; `ctrl-n`/`alt-ctrl-n`, `ctrl-alt-r`, `ctrl-alt-c` and
+  `ctrl-alt-shift-c` on Linux; and `ctrl-n`/`alt-n`, `ctrl-alt-r` and
+  `alt-shift-c` on Windows.
 - Local folder listings inside Herdr's granted read roots (the home folder;
   the app grants `read_roots([home()])` to every mod on every platform) run
   in-process through Herdr's fs API. A local folder outside those roots keeps

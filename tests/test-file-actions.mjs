@@ -40,12 +40,29 @@ assert.deepEqual(contextMenuActions({ rowKind: "file", remote: true }), [
 assert.deepEqual(contextMenuActions({ rowKind: "root" }), ["new-file", "new-folder"]);
 const createShortcuts = [
   { section: "mod:mide-files", keys: "cmd-n", action: "mide-files.new-file" },
-  { section: "mod:mide-files", keys: "cmd-shift-n", action: "mide-files.new-folder" },
+  { section: "mod:mide-files", keys: "alt-cmd-n", action: "mide-files.new-folder" },
+  { section: "mod:mide-files", keys: "alt-cmd-r", action: "mide-files.reveal" },
+  { section: "mod:mide-files", keys: "alt-cmd-c", action: "mide-files.copy-absolute-path" },
+  { section: "mod:mide-files", keys: "alt-cmd-shift-c", action: "mide-files.copy-relative-path" },
   { section: "mod:mide-files", keys: "ctrl-n", action: "mide-files.new-file" },
-  { section: "mod:mide-files", keys: "ctrl-shift-n", action: "mide-files.new-folder" },
+  { section: "mod:mide-files", keys: "alt-ctrl-n", action: "mide-files.new-folder" },
+  { section: "mod:mide-files", keys: "ctrl-alt-r", action: "mide-files.reveal" },
+  { section: "mod:mide-files", keys: "ctrl-alt-c", action: "mide-files.copy-absolute-path" },
+  { section: "mod:mide-files", keys: "ctrl-alt-shift-c", action: "mide-files.copy-relative-path" },
+  { section: "mod:mide-files", keys: "alt-n", action: "mide-files.new-folder" },
+  { section: "mod:mide-files", keys: "ctrl-alt-r", action: "mide-files.reveal" },
+  { section: "mod:mide-files", keys: "alt-shift-c", action: "mide-files.copy-absolute-path" },
 ];
 assert.equal(shortcutHint(createShortcuts, "new-file", "macos"), "⌘N");
-assert.equal(shortcutHint(createShortcuts, "new-folder", "linux"), "Ctrl+Shift+N");
+assert.equal(shortcutHint(createShortcuts, "new-folder", "macos"), "⌥⌘N");
+assert.equal(shortcutHint(createShortcuts, "new-folder", "linux"), "Ctrl+Alt+N");
+assert.equal(shortcutHint(createShortcuts, "new-folder", "windows"), "Alt+N");
+assert.equal(shortcutHint(createShortcuts, "reveal", "macos"), "⌥⌘R");
+assert.equal(shortcutHint(createShortcuts, "copy-absolute-path", "macos"), "⌥⌘C");
+assert.equal(shortcutHint(createShortcuts, "copy-relative-path", "macos"), "⌥⌘⇧C");
+assert.equal(shortcutHint(createShortcuts, "copy-relative-path", "linux"), "Ctrl+Alt+Shift+C");
+assert.equal(shortcutHint(createShortcuts, "copy-absolute-path", "windows"), "Alt+Shift+C");
+assert.equal(shortcutHint(createShortcuts, "copy-relative-path", "windows"), null);
 assert.equal(
   shortcutHint([{ section: "mod:mide-files", keys: "cmd-n", action: "other.action" }], "new-file", "macos"),
   null,

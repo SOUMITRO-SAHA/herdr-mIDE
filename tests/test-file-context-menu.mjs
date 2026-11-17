@@ -109,7 +109,10 @@ const context = {
   writeTextFile: async (...args) => writes.push(args),
   keys: () => [
     { section: "mod:mide-files", keys: "cmd-n", action: "mide-files.new-file" },
-    { section: "mod:mide-files", keys: "cmd-shift-n", action: "mide-files.new-folder" },
+    { section: "mod:mide-files", keys: "alt-cmd-n", action: "mide-files.new-folder" },
+    { section: "mod:mide-files", keys: "alt-cmd-r", action: "mide-files.reveal" },
+    { section: "mod:mide-files", keys: "alt-cmd-c", action: "mide-files.copy-absolute-path" },
+    { section: "mod:mide-files", keys: "alt-cmd-shift-c", action: "mide-files.copy-relative-path" },
   ],
   resolveIcon: () => null,
   gitColors: {},
@@ -144,12 +147,20 @@ assert.ok(ids.has("mide-files-menu-copy-name"));
 assert.ok(ids.has("mide-files-menu-new-file"));
 assert.ok(ids.has("mide-files-menu-new-folder"));
 assert.ok(labels.includes("⌘N"), "the shortcut hint appears when the matching key is merged");
+assert.ok(labels.includes("⌥⌘R"), "Reveal's active shortcut appears in the right column");
+assert.ok(labels.includes("⌥⌘C"), "Copy Absolute Path's active shortcut appears in the right column");
+assert.ok(labels.includes("⌥⌘⇧C"), "Copy Relative Path's active shortcut appears in the right column");
 
 controls.get("mide-files-menu-copy-absolute-path")(null, {
   write_to_clipboard: value => clipboard.push(value),
 });
 assert.deepEqual(clipboard, ["/work/repo/src/main.js"]);
 assert.deepEqual(closed, ["file-menu"]);
+
+panel.runSelectedAction("copy-relative-path", {
+  write_to_clipboard: value => clipboard.push(value),
+});
+assert.equal(clipboard.at(-1), "src/main.js");
 
 fileView.dispatchMenuAction("new-file", {});
 assert.equal(sharedValues.get("mide.files.action.request").action, "new-file");
@@ -158,6 +169,7 @@ assert.deepEqual(commands.at(-1), { name: "mide-files.new-file", args: undefined
 panel.showContextMenu({ path: "src", rowKind: "folder" }, { x: 10, y: 20 });
 const folderView = renderMenu(latestOverlay.props.contextMenu, "folder-menu");
 assert.ok(ids.has("mide-files-menu-open-in-new-tab"));
+assert.ok(labels.includes("⌥⌘N"), "the folder shortcut is right-aligned when its key is merged");
 folderView.dispatchMenuAction("open-in-new-tab", {});
 assert.equal(commands.at(-1).name, "tab.new");
 assert.equal(commands.at(-1).args.space, "space-1");
@@ -224,5 +236,21 @@ await panel.createWithShell("/remote/repo/new.txt", "file", "build-machine");
 assert.equal(execCalls.at(-1).program, "sh");
 assert.equal(execCalls.at(-1).options.on, "build-machine");
 assert.equal(execCalls.at(-1).args.at(-1), "/remote/repo/new.txt");
+
+panel.selected = { path: "src/main.js", rowKind: "file" };
+panel.menuOverlay = null;
+panel.runSelectedAction("reveal", createCx);
+await tasks.at(-1);
+assert.equal(execCalls.at(-1).program, "open");
+assert.equal(execCalls.at(-1).args[0], "-R");
+assert.equal(execCalls.at(-1).args[1], "/work/repo/src/main.js");
+panel.on = "build-machine";
+const remoteRevealCallCount = execCalls.length;
+panel.runSelectedAction("reveal", createCx);
+assert.equal(
+  execCalls.length,
+  remoteRevealCallCount,
+  "Reveal shortcuts do not open local file managers for remote files",
+);
 
 console.log("file context menu tests passed");

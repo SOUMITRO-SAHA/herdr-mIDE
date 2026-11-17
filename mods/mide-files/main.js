@@ -163,7 +163,12 @@ export default class MideFiles extends View {
       for (;;) {
         const command = await nextCommand(),
           name = typeof command === "string" ? command : command?.name;
-        if (!["new-file", "new-folder", "open", "toggle"].includes(name)) continue;
+        if (
+          !["new-file", "new-folder", "open", "toggle", "reveal", "copy-absolute-path", "copy-relative-path"].includes(
+            name,
+          )
+        )
+          continue;
         const request = shared(FILE_ACTION_REQUEST),
           fromMenu =
             request?.action === name &&
@@ -175,6 +180,8 @@ export default class MideFiles extends View {
         }
         if (name === "new-file" || name === "new-folder") {
           this.startCreate(name === "new-file" ? "file" : "folder", cx);
+        } else if (["reveal", "copy-absolute-path", "copy-relative-path"].includes(name)) {
+          this.runSelectedAction(name, cx);
         } else {
           if (!fromMenu) continue;
           if (name === "open") this.open(request.path, cx);
@@ -189,7 +196,7 @@ export default class MideFiles extends View {
     this.selected = { path: row.path, rowKind: row.rowKind };
     const actions = contextMenuActions({ rowKind: row.rowKind, remote: Boolean(this.on) }),
       height = actions.length * 34 + 8;
-    openOverlay({
+    this.menuOverlay = openOverlay({
       mod: "mide-files",
       props: {
         contextMenu: {
@@ -265,6 +272,46 @@ export default class MideFiles extends View {
     run(`mide-files.${targetAction}`);
   }
 
+  runSelectedAction(action, cx) {
+    const selected = this.selected;
+    if (!this.root || !selected || selected.rowKind === "root") return;
+    if (action === "copy-absolute-path") {
+      cx.write_to_clipboard(createAbsolutePath(this.root, "", selected.path));
+      if (this.menuOverlay) closeOverlay(this.menuOverlay);
+      this.menuOverlay = null;
+      return;
+    }
+    if (action === "copy-relative-path") {
+      cx.write_to_clipboard(selected.path);
+      if (this.menuOverlay) closeOverlay(this.menuOverlay);
+      this.menuOverlay = null;
+      return;
+    }
+    if (action === "reveal") {
+      if (this.on) return;
+      const command = revealCommand(
+        window().platform,
+        createAbsolutePath(this.root, "", selected.path),
+        selected.rowKind,
+      );
+      if (this.menuOverlay) closeOverlay(this.menuOverlay);
+      this.menuOverlay = null;
+      cx.spawn(async () => {
+        try {
+          const result = await exec(command.program, command.args);
+          if (result.code !== 0)
+            notify({
+              title: "Couldn't reveal this item",
+              body: result.stderr || "The file manager returned an error",
+              level: "error",
+            });
+        } catch (error) {
+          notify({ title: "Couldn't reveal this item", body: String(error), level: "error" });
+        }
+      });
+    }
+  }
+
   renderContextMenu(typography) {
     const menu = this.contextMenu,
       t = { ...theme(), ...gitColors },
@@ -288,6 +335,9 @@ export default class MideFiles extends View {
       hint = {
         "new-file": shortcutHint(bindings, "new-file", menu.platform),
         "new-folder": shortcutHint(bindings, "new-folder", menu.platform),
+        reveal: shortcutHint(bindings, "reveal", menu.platform),
+        "copy-absolute-path": shortcutHint(bindings, "copy-absolute-path", menu.platform),
+        "copy-relative-path": shortcutHint(bindings, "copy-relative-path", menu.platform),
       };
     const children = [];
     for (const action of actions) {
