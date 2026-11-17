@@ -6,5 +6,19 @@
   "mod:mide-editor": {
     "cmd-s": "mide-editor.save",
     "ctrl-s": "mide-editor.save"
+  },
+  "mod:mide-files": {
+    "cmd-n": "mide-files.new-file",
+    "alt-cmd-n": "mide-files.new-folder",
+    "alt-cmd-r": "mide-files.reveal",
+    "alt-cmd-c": "mide-files.copy-absolute-path",
+    "alt-cmd-shift-c": "mide-files.copy-relative-path",
+    "ctrl-n": "mide-files.new-file",
+    "alt-ctrl-n": "mide-files.new-folder",
+    "alt-n": "mide-files.new-folder",
+    "ctrl-alt-r": "mide-files.reveal",
+    "ctrl-alt-c": "mide-files.copy-absolute-path",
+    "ctrl-alt-shift-c": "mide-files.copy-relative-path",
+    "alt-shift-c": "mide-files.copy-absolute-path"
   }
 }

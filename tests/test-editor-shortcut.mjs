@@ -64,6 +64,13 @@ assert.equal(
   false,
 );
 assert.deepEqual(calls, []);
+calls.length = 0;
+assert.equal(
+  handleSaveShortcut(key({ platform: true }), cx, { ...editor, on: "build-machine" }, "macos", noBindings, layout),
+  false,
+  "remote editor buffers must not offer a local save shortcut",
+);
+assert.deepEqual(calls, []);
 const source = readFileSync(new URL("../mods/mide-editor/main.js", import.meta.url), "utf8");
 assert.match(source, /import \{ handleSaveShortcut \} from "\.\/keybindings\.js"/);
 assert.match(source, /\.track_focus\(this\.handle\)\s*\.on_key_down\(\(e, cx\) => handleSaveShortcut\(/);

@@ -26,6 +26,7 @@ const MAX = 400000;
 const WORD_WRAP_SETTING = "mide.editor.word_wrap";
 const MARKDOWN_PREVIEW_SETTING = "mide.editor.markdown_preview_default";
 const EDITOR_REQUEST = "mide.editor.request";
+const draftKey = (file, on) => (on ? `${on}\0${file}` : file);
 // Herdr's key names are platform-literal: cmd-s matches only on macOS, so
 // the hint follows the documented window().platform.
 const saveHint = () => (window().platform === "macos" ? "⌘S save" : "Ctrl+S save");
@@ -58,13 +59,16 @@ export default class MideEditor extends View {
     this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.settingsOpen = false;
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
-    this.load(props()?.file ?? null, cx);
+    this.load(props()?.file ?? null, props()?.on ?? null, cx);
     cx.spawn(async cx => {
       for (;;) {
         const command = await nextCommand();
         const name = typeof command === "string" ? command : command?.name;
         if (name === "save") this.save(cx);
-        else if (name === "open") this.openFile(shared(EDITOR_REQUEST)?.file ?? null, cx);
+        else if (name === "open") {
+          const request = shared(EDITOR_REQUEST);
+          this.openFile(request?.file ?? null, request?.on ?? null, cx);
+        }
         cx.notify();
       }
     });
@@ -74,6 +78,7 @@ export default class MideEditor extends View {
     const code = EditorState.new({
       language: languageFor(file),
       value,
+      readonly: Boolean(this.on),
       soft_wrap: this.wordWrap,
       syntax: syntaxPalette(),
     });
@@ -86,13 +91,14 @@ export default class MideEditor extends View {
     return code;
   }
 
-  load(file, cx) {
+  load(file, on, cx) {
     this.code?.release();
     this.code = null;
     this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true;
     this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.file = file ?? null;
+    const machine = (this.on = on ?? null);
     this.baseline = null;
     this.truncated = false;
     this.dirty = false;
@@ -100,7 +106,7 @@ export default class MideEditor extends View {
     this.note = null;
     this.saved = false;
     if (!file) return;
-    const draft = this.drafts.get(file);
+    const draft = this.drafts.get(draftKey(file, this.on));
     if (draft) {
       this.baseline = draft.baseline;
       this.truncated = draft.truncated;
@@ -111,8 +117,8 @@ export default class MideEditor extends View {
     }
     cx.spawn(async cx => {
       try {
-        const text = await readTextFile(file);
-        if (this.file !== file) return;
+        const text = await readTextFile(file, machine ? { on: machine } : undefined);
+        if (this.file !== file || this.on !== machine) return;
         if (text === null) {
           this.error = "This file is no longer available";
           return;
@@ -127,23 +133,33 @@ export default class MideEditor extends View {
         this.truncated = text.length > MAX;
         this.code = this.createCode(this.truncated ? text.slice(0, MAX) + "\n… (file truncated)" : text, file);
       } catch {
-        if (this.file === file) this.error = "Cannot open this file (binary, too large, or unreadable)";
+        if (this.file === file && this.on === machine)
+          this.error = "Cannot open this file (binary, too large, or unreadable)";
       } finally {
         cx.notify();
       }
     });
   }
 
-  openFile(file, cx) {
-    if (!file || file === this.file) return;
+  openFile(file, on, cx) {
+    if (!file || (file === this.file && (on ?? null) === this.on)) return;
     if (this.dirty && this.code && this.file) {
-      this.drafts.set(this.file, { value: this.code.value(), baseline: this.baseline, truncated: this.truncated });
+      this.drafts.set(draftKey(this.file, this.on), {
+        value: this.code.value(),
+        baseline: this.baseline,
+        truncated: this.truncated,
+      });
     }
-    this.load(file, cx);
+    this.load(file, on, cx);
   }
 
   save(cx) {
     if (!this.code || !this.file || this.saving) return;
+    if (this.on) {
+      this.note = "Remote files are read-only; saving them isn't supported yet";
+      cx.notify();
+      return;
+    }
     if (this.truncated) {
       this.note = "Too large to save here (>400 KB) — editing would drop the rest of the file";
       cx.notify();
@@ -154,6 +170,8 @@ export default class MideEditor extends View {
     this.saved = false;
     const sequence = (this.saveSequence = (this.saveSequence ?? 0) + 1);
     const file = this.file,
+      on = this.on,
+      key = draftKey(file, on),
       value = this.code.value(),
       expected = this.baseline;
     cx.spawn(async cx => {
@@ -161,10 +179,10 @@ export default class MideEditor extends View {
         // The host only writes when the disk still matches the snapshot we
         // loaded; on success our draft becomes the new baseline.
         await writeTextFile(file, value, expected);
-        if (this.file === file) {
+        if (this.file === file && this.on === on) {
           this.baseline = value;
           this.dirty = !this.code || this.code.value() !== value;
-          this.drafts.delete(file);
+          this.drafts.delete(key);
           if (!this.dirty) {
             this.saved = sequence;
             cx.timer.after(1500, cx => {
@@ -175,9 +193,9 @@ export default class MideEditor extends View {
             });
           }
         } else {
-          const draft = this.drafts.get(file);
+          const draft = this.drafts.get(key);
           if (draft) {
-            if (draft.value === value) this.drafts.delete(file);
+            if (draft.value === value) this.drafts.delete(key);
             else draft.baseline = value;
           }
         }
@@ -492,8 +510,8 @@ export default class MideEditor extends View {
                   .underline()
                   .child("Reload (discard draft)")
                   .on_click((_e, cx) => {
-                    this.drafts.delete(this.file);
-                    this.load(this.file, cx);
+                    this.drafts.delete(draftKey(this.file, this.on));
+                    this.load(this.file, this.on, cx);
                   }),
               ),
             ),
@@ -522,10 +540,10 @@ export default class MideEditor extends View {
               div()
                 .id("mide-editor-save-status")
                 .flex_none()
-                .child(this.saving ? "Saving…" : this.saved ? "Saved" : saveHint()),
+                .child(this.on ? "Remote · read-only" : this.saving ? "Saving…" : this.saved ? "Saved" : saveHint()),
             ),
           )
-          .when(this.code && this.file, el =>
+          .when(this.code && this.file && !this.on, el =>
             el.child(
               div()
                 .id("mide-editor-save")

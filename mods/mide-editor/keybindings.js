@@ -6,6 +6,7 @@ export function handleSaveShortcut(event, cx, editor, platform, getBindings, get
   const mac = platform === "macos";
   if (
     !["macos", "windows", "linux"].includes(platform) ||
+    editor.on ||
     !editor.file ||
     !editor.code ||
     event.key !== "s" ||

@@ -7,8 +7,9 @@ the _how_ lives in the PR.
 
 These rules apply to everyone — people and AI agents alike. Agents should
 also read [AGENTS.md](./AGENTS.md) for mod-specific rules: public Herdr APIs
-only, TDD, the `herdr-dev` profile for local testing, the two icon sources,
-and third-party credit.
+only, TDD, the `herdr-dev` profile for local testing, **E2E / automation
+testing via [`e2e/`](./e2e/)** (terminology in [`e2e/README.md`](./e2e/README.md)),
+the two icon sources, and third-party credit.
 
 ## The flow at a glance
 
@@ -75,6 +76,10 @@ Examples: `fix/12-editor-save-windows`, `docs/7-issue-first-contribution-flow`.
 - Mods changed → `just check` too (the Herdr runtime's own parser).
 - Any live Herdr verification runs in the `herdr-dev` profile, never the
   production app home (AGENTS.md, “Local testing”).
+- **Automation testing** / **E2E testing** for a feature means the [`e2e/`](./e2e/)
+  scripts and/or the manual scenes in [`docs/TESTING.md`](./docs/TESTING.md) on
+  `herdr-dev` — see [`e2e/README.md`](./e2e/README.md). `just test` and
+  `just check` are required but do not count as E2E by themselves.
 - Update in the same change: `CHANGELOG.md` (Unreleased) for user-facing
   changes, `RECIPE.md` for behavior, asset or setup changes, and
   `THIRD-PARTY-NOTICES.md` for anything adopted from third parties.

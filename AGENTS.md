@@ -72,6 +72,30 @@ sync`, `just status`, `just shot`, `just switch`. A separate VM or test
   Git fixture from `just smoke-prepare`; do not launch a local test window in
   the fixture's app home. CI uses its own staging home and never production;
   `just check` stages into temporary directories and touches no app home.
+- **For agent-driven live and e2e verification, use the `herdr-mide-e2e`
+  skill first** (`.cursor/skills/herdr-mide-e2e/SKILL.md`, mirrored under
+  `.opencode/skills/`). Herdr’s own window and core manuals come from
+  `herdr-app --skill`, `hc --skill`, and `$HERDR_APP_HOME/AGENTS.md`.
+
+## End-to-end automation (`e2e/`)
+
+- In this repo, **automation testing** and **E2E testing** mean [`e2e/`](./e2e/)
+  only — not `just test` alone. Use that vocabulary in issues, PRs and replies.
+- **Herdr UI automation** lives under [`e2e/`](./e2e/): scripts in
+  `e2e/scripts/`, captures in `e2e/screenshots/<run-id>/`. The screenshot tree
+  is gitignored; never commit PNG or status JSON from a run.
+- Add new live automation only as scripts under `e2e/scripts/`; document them in
+  [`e2e/README.md`](./e2e/README.md). Reuse `e2e/scripts/lib/herdr-dev.sh` for
+  the dev profile, PID selection, and output paths (`E2E_RUN` names each run).
+- Every script and agent-run must set `HERDR_APP_HOME` to `herdr-dev` and must
+  refuse production app-home paths. When production and dev windows are both
+  open, target the dev process (environment includes `HERDR_APP_HOME=…/herdr-dev`);
+  do not click or activate Herdr by bundle id alone.
+- `just test` / `just check` remain the required gates; `e2e/` supplements manual
+  scenes in [`docs/TESTING.md`](./docs/TESTING.md), it does not replace them.
+- Prefer `just e2e-files-context` (or the script named in `e2e/README.md`) over
+  ad-hoc copies under `scripts/`. Do not move `scripts/smoke.mjs`, `check.sh`,
+  `dev.sh`, or `sync.sh` into `e2e/` — see the boundary table in `e2e/README.md`.
 
 ## Contributing — the issue-first flow
 

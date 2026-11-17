@@ -9,6 +9,7 @@
 #   just uninstall remove the installed mods and layout (never touches keys)
 #   just status    what the window says: layout, focus, errors from mods
 #   just shot      PNG of the window → herdr-shot.png
+#   just e2e-*     automation testing (E2E on herdr-dev); see e2e/README.md
 #   just switch    show the herdr-mide layout (ctrl-shift-l cycles back)
 #
 # Requirements: Bun, Git, a POSIX shell (Git Bash on Windows) and rsync —
@@ -43,6 +44,7 @@ help:
     @echo "  just bundle   create a self-contained layout bundle in dist/herdr-mide"
     @echo "  just smoke-prepare  prepare a separate app home; see TESTING.md"
     @echo "  just smoke-capture  capture a scene from a user-started test window"
+    @echo "  just e2e-files-context  dev-only Files context-menu automation; see e2e/"
 
 dev interval=INTERVAL:
     @INTERVAL="{{interval}}" ./scripts/dev.sh
@@ -64,6 +66,8 @@ test:
     @bun ./tests/test-changes-footer-sizing.mjs
     @bun ./tests/test-changes-branch-footer.mjs
     @bun ./tests/test-file-icons.mjs
+    @bun ./tests/test-file-actions.mjs
+    @bun ./tests/test-file-context-menu.mjs
     @bun ./tests/test-file-directory.mjs
     @bun ./tests/test-diff-assets.mjs
     @bun ./tests/test-editor-save.mjs
@@ -108,3 +112,11 @@ smoke-prepare:
 
 smoke-capture smoke_root scene:
     @MIDE_SMOKE_ROOT="{{smoke_root}}" MIDE_SMOKE_SCENE="{{scene}}" bun ./scripts/smoke.mjs --capture
+
+# Live Herdr UI automation (herdr-dev only). Sets E2E_RUN; see e2e/README.md.
+e2e-files-context run="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
+    export E2E_RUN="{{run}}"
+    exec ./e2e/scripts/files-context-menus.sh

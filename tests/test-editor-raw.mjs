@@ -85,6 +85,9 @@ let editorNewCalls = 0;
 let markdownCalls = 0;
 let editorOptions;
 let fileText;
+const codeOptions = [],
+  readRequests = [],
+  writes = [];
 const context = {
   View: class {},
   div: element,
@@ -100,6 +103,7 @@ const context = {
   EditorState: {
     new: options => {
       editorOptions = options;
+      codeOptions.push(options);
       let value = options?.value ?? "";
       let change;
       return {
@@ -143,8 +147,8 @@ const context = {
   keys: {},
   props: () => undefined,
   nextCommand: async () => undefined,
-  readTextFile: async () => fileText ?? MD,
-  writeTextFile: async () => {},
+  readTextFile: async (file, options) => (readRequests.push({ file, options }), fileText ?? MD),
+  writeTextFile: async (...args) => writes.push(args),
   languageFor,
   syntaxPalette,
 };
@@ -171,6 +175,18 @@ const MD = [
 ].join("\n");
 const codeStub = value => ({ value: () => value, release() {} });
 
+const find = (parent, id) => {
+  parent = parent.self ?? parent;
+  if (parent.id === id) return parent;
+  for (const kid of parent.kids ?? []) {
+    if (kid.tag) {
+      const hit = find(kid, id);
+      if (hit) return hit;
+    }
+  }
+  return null;
+};
+
 const editor = new MideEditor();
 Object.assign(editor, {
   file: "notes.md",
@@ -190,17 +206,6 @@ Object.assign(editor, {
 // Raw Markdown is immediately editable and never exposes an Edit/View toggle.
 const renderedRoot = editor.render(cx);
 const root = renderedRoot.self ?? renderedRoot;
-const find = (parent, id) => {
-  parent = parent.self ?? parent;
-  if (parent.id === id) return parent;
-  for (const kid of parent.kids ?? []) {
-    if (kid.tag) {
-      const hit = find(kid, id);
-      if (hit) return hit;
-    }
-  }
-  return null;
-};
 const readingList = find(root, "mide-editor-reading-list");
 assert.equal(readingList, null);
 assert.ok(editorNewCalls > 0, "Markdown Raw uses the host editor directly");
@@ -228,7 +233,7 @@ assert.ok(markdownCalls > 0, "preview still renders TextView markdown");
 
 // A freshly loaded Markdown file and restored draft open in the host editor.
 Object.assign(editor, { file: "doc.md", editorMode: "raw" });
-editor.load("doc.md", cx);
+editor.load("doc.md", null, cx);
 await pending.pop();
 assert.equal(editorOptions.language, "markdown");
 assert.deepEqual(editorOptions.syntax, syntaxPalette());
@@ -236,19 +241,32 @@ editorNewCalls = 0;
 editor.render(cx);
 assert.ok(editorNewCalls > 0);
 editor.code.edit("unsaved draft", cx);
-editor.openFile("other.md", cx);
+editor.openFile("other.md", null, cx);
 await pending.pop();
-editor.openFile("doc.md", cx);
+editor.openFile("doc.md", null, cx);
 editorNewCalls = 0;
 editor.render(cx);
 assert.ok(editorNewCalls > 0, "restored draft opens in the editor");
 assert.equal(editor.code.value(), "unsaved draft");
 fileText = "long ".repeat(2000);
-editor.openFile("long.md", cx);
+editor.openFile("long.md", null, cx);
 await pending.pop();
 assert.equal(editor.code.value(), fileText, "long Markdown lines remain intact in Raw");
 editorNewCalls = 0;
 editor.render(cx);
 assert.ok(editorNewCalls > 0);
+
+editor.load("/remote/repo/new file.txt", "build-machine", cx);
+await pending.pop();
+assert.equal(readRequests.at(-1).file, "/remote/repo/new file.txt");
+assert.equal(readRequests.at(-1).options.on, "build-machine", "remote opens read from the target machine");
+assert.equal(codeOptions.at(-1).readonly, true, "remote files open read-only without a public remote write API");
+assert.equal(editor.on, "build-machine");
+editor.save(cx);
+assert.match(editor.note, /read-only/);
+assert.equal(writes.length, 0, "saving a remote buffer must never write to the local machine");
+const remoteRoot = editor.render(cx);
+assert.equal(find(remoteRoot, "mide-editor-save"), null, "remote files do not show a Save action");
+assert.equal(find(remoteRoot, "mide-editor-save-status").text, "Remote · read-only");
 
 console.log("editor Markdown Raw tests passed");
