@@ -88,6 +88,19 @@ const shell = ["```sh", "# shell comment", "```"].join("\n");
 assert.ok(has(line(shell, 2), "comment", 0, 15));
 const golang = ["```golang", "// go comment", "```"].join("\n");
 assert.ok(has(line(golang, 2), "comment", 0, 13), "language aliases resolve (golang → go)");
+const pythonAlias = ["```py", '"""open', "inside", '"""', "```"].join("\n");
+assert.ok(has(line(pythonAlias, 3), "string", 0, 6), "py uses Python multiline strings");
+const tsAlias = ["```ts", "// comment", "```"].join("\n");
+assert.ok(has(line(tsAlias, 2), "comment", 0, 10), "ts uses JavaScript comment rules");
+
+const listFence = ["- ```js", "  const x = 1;", "  ```", "", "# After"].join("\n");
+assert.ok(has(line(listFence, 2), "keyword", 2, 7), "list fence content is code");
+assert.ok(has(line(listFence, 5), "title", 0, 7), "closing a list fence resumes Markdown");
+const quoteFence = ["> ```js", "> const x = 1;", "> ```", "# After"].join("\n");
+assert.ok(has(line(quoteFence, 2), "keyword", 2, 7), "quoted fence content is code");
+assert.ok(has(line(quoteFence, 4), "title", 0, 7), "closing a quoted fence resumes Markdown");
+const quoteOperator = ["> ```js", "> > 1", "> ```"].join("\n");
+assert.ok(has(line(quoteOperator, 2), "operator", 2, 3), "a code operator is not an extra quote marker");
 
 // A closing fence must use the same character as the opener.
 const mismatch = ["```js", "let x = 1;", "~~~", "return x;", "```", "back to prose"].join("\n");
@@ -159,6 +172,13 @@ const body = line(table, 3);
 assert.ok(has(body, "punctuation.markup", 0, 1));
 assert.ok(has(body, "punctuation.markup", 15, 16));
 assert.ok(has(body, "text.literal", 9, 14), "inline rules work inside cells");
+const pipeTable = ["| A | B |", "|---|---|", "| `a|b` | x\\|y |"].join("\n");
+const pipeBody = line(pipeTable, 3);
+assert.ok(has(pipeBody, "text.literal", 2, 7), "code span may contain a pipe");
+assert.equal(
+  pipeBody.some(run => run.scope === "punctuation.markup" && (run.start === 4 || run.start === 12)),
+  false,
+);
 assert.equal(
   line(table, 5).some(run => run.scope === "punctuation.markup"),
   false,
@@ -264,5 +284,10 @@ const started = performance.now();
 highlightLines(big, "markdown", [1, 2000, 4001]);
 const elapsed = performance.now() - started;
 assert.ok(elapsed < 2000, `large markdown input highlighted in ${Math.round(elapsed)}ms (must stay well under 2s)`);
+const unmatched = "[a".repeat(100000);
+const unmatchedStarted = performance.now();
+highlightLines(unmatched, "markdown", [1]);
+const unmatchedElapsed = performance.now() - unmatchedStarted;
+assert.ok(unmatchedElapsed < 1000, `unmatched brackets took ${Math.round(unmatchedElapsed)}ms`);
 
 console.log("shared markdown syntax tests passed");
