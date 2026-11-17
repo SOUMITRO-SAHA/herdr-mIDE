@@ -174,7 +174,7 @@ const FENCE_LANGUAGES = new Set([
 export const fenceLanguage = info => {
   const word = info.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
   if (!word) return null;
-  const language = FENCE_ALIASES[word] ?? word;
+  const language = FENCE_ALIASES[word] ?? LANG[word] ?? word;
   return FENCE_LANGUAGES.has(language) ? language : null;
 };
 
@@ -232,6 +232,9 @@ const isClosingFence = (line, char, length) => new RegExp(`^ {0,3}${char}{${leng
 // One slice per call with sticky regexes — no per-character substring
 // copying — and runs come back in the caller's coordinates.
 const inlineRuns = (runs, text, from, to, depth = 0) => {
+  // Diff displays at most 4,000 characters of a line. Keep unmatched inline
+  // delimiters from repeatedly scanning an unbounded suffix of the source.
+  to = Math.min(to, from + 4000);
   const local = from === 0 && to === text.length ? text : text.slice(from, to);
   const inner = [];
   inlineRunsLocal(inner, local, depth);
@@ -349,17 +352,34 @@ const inlineRunsLocal = (runs, text, depth) => {
 // Table rows (header, body): pipes are punctuation.markup and cell contents
 // keep the inline rules. Zed styles nothing else — header rows are ordinary.
 const tableRow = (runs, line) => {
+  line = line.slice(0, 4000);
   let index = 0;
+  let cellStart = 0;
   while (index < line.length) {
-    const pipe = line.indexOf("|", index);
-    if (pipe < 0) {
-      inlineRuns(runs, line, index, line.length);
-      break;
+    if (line[index] === "\\") {
+      index += 2;
+      continue;
     }
-    inlineRuns(runs, line, index, pipe);
-    appendRun(runs, pipe, pipe + 1, "punctuation.markup");
-    index = pipe + 1;
+    if (line[index] === "`") {
+      let end = index + 1;
+      while (line[end] === "`") end++;
+      const marker = line.slice(index, end);
+      const close = line.indexOf(marker, end);
+      if (close >= 0) {
+        index = close + marker.length;
+        continue;
+      }
+      index = end;
+      continue;
+    }
+    if (line[index] === "|") {
+      inlineRuns(runs, line, cellStart, index);
+      appendRun(runs, index, index + 1, "punctuation.markup");
+      cellStart = index + 1;
+    }
+    index++;
   }
+  inlineRuns(runs, line, cellStart, line.length);
 };
 
 // Delimiter row: pipes and dashes are punctuation.markup; alignment colons
@@ -379,23 +399,60 @@ const delimiterRow = (runs, line) => {
   }
 };
 
+// Fence prefixes belong to their containing quote/list, not the injected
+// language. Keep source offsets so the resulting runs still address the
+// original line.
+const quotePrefix = (line, limit = Infinity) => {
+  const markers = [];
+  let offset = 0;
+  while (markers.length < limit) {
+    const match = /^ {0,3}> ?/.exec(line.slice(offset));
+    if (!match) break;
+    const marker = offset + match[0].indexOf(">");
+    markers.push(marker);
+    offset += match[0].length;
+  }
+  return { offset, markers };
+};
+
 const markdownTokenizeLine = (line, state, context) => {
   const runs = [];
 
   if (state.fence) {
-    const { char, length, language, codeState } = state.fence;
-    if (isClosingFence(line, char, length)) {
-      appendRun(runs, 0, line.length, "punctuation.embedded");
+    const { char, length, language, codeState, quotes, indent } = state.fence;
+    const prefix = quotePrefix(line, quotes);
+    let offset = quotes ? prefix.offset : 0;
+    const missingQuote = quotes && prefix.markers.length < quotes;
+    const spaces = /^ */.exec(line.slice(offset))[0].length;
+    const missingIndent = indent && spaces < indent && line.slice(offset).trim() !== "";
+    if (missingQuote || missingIndent) {
       state.fence = null;
+    } else {
+      if (quotes) for (const marker of prefix.markers) appendRun(runs, marker, marker + 1, "punctuation.markup");
+      offset += Math.min(spaces, indent);
+      const content = line.slice(offset);
+      if (isClosingFence(content, char, length)) {
+        appendRun(runs, offset, line.length, "punctuation.embedded");
+        state.fence = null;
+        return runs;
+      }
+      if (language) {
+        for (const run of context.tokenize(content, language, codeState))
+          appendRun(runs, offset + run.start, offset + run.end, run.scope);
+      }
       return runs;
     }
-    // Inner lines highlight with the fenced language's own rules — Zed's
-    // injection — and unknown languages (or no info string) render plain.
-    if (!language) return runs;
-    return context.tokenize(line, language, codeState);
   }
 
-  const opening = FENCE_OPEN.exec(line);
+  const prefix = quotePrefix(line);
+  let offset = prefix.offset;
+  const containerList = LIST_MARKER.exec(line.slice(offset));
+  let indent = 0;
+  if (containerList?.[3]) {
+    indent = containerList[1].length + containerList[2].length + 1;
+    offset += indent;
+  }
+  const opening = FENCE_OPEN.exec(line.slice(offset));
   if (opening) {
     const char = opening[1][0];
     const info = opening[2].trim();
@@ -403,13 +460,19 @@ const markdownTokenizeLine = (line, state, context) => {
     // such a line is prose, not a fence.
     if (char !== "`" || !info.includes("`")) {
       const word = info.split(/\s+/)[0] ?? "";
-      appendRun(runs, 0, opening[1].length, "punctuation.embedded");
-      if (word) appendRun(runs, opening[1].length, opening[1].length + word.length, "punctuation.embedded");
+      for (const marker of prefix.markers) appendRun(runs, marker, marker + 1, "punctuation.markup");
+      if (indent) {
+        const start = prefix.offset + containerList[1].length;
+        appendRun(runs, start, start + containerList[2].length, "punctuation.list_marker");
+      }
+      appendRun(runs, offset, line.length, "punctuation.embedded");
       state.fence = {
         char,
         length: opening[1].length,
         language: context.resolveLanguage(word),
         codeState: {},
+        quotes: prefix.markers.length,
+        indent,
       };
       state.table = false;
       return runs;

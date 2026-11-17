@@ -68,7 +68,7 @@ test:
     @bun ./tests/test-diff-assets.mjs
     @bun ./tests/test-editor-save.mjs
     @bun ./tests/test-editor-shortcut.mjs
-    @bun ./tests/test-editor-reading.mjs
+    @bun ./tests/test-editor-raw.mjs
     @bun ./tests/test-keys.mjs
     @bun ./tests/test-smoke.mjs
     @bun ./tests/test-portable-temp.mjs
