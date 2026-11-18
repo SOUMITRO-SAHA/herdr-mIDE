@@ -35,7 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `~/.config/herdr-app` after `just test`-style checks (refuses `herdr-dev`).
 
 - E2E on `herdr-dev`: `just e2e-editor-image <run-id>` opens `public/logo.png`
-  in the editor and captures Preview evidence.
+  in the editor and captures Preview evidence; `just e2e-editor-svg` opens a
+  repo `.svg` on Raw then Preview. VM coverage in `tests/test-editor-svg.mjs`
+  exercises SVG Raw/Preview tabs, staging path, and raster-only Preview (no tabs).
 
 - Files rows now have a pointer-anchored context menu for Open, Reveal, copying absolute/relative paths and names, plus Open in New Tab for folders. New File/New Folder appear in the menu and on the tree root; they create an inline name row, validate names before creating, refuse existing targets, and open new files in the editor. Optional Zed-style Files bindings cover New File/New Folder, Reveal, and path copying; the menu right-aligns shortcut hints only when the corresponding binding is active. Remote menus omit local Reveal; remote creation uses `exec`, and opened remote files are read-only because the released write API is local-only.
 

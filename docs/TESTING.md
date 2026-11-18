@@ -206,7 +206,11 @@ overwrite an app, core, file or key binding belonging to someone else.
 - **Editor:** open `sample.txt`, edit and save, switch files and return to a
   draft; then change the same file externally and confirm save refuses the
   stale baseline. Test Markdown Raw/Preview and word wrap; on macOS,
-  `just e2e-editor-markdown <run-id>` captures the Raw header scene. Open a
+  `just e2e-editor-markdown <run-id>` captures the Raw header scene. Open
+  `public/logo.png` and a repo `.svg` (`mods/mide-files/icons/settings.svg`) —
+  raster images open in Preview only (no tabs); SVG defaults to Raw with
+  Raw/Preview tabs and Preview stages the file for `image()`. On macOS,
+  `just e2e-editor-image` and `just e2e-editor-svg` capture those scenes. Open a
   changed `.md` in Changes/Diff and confirm inline Markdown coloring in the diff
   pane.
 - **Changes and Diff:** stage and unstage a file and group, verify checkbox

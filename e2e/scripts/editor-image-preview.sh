@@ -74,12 +74,6 @@ sleep 2.5
 shot "20-editor-image-preview"
 herdr-app status >"$E2E_DIR/20-status.json"
 grep -q '"layout": "herdr-mide"' "$E2E_DIR/20-status.json" || fail "layout is not herdr-mide"
-if left_click_mapped "$DEV_PID" 2040 95 2>/dev/null; then
-  sleep 0.8
-  shot "30-editor-image-raw"
-  herdr-app status >"$E2E_DIR/30-status.json"
-fi
-
 herdr-app status >"$E2E_DIR/99-status-final.json"
 echo "e2e: captures → $E2E_DIR"
-echo "e2e: review 20-editor-image-preview.png — expect centered logo.png and dimension caption"
+echo "e2e: review 20-editor-image-preview.png — expect centered logo.png, dimension caption, no Raw/Preview tabs"

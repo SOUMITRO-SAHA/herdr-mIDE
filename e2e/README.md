@@ -101,11 +101,12 @@ and gallery screenshots”).
 
 ## Available scripts
 
-| Script                                                               | Purpose                                                                                                                       |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| [`scripts/files-context-menus.sh`](scripts/files-context-menus.sh)   | Files panel: show panel, right-click root/folder/file rows, `herdr-app shot` + status JSON (macOS; targets dev PID only).     |
-| [`scripts/editor-markdown-raw.sh`](scripts/editor-markdown-raw.sh)   | Editor: open a `.md` via `tab.new`, capture Raw (Raw + Preview only, no Edit toggle); optional Preview click (macOS dev PID). |
-| [`scripts/editor-image-preview.sh`](scripts/editor-image-preview.sh) | Editor: open `public/logo.png` via `tab.new`, capture Preview (centered image + caption); optional Raw click (macOS dev PID). |
+| Script                                                                   | Purpose                                                                                                                       |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [`scripts/files-context-menus.sh`](scripts/files-context-menus.sh)       | Files panel: show panel, right-click root/folder/file rows, `herdr-app shot` + status JSON (macOS; targets dev PID only).     |
+| [`scripts/editor-markdown-raw.sh`](scripts/editor-markdown-raw.sh)       | Editor: open a `.md` via `tab.new`, capture Raw (Raw + Preview only, no Edit toggle); optional Preview click (macOS dev PID). |
+| [`scripts/editor-image-preview.sh`](scripts/editor-image-preview.sh)     | Editor: open `public/logo.png` via `tab.new`, capture Preview only (no Raw/Preview tabs on raster images; macOS dev PID).     |
+| [`scripts/editor-svg-raw-preview.sh`](scripts/editor-svg-raw-preview.sh) | Editor: open a repo `.svg` (default Raw + tabs), capture Raw then Preview click (staged image render; macOS dev PID).         |
 
 Run via `just` when a recipe exists (see root `justfile`), or directly:
 
