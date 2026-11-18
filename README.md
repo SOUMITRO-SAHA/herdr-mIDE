@@ -139,6 +139,8 @@ just smoke-prepare  # prepare a disposable app home and Git fixture
 just smoke-capture  # check and capture a user-started test window; see docs/TESTING.md
 just e2e-files-context <run-id>   # automation testing: Files context menus on herdr-dev; see e2e/
 just e2e-editor-markdown <run-id> # automation testing: Editor Markdown Raw on herdr-dev
+just e2e-editor-image <run-id>    # automation testing: Editor image Preview on herdr-dev
+just update                       # overwrite mIDE in ~/.config/herdr-app (production smoke)
 ```
 
 **Automation testing** / **E2E** = [`e2e/`](./e2e/) on the **isolated**

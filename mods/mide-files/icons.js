@@ -968,3 +968,10 @@ export function resolveIcon(name) {
   for (const [prefix, icon] of PREFIX) if (lower.startsWith(prefix)) return icon;
   return null;
 }
+/** Editor image preview: raster types and SVG (full-color via `image()`, not theme `svg()`). */
+export function isEditorImageFile(path) {
+  const base = path?.split(/[\\/]/).pop();
+  if (!base) return false;
+  const icon = resolveIcon(base);
+  return icon === "image" || icon === "svg";
+}

@@ -37,9 +37,12 @@ files, commit and make small edits without changing Herdr's theme.
   quote and table-pipe punctuation, blue emphasis (bold for strong), orange
   inline code, orange italic link text with green URIs; bare URLs and
   strikethrough stay plain. Editor opens beside a terminal or below Diff,
-  with a 36px header, unsaved dot, optional Markdown Raw/Preview tabs,
-  Settings menu and 28px footer with Save. Raw Markdown uses the same editable
-  host editor as other source files (⌘S or the Save control writes).
+  with a 36px header, unsaved dot, optional Markdown Raw/Preview tabs (not shown
+  for images), Settings menu and 28px footer with Save. Raw Markdown uses the
+  same editable host editor as other source files (⌘S or the Save control writes).
+  Image files always open in Preview: the picture is centered and fit within the
+  pane (not upscaled past natural size), with the filename and pixel dimensions in a
+  caption row (no Raw/Preview tabs or editor setting for images).
 - Panel controls use Herdr's interface font and colors. Editor and diff text
   use the terminal font; their syntax uses mIDE's Ayu palette. The layout does
   not change the user's selected theme.
