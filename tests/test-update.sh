@@ -5,7 +5,9 @@ TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/mide-update-test.XXXXXX")"
 trap 'rm -r "$TEST_ROOT"' EXIT HUP INT TERM
 
 export HOME="$TEST_ROOT/home"
-PROD_HOME="$HOME/.config/herdr-app"
+# Match mide_production_app_home() when GitHub Actions sets XDG_CONFIG_HOME.
+export XDG_CONFIG_HOME="$HOME/.config"
+PROD_HOME="$XDG_CONFIG_HOME/herdr-app"
 mkdir -p "$PROD_HOME/mods/mide-editor" "$PROD_HOME/layouts" "$TEST_ROOT/bin"
 printf 'stale\n' > "$PROD_HOME/mods/mide-editor/main.js"
 printf 'stale layout\n' > "$PROD_HOME/layouts/herdr-mide.json"
