@@ -23,7 +23,7 @@ import {
   keys,
 } from "herdr";
 import { languageFor, syntaxPalette } from "./_shared/syntax.js";
-import { isEditorImageFile } from "./_shared/icons.js";
+import { isEditorRasterImage, isEditorSvgImage } from "./_shared/icons.js";
 import { handleSaveShortcut } from "./keybindings.js";
 
 const MAX = 400000;
@@ -70,10 +70,13 @@ const probeImageDimensions = async (path, on) => {
   return null;
 };
 const defaultEditorMode = (file, markdownDefault) => {
-  if (isEditorImageFile(file ?? "")) return "preview";
+  if (isEditorRasterImage(file ?? "")) return "preview";
+  if (isEditorSvgImage(file ?? "")) return "raw";
   if (languageFor(file ?? "") === "markdown") return markdownDefault ? "preview" : "raw";
   return "raw";
 };
+const editorShowsImagePreview = (file, mode) =>
+  isEditorRasterImage(file ?? "") || (isEditorSvgImage(file ?? "") && mode === "preview");
 const editorTypography = () => {
   const current = settings();
   const uiSize = current.ui_font_size ?? 13;
@@ -162,7 +165,7 @@ export default class MideEditor extends View {
       this.imagePreviewPath = null;
     }
     if (!file) return;
-    if (isEditorImageFile(file) && this.editorMode === "preview") {
+    if (editorShowsImagePreview(file, this.editorMode)) {
       const alreadyStaged = !fileChanged && this.imagePreviewPath && !this.imageError;
       if (alreadyStaged) {
         cx.notify();
@@ -440,7 +443,8 @@ export default class MideEditor extends View {
           .on_click((_e, cx) => {
             if (this.editorMode === mode) return;
             this.editorMode = mode;
-            cx.notify();
+            if (this.file && isEditorSvgImage(this.file)) this.load(this.file, this.on, cx);
+            else cx.notify();
           }),
       )
       .child(label);
@@ -452,8 +456,9 @@ export default class MideEditor extends View {
       name = this.file?.split(/[\\/]/).pop();
     const typography = editorTypography(),
       markdown = languageFor(this.file ?? "") === "markdown",
-      imageFile = isEditorImageFile(this.file ?? ""),
-      modeToggle = markdown;
+      svgImage = isEditorSvgImage(this.file ?? ""),
+      imagePreview = editorShowsImagePreview(this.file ?? "", this.editorMode),
+      modeToggle = markdown || svgImage;
     return v_flex()
       .id("mide-editor")
       .size_full()
@@ -552,7 +557,7 @@ export default class MideEditor extends View {
       )
       .child(
         this.file
-          ? imageFile && this.editorMode === "preview"
+          ? imagePreview
             ? this.imageError
               ? div().id("mide-editor-image-error").flex_1().min_h(0).p(12).text_color(t.dim).child(this.imageError)
               : this.imagePreviewPath
@@ -684,10 +689,10 @@ export default class MideEditor extends View {
               .truncate()
               .child(this.file ?? ""),
           )
-          .when(this.file && imageFile && this.editorMode === "preview", el =>
+          .when(this.file && imagePreview, el =>
             el.child(div().id("mide-editor-save-status").flex_none().child("Image preview")),
           )
-          .when(this.code && this.file && !(imageFile && this.editorMode === "preview"), el =>
+          .when(this.code && this.file && !imagePreview, el =>
             el.child(
               div()
                 .id("mide-editor-save-status")
