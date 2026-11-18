@@ -92,6 +92,7 @@ const context = {
   View: class {},
   div: element,
   svg: element,
+  image: element,
   v_flex: element,
   h_flex: element,
   Editor: {
@@ -151,6 +152,11 @@ const context = {
   writeTextFile: async (...args) => writes.push(args),
   languageFor,
   syntaxPalette,
+  isEditorRasterImage: () => false,
+  isEditorSvgImage: () => false,
+  checking: () => false,
+  appHome: () => "/tmp/herdr-app-home",
+  exec: async () => ({ code: 0, stdout: "", stderr: "" }),
 };
 const MideEditor = runInNewContext(source, context);
 const pending = [];

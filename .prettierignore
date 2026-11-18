@@ -11,6 +11,7 @@ public/
 # A deliberately compact, hand-editable data map; one association per short
 # line keeps it scannable and diff-friendly. Code style rules do not apply.
 mods/mide-files/icons.js
+mods/mide-editor/_shared/icons.js
 mods/*/gpui-kit.d.ts
 mods/*/jsconfig.json
 *.png

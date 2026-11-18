@@ -37,6 +37,7 @@ help:
     @echo "  just fmt      format the tree (Prettier via Bun)"
     @echo "  just fmt-check  verify formatting; CI enforces this on every PR"
     @echo "  just install  first-time install (install.sh)"
+    @echo "  just update     overwrite mIDE in ~/.config/herdr-app (production smoke)"
     @echo "  just uninstall  remove the installed mods and layout"
     @echo "  just status   window state + mod errors"
     @echo "  just shot     window screenshot → herdr-shot.png"
@@ -46,6 +47,7 @@ help:
     @echo "  just smoke-capture  capture a scene from a user-started test window"
     @echo "  just e2e-files-context  dev-only Files context-menu automation; see e2e/"
     @echo "  just e2e-editor-markdown  dev-only Editor Markdown Raw automation; see e2e/"
+    @echo "  just e2e-editor-image     dev-only Editor image Preview automation; see e2e/"
     @echo "  just setup-herdr-dev   prepare isolated app home + core session; see docs/TESTING.md"
 
 dev interval=INTERVAL:
@@ -78,11 +80,13 @@ test:
     @bun ./tests/test-editor-save.mjs
     @bun ./tests/test-editor-shortcut.mjs
     @bun ./tests/test-editor-raw.mjs
+    @bun ./tests/test-editor-image.mjs
     @bun ./tests/test-keys.mjs
     @bun ./tests/test-smoke.mjs
     @bun ./tests/test-portable-temp.mjs
     @sh ./tests/test-bundle.sh
     @sh ./tests/test-install.sh
+    @sh ./tests/test-update.sh
     @sh ./tests/test-uninstall.sh
     @sh ./tests/test-herdr-dev-profile.sh
 
@@ -97,6 +101,9 @@ check mods=MODS: test
 
 install:
     @./install.sh
+
+update *args:
+    @sh ./scripts/update.sh {{args}}
 
 uninstall:
     @./scripts/uninstall.sh
@@ -131,3 +138,9 @@ e2e-editor-markdown run="local":
     set -euo pipefail
     export E2E_RUN="{{run}}"
     exec ./e2e/scripts/editor-markdown-raw.sh
+
+e2e-editor-image run="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export E2E_RUN="{{run}}"
+    exec ./e2e/scripts/editor-image-preview.sh

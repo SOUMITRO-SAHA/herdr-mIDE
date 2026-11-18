@@ -968,3 +968,21 @@ export function resolveIcon(name) {
   for (const [prefix, icon] of PREFIX) if (lower.startsWith(prefix)) return icon;
   return null;
 }
+const editorImageIcon = path => {
+  const base = path?.split(/[\\/]/).pop();
+  if (!base) return null;
+  const icon = resolveIcon(base);
+  return icon === "image" || icon === "svg" ? icon : null;
+};
+/** Raster types: preview only (no Raw/Preview tabs). */
+export function isEditorRasterImage(path) {
+  return editorImageIcon(path) === "image";
+}
+/** SVG: markup in Raw, full-color picture in Preview (tabs like Markdown; default Raw). */
+export function isEditorSvgImage(path) {
+  return editorImageIcon(path) === "svg";
+}
+/** Either raster preview or SVG with optional Raw/Preview. */
+export function isEditorImageFile(path) {
+  return editorImageIcon(path) !== null;
+}

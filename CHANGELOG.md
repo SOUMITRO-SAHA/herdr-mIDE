@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The editor previews image files (PNG, JPEG, WebP, SVG, and other types from
+  the Material icon map) in the pane: workspace files stage under
+  `mide-editor-preview/` in the app home (outside `mods/` so staging does not
+  hot-reload the editor), then render via `image()` with filename and dimensions
+  in a caption. `isEditorImageFile()` in `mods/mide-files/icons.js` is tested in
+  `tests/test-editor-image.mjs`; materialized for the editor via
+  `mods/mide-editor/_shared/icons.js`.
+
+- `just update` (`scripts/update.sh`) overwrites the mIDE bundle in production
+  `~/.config/herdr-app` after `just test`-style checks (refuses `herdr-dev`).
+
+- E2E on `herdr-dev`: `just e2e-editor-image <run-id>` opens `public/logo.png`
+  in the editor and captures Preview evidence.
+
 - Files rows now have a pointer-anchored context menu for Open, Reveal, copying absolute/relative paths and names, plus Open in New Tab for folders. New File/New Folder appear in the menu and on the tree root; they create an inline name row, validate names before creating, refuse existing targets, and open new files in the editor. Optional Zed-style Files bindings cover New File/New Folder, Reveal, and path copying; the menu right-aligns shortcut hints only when the corresponding binding is active. Remote menus omit local Reveal; remote creation uses `exec`, and opened remote files are read-only because the released write API is local-only.
 
 - Markdown in Diff now colors like Zed's Ayu Dark theme: headings and thematic breaks as bold text, fenced code in its inner language with gray fence markers, gray list/quote/table-pipe punctuation, blue emphasis (strong adds bold), orange inline code, orange italic link text with green URIs — bare URLs and strikethrough stay plain. The markdown tokenizer lives in the one canonical `shared/syntax.js` (per-language registry keyed by `languageFor()`; languages without an entry keep the generic tokenizer), with `syntaxEffects()` for Diff and fence-alias, nested-fence, and table-pipe fixes. Markdown Raw stays immediately editable in Herdr's normal editor (Raw + Preview only; no separate reading view or Edit toggle); the host editor API does not expose Markdown-specific scopes in the pane itself. Rust and further languages follow as their own PRs.

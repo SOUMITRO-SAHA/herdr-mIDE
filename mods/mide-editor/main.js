@@ -5,7 +5,7 @@
 // Vim note: Herdr's built-in EditorState exposes value()/set_value() but no
 // cursor or selection API, so modal editing arrives as a custom editor core
 // (ROADMAP Phase 1).
-import { View, div, svg } from "gpui-kit";
+import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState, TextView, Checkbox, Popover } from "gpui-base";
 import {
   props,
@@ -15,11 +15,15 @@ import {
   setShared,
   readTextFile,
   writeTextFile,
+  appHome,
+  exec,
+  checking,
   nextCommand,
   window,
   keys,
 } from "herdr";
 import { languageFor, syntaxPalette } from "./_shared/syntax.js";
+import { isEditorRasterImage, isEditorSvgImage } from "./_shared/icons.js";
 import { handleSaveShortcut } from "./keybindings.js";
 
 const MAX = 400000;
@@ -30,6 +34,49 @@ const draftKey = (file, on) => (on ? `${on}\0${file}` : file);
 // Herdr's key names are platform-literal: cmd-s matches only on macOS, so
 // the hint follows the documented window().platform.
 const saveHint = () => (window().platform === "macos" ? "⌘S save" : "Ctrl+S save");
+const IMAGE_PREVIEW_CACHE = "mide-editor-preview";
+const imagePreviewRel = file => {
+  const base = file.split(/[\\/]/).pop() ?? "preview";
+  return `${IMAGE_PREVIEW_CACHE}/${base}`;
+};
+/** `image()` resolves under the app home; workspace files are staged here (not under `mods/` — writes there hot-reload the mod). */
+const stageImageForPreview = async (file, on) => {
+  const relative = imagePreviewRel(file);
+  const dir = `${appHome()}/${IMAGE_PREVIEW_CACHE}`;
+  const dest = `${appHome()}/${relative}`;
+  const mkdir = await exec("mkdir", ["-p", dir]);
+  if (mkdir.code !== 0) return { ok: false };
+  const same = await exec("cmp", ["-s", file, dest], on ? { on } : undefined);
+  if (same.code !== 0) {
+    const copy = await exec("cp", [file, dest], on ? { on } : undefined);
+    if (copy.code !== 0) return { ok: false };
+  }
+  const dimensions = await probeImageDimensions(file, on);
+  return { ok: true, relative, dimensions };
+};
+/** Width×height for the caption, or null when unknown; false when the file cannot be read. */
+const probeImageDimensions = async (path, on) => {
+  if (window().platform === "macos") {
+    const { code, stdout } = await exec(
+      "sips",
+      ["-g", "pixelWidth", "-g", "pixelHeight", path],
+      on ? { on } : undefined,
+    );
+    if (code !== 0) return false;
+    const w = stdout.match(/pixelWidth:\s*(\d+)/);
+    const h = stdout.match(/pixelHeight:\s*(\d+)/);
+    return w && h ? `${w[1]}×${h[1]}` : null;
+  }
+  return null;
+};
+const defaultEditorMode = (file, markdownDefault) => {
+  if (isEditorRasterImage(file ?? "")) return "preview";
+  if (isEditorSvgImage(file ?? "")) return "raw";
+  if (languageFor(file ?? "") === "markdown") return markdownDefault ? "preview" : "raw";
+  return "raw";
+};
+const editorShowsImagePreview = (file, mode) =>
+  isEditorRasterImage(file ?? "") || (isEditorSvgImage(file ?? "") && mode === "preview");
 const editorTypography = () => {
   const current = settings();
   const uiSize = current.ui_font_size ?? 13;
@@ -56,7 +103,10 @@ export default class MideEditor extends View {
     this.note = null;
     this.drafts = new Map();
     this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true;
-    this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
+    this.editorMode = defaultEditorMode(props()?.file ?? null, this.markdownPreviewDefault);
+    this.imageDimensions = null;
+    this.imageError = null;
+    this.imagePreviewPath = null;
     this.settingsOpen = false;
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.load(props()?.file ?? null, props()?.on ?? null, cx);
@@ -69,7 +119,6 @@ export default class MideEditor extends View {
           const request = shared(EDITOR_REQUEST);
           this.openFile(request?.file ?? null, request?.on ?? null, cx);
         }
-        cx.notify();
       }
     });
   }
@@ -92,20 +141,68 @@ export default class MideEditor extends View {
   }
 
   load(file, on, cx) {
+    const previousFile = this.file;
+    const previousOn = this.on ?? null;
+    const machine = on ?? null;
+    const fileChanged = file !== previousFile || machine !== previousOn;
+
     this.code?.release();
     this.code = null;
     this.markdownPreviewDefault = shared(MARKDOWN_PREVIEW_SETTING) === true;
-    this.editorMode = this.markdownPreviewDefault ? "preview" : "raw";
     this.wordWrap = shared(WORD_WRAP_SETTING) === true;
     this.file = file ?? null;
-    const machine = (this.on = on ?? null);
+    this.on = machine;
     this.baseline = null;
     this.truncated = false;
     this.dirty = false;
     this.error = null;
     this.note = null;
     this.saved = false;
+    if (fileChanged) {
+      this.editorMode = defaultEditorMode(file, this.markdownPreviewDefault);
+      this.imageDimensions = null;
+      this.imageError = null;
+      this.imagePreviewPath = null;
+    }
     if (!file) return;
+    if (editorShowsImagePreview(file, this.editorMode)) {
+      const alreadyStaged = !fileChanged && this.imagePreviewPath && !this.imageError;
+      if (alreadyStaged) {
+        cx.notify();
+        return;
+      }
+      if (!checking()) {
+        cx.spawn(async cx => {
+          try {
+            const staged = await stageImageForPreview(file, machine ?? undefined);
+            if (this.file !== file || this.on !== machine) return;
+            if (!staged.ok) {
+              this.imageError = "Cannot load this image (missing, too large, or unsupported)";
+              this.imagePreviewPath = null;
+              return;
+            }
+            this.imagePreviewPath = staged.relative;
+            if (staged.dimensions === false)
+              this.imageError = "Cannot load this image (missing, too large, or unsupported)";
+            else this.imageDimensions = staged.dimensions;
+          } catch {
+            if (this.file === file && this.on === machine) {
+              this.imageError = "Cannot load this image (missing, too large, or unsupported)";
+              this.imagePreviewPath = null;
+            }
+          } finally {
+            cx.notify();
+          }
+        });
+      }
+      cx.notify();
+      return;
+    }
+    if (fileChanged) {
+      this.imageDimensions = null;
+      this.imageError = null;
+      this.imagePreviewPath = null;
+    }
     const draft = this.drafts.get(draftKey(file, this.on));
     if (draft) {
       this.baseline = draft.baseline;
@@ -327,7 +424,7 @@ export default class MideEditor extends View {
     cx.notify();
   }
 
-  markdownTab(mode, label, t, typography) {
+  modeTab(mode, label, t, typography) {
     const active = this.editorMode === mode;
     return div()
       .id(`mide-editor-${mode}`)
@@ -344,8 +441,10 @@ export default class MideEditor extends View {
           .cursor_pointer()
           .hover(s => s.bg(t.hover))
           .on_click((_e, cx) => {
+            if (this.editorMode === mode) return;
             this.editorMode = mode;
-            cx.notify();
+            if (this.file && isEditorSvgImage(this.file)) this.load(this.file, this.on, cx);
+            else cx.notify();
           }),
       )
       .child(label);
@@ -356,7 +455,10 @@ export default class MideEditor extends View {
       t = { ...host, background: host.chrome },
       name = this.file?.split(/[\\/]/).pop();
     const typography = editorTypography(),
-      markdown = languageFor(this.file ?? "") === "markdown";
+      markdown = languageFor(this.file ?? "") === "markdown",
+      svgImage = isEditorSvgImage(this.file ?? ""),
+      imagePreview = editorShowsImagePreview(this.file ?? "", this.editorMode),
+      modeToggle = markdown || svgImage;
     return v_flex()
       .id("mide-editor")
       .size_full()
@@ -391,7 +493,7 @@ export default class MideEditor extends View {
           .when(this.dirty, el =>
             el.child(div().id("mide-editor-dirty").text_size(typography.text(11)).text_color(t.accent).child("●")),
           )
-          .when(markdown, el =>
+          .when(modeToggle, el =>
             el.child(
               h_flex()
                 .h(24)
@@ -400,8 +502,8 @@ export default class MideEditor extends View {
                 .gap(2)
                 .rounded(6)
                 .bg(t.raised)
-                .child(this.markdownTab("raw", "Raw", t, typography))
-                .child(this.markdownTab("preview", "Preview", t, typography)),
+                .child(this.modeTab("raw", "Raw", t, typography))
+                .child(this.modeTab("preview", "Preview", t, typography)),
             ),
           )
           .child(
@@ -455,36 +557,88 @@ export default class MideEditor extends View {
       )
       .child(
         this.file
-          ? this.code
-            ? markdown && this.editorMode === "preview"
-              ? h_flex()
-                  .id("mide-editor-markdown-preview")
+          ? imagePreview
+            ? this.imageError
+              ? div().id("mide-editor-image-error").flex_1().min_h(0).p(12).text_color(t.dim).child(this.imageError)
+              : this.imagePreviewPath
+                ? v_flex()
+                    .id("mide-editor-image-preview")
+                    .flex_1()
+                    .min_h(0)
+                    .min_w(0)
+                    .child(
+                      h_flex()
+                        .flex_1()
+                        .min_h(0)
+                        .min_w(0)
+                        .p(16)
+                        .items_center()
+                        .justify_center()
+                        .overflow_hidden()
+                        .child(
+                          image(this.imagePreviewPath)
+                            .id("mide-editor-image-asset")
+                            .max_w_full()
+                            .max_h_full()
+                            .flex_none(),
+                        ),
+                    )
+                    .child(
+                      h_flex()
+                        .h(28)
+                        .flex_none()
+                        .px(12)
+                        .gap(8)
+                        .items_center()
+                        .border_t(1)
+                        .border_color(t.border)
+                        .text_size(typography.text(11))
+                        .text_color(t.dim)
+                        .child(
+                          div()
+                            .flex_1()
+                            .min_w(0)
+                            .truncate()
+                            .child(name ?? ""),
+                        )
+                        .child(
+                          div()
+                            .id("mide-editor-image-dimensions")
+                            .flex_none()
+                            .child(this.imageDimensions ?? "…"),
+                        ),
+                    )
+                : div().flex_1().min_h(0).p(12).text_color(t.dim).child("Loading image…")
+            : this.code
+              ? markdown && this.editorMode === "preview"
+                ? h_flex()
+                    .id("mide-editor-markdown-preview")
+                    .flex_1()
+                    .min_h(0)
+                    .min_w(0)
+                    .justify_center()
+                    .bg(t.background)
+                    .child(
+                      TextView.markdown("mide-editor-markdown-document", this.code.value())
+                        .selectable(true)
+                        .scrollable(true)
+                        .flex_1()
+                        .min_h(0)
+                        .min_w(0)
+                        .max_w(1040)
+                        .p(24)
+                        .font_family(typography.uiFont)
+                        .text_size(typography.size)
+                        .font_weight(400)
+                        .line_height(1.65),
+                    )
+                : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
+              : div()
                   .flex_1()
                   .min_h(0)
-                  .min_w(0)
-                  .justify_center()
-                  .bg(t.background)
-                  .child(
-                    TextView.markdown("mide-editor-markdown-document", this.code.value())
-                      .selectable(true)
-                      .scrollable(true)
-                      .flex_1()
-                      .min_h(0)
-                      .min_w(0)
-                      .max_w(1040)
-                      .p(24)
-                      .font_family(typography.uiFont)
-                      .text_size(typography.size)
-                      .font_weight(400)
-                      .line_height(1.65),
-                  )
-              : Editor.new(this.code).flex_1().min_h(0).font_family(typography.font).text_size(typography.size)
-            : div()
-                .flex_1()
-                .min_h(0)
-                .p(12)
-                .text_color(t.dim)
-                .child(this.error || "Loading file…")
+                  .p(12)
+                  .text_color(t.dim)
+                  .child(this.error || "Loading file…")
           : div()
               .flex_1()
               .min_h(0)
@@ -535,7 +689,10 @@ export default class MideEditor extends View {
               .truncate()
               .child(this.file ?? ""),
           )
-          .when(this.code && this.file, el =>
+          .when(this.file && imagePreview, el =>
+            el.child(div().id("mide-editor-save-status").flex_none().child("Image preview")),
+          )
+          .when(this.code && this.file && !imagePreview, el =>
             el.child(
               div()
                 .id("mide-editor-save-status")
