@@ -68,26 +68,36 @@ Machine-specific values belong in **`e2e/local.env`** (gitignored). Copy
 path, optional space id, screenshot calibration size). Never commit
 `local.env`, captures, or status JSON from a run.
 
-## Profile: always `herdr-dev`
+## Profile: isolated `herdr-dev` (app home **and** core)
+
+Layouts/mods use `HERDR_APP_HOME`; **spaces, tabs, and agents use herdr-core**
+(`HC_SESSION`). Scripts load [`scripts/herdr-dev-profile.sh`](../scripts/herdr-dev-profile.sh)
+via `e2e/scripts/lib/herdr-dev.sh` — same bundle as `just dev` / `just sync`.
 
 ```sh
-export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
+just setup-herdr-dev
+just e2e-files-context my-run
 ```
 
-Use that for `just sync`, every `herdr-app` / `hc` command, and every script
-here. Do not use production `~/.config/herdr-app` for development or automation.
-Scripts must refuse a production-only app home when they detect one.
+Do **not** set only `HERDR_APP_HOME=~/.config/herdr-dev`; that shared the
+production core and created spaces like “mIDE e2e” beside real work.
 
-When both production and dev windows are open, automation must target the
-process whose environment includes `HERDR_APP_HOME=…/herdr-dev` (see
-`e2e/scripts/lib/herdr-dev.sh`).
+Scripts refuse production paths, launch Herdr with `HC_SESSION=herdr-mide-dev`,
+and match automation PID on **both** env vars. Never drive production for E2E.
+
+Committed README and gallery PNGs (`public/examples/`, root `preview.png`) must
+follow the same rule: capture only on **`herdr-dev`**, review for private
+information, then copy reviewed files into the repo. Do not commit raw
+`e2e/screenshots/` output. See [`docs/TESTING.md`](../docs/TESTING.md) (“README
+and gallery screenshots”).
 
 ## Before you run
 
 1. `just test` and `just check` green.
-2. `HERDR_APP_HOME=~/.config/herdr-dev just sync`.
-3. Dev window up: `HERDR_APP_HOME=~/.config/herdr-dev herdr-app status`.
-4. Read `herdr-app --skill` for any unfamiliar `do` commands.
+2. `just setup-herdr-dev` once; launch the dev Herdr window with the printed env.
+3. `just sync` (applies isolated profile automatically).
+4. Dev window up: `just status` (must not error on the dev socket).
+5. Read `herdr-app --skill` for any unfamiliar `do` commands.
 
 ## Available scripts
 
@@ -112,6 +122,16 @@ E2E_RUN=pr-32-files-context-actions \
 4. Document the script in this README and, if agents need it, in
    [`AGENTS.md`](../AGENTS.md).
 5. Do not commit screenshots; rely on `.gitignore` under `e2e/screenshots/`.
+
+## Promoting captures to `public/examples/`
+
+PR and README screenshots that are **committed** in git follow the same rules as
+[docs/TESTING.md](../docs/TESTING.md) (“Documentation screenshots”):
+
+1. Run on **`herdr-dev`** only (`E2E_RUN=docs-refresh just e2e-files-context`, etc.).
+2. Review captures under `e2e/screenshots/<run-id>/` for private data.
+3. Copy the chosen PNG into `public/examples/` with a descriptive name; do not
+   commit the whole `e2e/screenshots/` tree (gitignored).
 
 ## Definition of done (live automation)
 

@@ -54,12 +54,17 @@ Instructions for AI coding agents working in this repo.
 ## Local testing — always the `herdr-dev` profile
 
 - All local testing and development runs against our dedicated developer
-  profile, **`herdr-dev`**: its own app home and core session, selected by
-  pointing `HERDR_APP_HOME` at it (e.g. `HERDR_APP_HOME=~/.config/herdr-dev`)
-  for every command that touches a Herdr environment — `just dev`, `just
-sync`, `just status`, `just shot`, `just switch`. A separate VM or test
-  machine is not required. Verify the intended dev core session separately:
-  setting `HERDR_APP_HOME` alone does not select a core session.
+  profile, **`herdr-dev`**: **isolated app home and core session** via
+  [`scripts/herdr-dev-profile.sh`](./scripts/herdr-dev-profile.sh)
+  (`HERDR_APP_HOME=~/.config/herdr-dev`, `HC_SESSION=herdr-mide-dev`, dedicated
+  `XDG_*` under that tree). `just setup-herdr-dev` prepares dirs and prints how
+  to launch Herdr with that env. **`HERDR_APP_HOME` alone does not isolate
+  spaces or agents** — without `HC_SESSION`, E2E `space.new` pollutes
+  production. A separate VM is not required.
+- `just dev`, `just sync`, `just status`, `just shot`, and `just switch` apply
+  the profile automatically (`MIDE_HERDR_DEV=1` / `herdr-dev-exec.sh`).
+  **`just sync` never targets production** — use `install.sh` for installs into
+  `~/.config/herdr-app`.
 - Never run, sync, install, hot-reload, switch layouts or capture screenshots
   against the original production environment (the default `~/.config/herdr-app`
   app home with no `HERDR_APP_HOME` override). Do not point tests at it "just
@@ -87,10 +92,13 @@ sync`, `just status`, `just shot`, `just switch`. A separate VM or test
 - Add new live automation only as scripts under `e2e/scripts/`; document them in
   [`e2e/README.md`](./e2e/README.md). Reuse `e2e/scripts/lib/herdr-dev.sh` for
   the dev profile, PID selection, and output paths (`E2E_RUN` names each run).
-- Every script and agent-run must set `HERDR_APP_HOME` to `herdr-dev` and must
-  refuse production app-home paths. When production and dev windows are both
-  open, target the dev process (environment includes `HERDR_APP_HOME=…/herdr-dev`);
-  do not click or activate Herdr by bundle id alone.
+- Every script and agent-run must load the **full** dev profile (not
+  `HERDR_APP_HOME` only) and must refuse production app-home paths. When
+  production and dev windows are both open, target the dev process whose
+  environment includes **`HERDR_APP_HOME=…/herdr-dev` and
+  `HC_SESSION=herdr-mide-dev`**; do not click or activate Herdr by bundle id
+  alone. Agents must **never** call `herdr-app` / `hc` against production for
+  testing or documentation.
 - `just test` / `just check` remain the required gates; `e2e/` supplements manual
   scenes in [`docs/TESTING.md`](./docs/TESTING.md), it does not replace them.
 - Prefer `just e2e-files-context`, `just e2e-editor-markdown`, or the script

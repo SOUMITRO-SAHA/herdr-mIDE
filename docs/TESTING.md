@@ -21,6 +21,78 @@ For a user-facing feature, “tested end-to-end” means automated checks are gr
 **and** the relevant `e2e/` script and/or manual scenes below were run on
 `herdr-dev`, with captures or notes in the PR.
 
+## Development profile vs production (required)
+
+Herdr splits state in two places:
+
+| Layer                                      | Variable / location                                                | What lives here                           |
+| ------------------------------------------ | ------------------------------------------------------------------ | ----------------------------------------- |
+| **Window** (layouts, mods, keys)           | `HERDR_APP_HOME` → `~/.config/herdr-dev`                           | Layout JSON, mod copies, `herdr-app.sock` |
+| **Core** (spaces, tabs, agents, terminals) | `HC_SESSION` → `herdr-mide-dev` (plus XDG dirs under the dev home) | Space list, agents, terminal sessions     |
+
+**`HERDR_APP_HOME` alone is not enough.** If the dev window shares the default
+`HC_SESSION` with production, `herdr-app do space.new` and automation create
+spaces in the **same sidebar as your real work** (for example “mIDE e2e” beside
+`super-muse`). That is the failure mode we guard against.
+
+| Profile         | Isolation                                                                                                                         | Use for                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **`herdr-dev`** | `scripts/herdr-dev-profile.sh`: `HERDR_APP_HOME`, `HC_SESSION=herdr-mide-dev`, dedicated `XDG_*` under `~/.config/herdr-dev/xdg/` | `just setup-herdr-dev`, `just dev`, `sync`, `status`, `shot`, `switch`, all **`e2e/`** scripts |
+| **Production**  | default `~/.config/herdr-app` + default core                                                                                      | Owner-requested release check only — **never** development, agents, or automation              |
+
+### One-time setup
+
+```sh
+just setup-herdr-dev    # creates dirs, prints the env block to start Herdr
+```
+
+Launch **one dedicated dev window** with that printed `env … Herdr` line (or
+export the same variables in the terminal before `open` / the app binary).
+Quit any older “herdr-dev” window that was started with only `HERDR_APP_HOME`
+and no `HC_SESSION`, then relaunch — otherwise spaces may still be shared.
+
+Repo recipes apply the profile for you:
+
+- `just dev`, `just sync`, `just status`, `just shot`, `just switch` →
+  `MIDE_HERDR_DEV=1` or `scripts/herdr-dev-exec.sh`
+- `just e2e-*` → `e2e/scripts/lib/herdr-dev.sh` (refuses production paths,
+  starts dev Herdr with full env, matches PID on `HERDR_APP_HOME` **and**
+  `HC_SESSION`)
+
+### Rules (people and agents)
+
+1. **Never** run `just sync`, `just dev`, automation, or `herdr-app do …`
+   against production. Use `just install` / `install.sh` for deliberate installs
+   into `~/.config/herdr-app`, not `just sync`.
+2. **Never** fall back to production when `herdr-dev` is missing — run
+   `just setup-herdr-dev` and start the isolated window instead.
+3. **Never** query or drive production with agents (`herdr-app status` without
+   the dev profile, screenshots, `space.new`, pointer automation) unless the
+   owner explicitly asks for a single release smoke.
+4. E2E scripts use `--focus false` on new spaces so dev work does not steal
+   focus from a production window on the same display.
+5. CI and `just smoke-prepare` use **disposable** homes/sessions — not
+   production and not a substitute for fixing local `herdr-dev`.
+
+Canonical implementation: [`scripts/herdr-dev-profile.sh`](../scripts/herdr-dev-profile.sh)
+(modeled on Herdr’s `scripts/sandbox` and our `scripts/smoke.mjs` isolation).
+See [AGENTS.md](../AGENTS.md) and [e2e/README.md](../e2e/README.md).
+
+### Documentation screenshots
+
+Images committed in `public/examples/` (and the gallery `preview.png` when
+updated) must come from the **`herdr-dev`** profile or another **owner-reviewed,
+non-production** capture workflow:
+
+1. `HERDR_APP_HOME=~/.config/herdr-dev just sync` so mods match the repo.
+2. Run the relevant `just e2e-*` script or manual scenes; outputs land in
+   `e2e/screenshots/<run-id>/` (gitignored) or `just shot` / `herdr-app shot
+<new-file.png>`.
+3. **Review every pixel** for paths, credentials, terminal output, email
+   addresses and agent names before copying into `public/examples/` or
+   replacing `preview.png`.
+4. Never capture from production `~/.config/herdr-app` for repo documentation.
+
 ## Platform workflow
 
 Use this workflow on each target **macOS, Linux and Windows** machine. It
@@ -127,10 +199,16 @@ overwrite an app, core, file or key binding belonging to someone else.
 ### Scenes and expected results
 
 - **Files:** expand folders; check icons, modified/untracked marks and refresh.
-  On Windows, include folder names with spaces, apostrophes and Unicode.
+  Right-click root, folder and file rows — context menu actions, New File/New
+  Folder inline naming, and optional shortcut hints when keys are merged. On
+  macOS, `just e2e-files-context <run-id>` captures a repeatable dev run; on
+  Windows, include folder names with spaces, apostrophes and Unicode.
 - **Editor:** open `sample.txt`, edit and save, switch files and return to a
   draft; then change the same file externally and confirm save refuses the
-  stale baseline. Test Markdown Raw/Preview and word wrap.
+  stale baseline. Test Markdown Raw/Preview and word wrap; on macOS,
+  `just e2e-editor-markdown <run-id>` captures the Raw header scene. Open a
+  changed `.md` in Changes/Diff and confirm inline Markdown coloring in the diff
+  pane.
 - **Changes and Diff:** stage and unstage a file and group, verify checkbox
   clicks do not open Diff, open a row and use Split/Unified and Refresh.
   Commit staged changes, then tracked-only changes; verify the commit contents
@@ -157,7 +235,7 @@ For each release, record a fresh matrix rather than carrying old passes forward:
 
 | Platform | App/core versions                         | `just check`                                                                                                                                                 | Interactive scenes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Notes / screenshots                                                                                                                                                                                                                                                                                      |
 | -------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS    | pending                                   | pending                                                                                                                                                      | pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                                                                                                                                                                          |
+| macOS    | herdr-app 0.1.16 (2026-11-17)             | pass — `just test`, `just check`, `just fmt-check` on `main` after PR #50–#51                                                                                | partial — `e2e/` on **`herdr-dev`**: Files context menus (`just e2e-files-context`), Editor Markdown Raw (`just e2e-editor-markdown`). `public/examples/files-context-menu.png` shows the menu; terminal panes in some examples may still need cropping or a smoke-fixture re-capture before Gallery refresh. Full manual matrix (branches, remotes, conflicts) not re-run for this doc pass.                                                                                                                                                                                                                                       | Production app home not used; dev window started via `e2e/scripts/lib/herdr-dev.sh`                                                                                                                                                                                                                      |
 | Linux    | herdr-app 0.1.15 / hc 0.1.20 (2026-11-12) | pass — `just test`/`just check`/`just fmt-check` (Bun 1.4.4, just 1.45.0) at `b57580c`; Ubuntu 26.04.1 x86_64, GNOME Wayland (VMware VM)                     | partial — command-driven layout/space setup with captures; Files in and outside the granted read root: special-char names, Git marks, external add/rename auto-refresh, tree→editor open; editor Ctrl+S save on an apostrophe path (optional keys merged into the smoke home), unsaved-dot drafts; staging checkboxes, staged and tracked-only UI commits verified with Git; branch picker create/switch; panel resize 300–900; 12 clean captures, no mod errors. Not exercised (owner-accepted before v0.0.1): branch delete, blocked-switch error + toast, editor save conflict, Markdown Raw/Preview, word wrap, fetch/pull/push | second instance runs alongside an open window; Wayland socket panic + workaround in the smoke steps above; the Files/Changes buttons render only while the panel is visible, so a fresh space's hidden panel has no mouse path; commit submits only via Ctrl+Enter; captures kept locally, not committed |
 | Windows  | herdr-app 0.1.14 / hc 0.1.19 (2026-11-09) | pass — after CRLF-checkout, Windows symlink, Files `-EncodedCommand` and Git-marks fixes                                                                     | pending — Files scene verified on-window via screenshots; Editor/Changes/Diff/Remotes need the remaining clicks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `make test`, `make check`, `make smoke-prepare` green; single-instance finding above                                                                                                                                                                                                                     |
 | Windows  | herdr-app 0.1.15 / hc 0.1.20 (2026-11-11) | pass — `just test`/`just check` (GNU Make not installed; the justfile and path-adapter shim above), locally and on a hosted VM by the `windows-e2e` workflow | partial — Files tree with space/apostrophe/Unicode names, editor Save button and the Ctrl+S binding fix, draft persistence, external-edit save conflict, Reload, Markdown Raw/Preview, word wrap, staging checkboxes, Stage All/Unstage All, row diffs, Split/Unified and Refresh verified on-window with independent Git checks; UI commits, history, the branch picker and fetch/pull/push not exercised                                                                                                                                                                                                                          | `just smoke-prepare` green; single-instance finding above; hosted-VM command-driven scenes (layout, space, panels, screenshots, no mod errors) green with artifacts                                                                                                                                      |

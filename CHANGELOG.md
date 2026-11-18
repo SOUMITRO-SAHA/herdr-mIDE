@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- E2E and dev recipes no longer pollute production Herdr: the full
+  **`herdr-dev`** profile (`HERDR_APP_HOME`, `HC_SESSION=herdr-mide-dev`, XDG
+  roots via `scripts/herdr-dev-profile.sh`) isolates spaces and agents.
+  `just dev`/`sync`/`status`/`shot`/`switch` and `e2e/` scripts refuse
+  production app homes and match automation to the dev PID on both env vars.
+  `just setup-herdr-dev` documents launching an isolated window. E2E ignores an
+  inherited production `HERDR_APP_HOME` in the shell so automation cannot
+  accidentally refuse or mis-route.
+
 - The Changes footer now uses compact spacing and truncates repository and branch names only when needed, while keeping Fetch/Pull/Push visible at the right edge. Short names leave their unused room for longer names, and both gain room when the panel widens.
 - PowerShell `-EncodedCommand` now encodes non-BMP path characters as UTF-16 surrogate pairs, preserving emoji and other supplementary Unicode in Windows file paths.
 
@@ -23,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Community health files for outside contributors: GitHub issue forms (bug report, feature request) with blank issues disabled and an upstream herdr-app contact link, a project Code of Conduct, a SECURITY.md for private vulnerability reporting, and README links to the new files.
 
 ### Changed
+
+- README, [TESTING.md](./docs/TESTING.md), [ROADMAP.md](./docs/ROADMAP.md), [RELEASING.md](./docs/RELEASING.md), and [e2e/README.md](./e2e/README.md) now describe post–v0.0.1 features (Files context actions, Markdown in Editor/Diff, `e2e/` on `herdr-dev`) and state explicitly that local live work and committed screenshots must use the **`herdr-dev`** profile, never the production app home. Refreshed `public/examples/files-context-menu.png` and `editor-markdown-raw.png` from `herdr-dev` E2E captures (review for private data before sharing outside the repo).
 
 - The repository root is now the complete, installable Gallery package: Editor and Diff carry AUTO-GENERATED, banner-marked `_shared/syntax.js` copies (`just shared` regenerates them; a `--check` mode fails `just test` on drift), and every mod folder carries the license and notices — installing from the root listing works as-is.
 

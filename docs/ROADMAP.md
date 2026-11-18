@@ -33,16 +33,18 @@ nothing in a wave depends on a capability nobody has verified yet. The big
 rock (Phase 1, the editor core) stays deliberately unscheduled until these
 waves land.
 
-| Milestone                                  | Theme                                       | Issues                                                                                                                       |
-| ------------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **v0.0.2** — a file manager you can act on | The tree stops being read-only              | #32 context menu · #45 restore file · #44 new file/folder · #41 hide git-ignored · #40 go-to-file · #27 listing housekeeping |
-| **v0.0.3** — see every file                | The editor pane learns what files look like | #33 per-language highlighting (Markdown, Rust) · #35 image preview · #43 SVG Raw/Preview · #34 Markdown images               |
-| **v0.0.4** — history you can act on        | The Changes panel acts on the past          | #36 commit preview · #38 revert with pre-filled message · #42 word-level diff                                                |
-| **v0.0.5** — beyond the pane               | Reaching outside herdr-mIDE                 | #39 open in an installed editor · #37 drag-and-drop (Finder → folder)                                                        |
+| Milestone                                  | Theme                                       | Issues                                                                                                                                                        |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v0.0.2** — a file manager you can act on | The tree stops being read-only              | ~~#32 context menu~~ ✅ · ~~#44 new file/folder (shipped with #32)~~ ✅ · #45 restore file · #41 hide git-ignored · #40 go-to-file · #27 listing housekeeping |
+| **v0.0.3** — see every file                | The editor pane learns what files look like | ~~#33 Markdown highlighting~~ ✅ · #33 Rust · #35 image preview · #43 SVG Raw/Preview · #34 Markdown images                                                   |
+| **v0.0.4** — history you can act on        | The Changes panel acts on the past          | #36 commit preview · #38 revert with pre-filled message · #42 word-level diff                                                                                 |
+| **v0.0.5** — beyond the pane               | Reaching outside herdr-mIDE                 | #39 open in an installed editor · #37 drag-and-drop (Finder → folder)                                                                                         |
 
-Within v0.0.2, #32 lands first — #45 and #44 add their items to the menu it
-builds. Within v0.0.3, #35 verifies how `image()` resolves paths; #43 and #34
-build on that conclusion.
+#32 and in-tree **New File** / **New Folder** (#44) merged on `main` (PR #50);
+#45 restore and the rest of v0.0.2 remain open. **Markdown** syntax in Editor
+and Diff (#33, partial) merged (PR #51); Rust and further languages are next.
+Within v0.0.3, #35 verifies how `image()` resolves paths; #43 and #34 build on
+that conclusion.
 
 ---
 
@@ -78,7 +80,9 @@ build on that conclusion.
 
 - [ ] Fuzzy-find files by name ("go to file") — [#40](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/40) (v0.0.2)
 - [ ] **Filter by git status** — "show me only what the agent changed" (no issue yet)
-- [ ] New / rename / delete / reveal file actions (context row or menu) — create [#44](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/44), restore [#45](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/45), the menu itself [#32](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/32) (v0.0.2); rename and delete still need issues
+- [x] Context menu with Open, Reveal, copy paths/name, Open in New Tab — [#32](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/32) (v0.0.2)
+- [x] New file / new folder from the tree (inline name row, validation) — [#44](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/44) (v0.0.2)
+- [ ] Restore deleted file — [#45](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/45) (v0.0.2); rename and delete still need issues
 - [ ] Respect `.gitignore` in listing (hide noise) — [#41](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/41) (v0.0.2)
 - [ ] Drop files from Finder onto a folder to move them — [#37](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/37) (v0.0.5)
 - [ ] More icons and a `NAMES`/`TYPES` override in shared state (no issue yet)
@@ -100,13 +104,21 @@ build on that conclusion.
 - [ ] Commit message drafting from staged diffs
 - [ ] Surface agents that touched files you are reviewing (`terminals()`, `agents()`)
 
+## Phase 3 — Editor & Diff language surface (v0.0.3, in progress)
+
+- [x] Markdown tokenizer and Diff inline colors (shared `syntax.js`) — [#33](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/33)
+- [ ] Rust highlighting — follow-on under #33
+- [ ] Image / SVG preview issues (#35, #43, #34)
+
 ## Phase 5 — Polish & hardening (ongoing)
 
+- [x] macOS automation testing scaffold — [`e2e/`](../e2e/) on `herdr-dev`
+- [x] README / example screenshot workflow documented — [TESTING.md](./TESTING.md)
 - [ ] Performance on large repos and big diffs
 - [ ] Keyboard-first everywhere (Vim motions beyond the editor: file tree, changes list)
 - [ ] Remote machines: editor save and staging over `on` (needs upstream `writeTextFile` support)
-- [ ] `preview.png` + listing on herdr.dev/layouts — the listing half is [#27](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/27) (v0.0.2)
-- [ ] Docs & screenshots
+- [x] Gallery listing **v0.0.1** on herdr.dev/layouts (2026-11-12); refresh assets before the next tagged release ([#27](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/27))
+- [ ] Keep `public/examples/` and `preview.png` current after each release (`herdr-dev` captures only)
 
 ---
 

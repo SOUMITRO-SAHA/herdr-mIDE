@@ -6,10 +6,6 @@ description: >-
   Herdr CLI skills, app-home types, docs/TESTING.md scenes. Use when changing
   mods or layout, when the user asks for live, smoke, or e2e testing, or before
   claiming UI behavior is verified.
-compatibility: Used by the AI coding agent building this project (not loaded by herdr-mIDE).
-metadata:
-  author: localfirstai
-  version: "1.1"
 ---
 
 # herdr-mIDE end-to-end testing
@@ -26,12 +22,12 @@ load those when driving the window or core. It aligns with
 
 ## `e2e/` layout (automation testing)
 
-| Path | Role |
-|------|------|
-| `e2e/scripts/` | Herdr UI automation entrypoints (`just e2e-*`) |
-| `e2e/screenshots/<run-id>/` | Gitignored PNG + status JSON (`E2E_RUN`) |
-| `e2e/scripts/lib/herdr-dev.sh` | Dev profile guard, PID, start window |
-| `e2e/local.env` | Gitignored machine overrides (`local.env.example`) |
+| Path                           | Role                                               |
+| ------------------------------ | -------------------------------------------------- |
+| `e2e/scripts/`                 | Herdr UI automation entrypoints (`just e2e-*`)     |
+| `e2e/screenshots/<run-id>/`    | Gitignored PNG + status JSON (`E2E_RUN`)           |
+| `e2e/scripts/lib/herdr-dev.sh` | Dev profile guard, PID, start window               |
+| `e2e/local.env`                | Gitignored machine overrides (`local.env.example`) |
 
 ```sh
 E2E_RUN=my-feature just e2e-files-context my-feature
@@ -43,12 +39,12 @@ Target the dev Herdr **process** when production and dev windows are both open.
 
 ## Herdr manuals (read on demand)
 
-| Source | Command or path | Use for |
-|--------|-----------------|--------|
-| Window | `herdr-app --skill` | `status`, `ls`, `do`, `shot`, layouts, keys, mods |
-| Core | `hc --skill` | terminals, agents, `run`, `send`, `wait`, `read` |
-| App home | `$HERDR_APP_HOME/AGENTS.md` | Same window guide as files (rewritten on app start) |
-| Mod APIs | `$HERDR_APP_HOME/herdr.d.ts`, `gpui-kit.d.ts` | Public types for the **installed** Herdr version |
+| Source   | Command or path                               | Use for                                             |
+| -------- | --------------------------------------------- | --------------------------------------------------- |
+| Window   | `herdr-app --skill`                           | `status`, `ls`, `do`, `shot`, layouts, keys, mods   |
+| Core     | `hc --skill`                                  | terminals, agents, `run`, `send`, `wait`, `read`    |
+| App home | `$HERDR_APP_HOME/AGENTS.md`                   | Same window guide as files (rewritten on app start) |
+| Mod APIs | `$HERDR_APP_HOME/herdr.d.ts`, `gpui-kit.d.ts` | Public types for the **installed** Herdr version    |
 
 Do not edit app-home `AGENTS.md` or the `.d.ts` files; the app overwrites them.
 
@@ -61,18 +57,24 @@ Do not edit app-home `AGENTS.md` or the `.d.ts` files; the app overwrites them.
 - Do **not** launch, stop, restart, or fake input on someone else’s window or
   core.
 
-## Profile: always `herdr-dev` for local work
+## Profile: isolated `herdr-dev` (app home **and** core)
+
+Herdr keeps mods in `HERDR_APP_HOME` but **spaces/agents in herdr-core**
+(`HC_SESSION`). Exporting only `HERDR_APP_HOME=~/.config/herdr-dev` pollutes
+production sidebars with E2E spaces — never do that.
 
 ```sh
-export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
+just setup-herdr-dev   # dirs + env block to launch Herdr
+just sync              # MIDE_HERDR_DEV=1 (full profile)
+just status            # herdr-dev-exec.sh — never production
 ```
 
-Set this for **every** `just` recipe that touches Herdr and for every
-`herdr-app` / `hc` command in local verification. Confirm the intended **core
-session** separately; the app-home override alone does not select a core.
+Canonical env: [`scripts/herdr-dev-profile.sh`](../../../scripts/herdr-dev-profile.sh)
+(`HC_SESSION=herdr-mide-dev`, XDG roots under `~/.config/herdr-dev/xdg/`).
+E2E: `e2e/scripts/lib/herdr-dev.sh` enforces the same before `space.new`.
 
-If `herdr-dev` is missing or broken, set it up — do not fall back to
-production.
+If isolation is broken, fix `herdr-dev` — **never** query or automate
+production `~/.config/herdr-app`.
 
 ## Automated gate (no window required)
 
@@ -95,21 +97,15 @@ interactions, or layout integration.
 
 ## Live dev loop (hot reload)
 
-Prerequisites: Herdr running with the **herdr-dev** app home; owner-approved
-install if keys or collisions matter (`just install` is no-clobber).
+Prerequisites: **isolated** dev window (`just setup-herdr-dev` launch line);
+production may stay open — do not target it.
 
 ```sh
-export HERDR_APP_HOME="$HOME/.config/herdr-dev"
-just sync         # one-shot copy mods + layout
-just dev          # watch repo → app home; Herdr reloads on change
-```
-
-In another terminal (same `HERDR_APP_HOME`):
-
-```sh
-just status       # layout, focus, mod errors — must be clean
-just switch       # herdr-mide layout
-just shot         # herdr-shot.png in repo root
+just sync         # herdr-dev app home only (not production)
+just dev          # watch + hot reload on herdr-dev
+just status       # dev socket only
+just switch       # herdr-mide on dev window
+just shot         # dev window PNG
 ```
 
 Iterate: edit mod → `just dev` syncs → `just status` → `just shot` to inspect
@@ -125,12 +121,13 @@ Do not claim a scene passed without doing it or inspecting a fresh capture.
 Use Herdr CLI instead of guessing focus:
 
 ```sh
-herdr-app status
-herdr-app ls
-herdr-app commands
-herdr-app do layout.switch --name herdr-mide
-herdr-app shot /absolute/path/new-name.png   # never overwrite an existing file
+sh scripts/herdr-dev-exec.sh herdr-app status
+sh scripts/herdr-dev-exec.sh herdr-app ls
+sh scripts/herdr-dev-exec.sh herdr-app do layout.switch --name herdr-mide
+sh scripts/herdr-dev-exec.sh herdr-app shot /absolute/path/new-name.png
 ```
+
+Never run bare `herdr-app` without the dev profile — that hits production.
 
 Read `herdr-app --skill` before `do` subcommands you have not used in this
 session. Prefer IDs from `ls` over assumed pane/terminal IDs.
@@ -158,13 +155,14 @@ a **user-started** window in that home; see `docs/TESTING.md`.
 
 ## Quick reference
 
-| Goal | Command |
-|------|---------|
+| Goal                     | Command                                                          |
+| ------------------------ | ---------------------------------------------------------------- |
+| Prepare isolation        | `just setup-herdr-dev` then launch Herdr with printed `env`      |
 | Automation testing (E2E) | `E2E_RUN=<id> just e2e-files-context <id>` — see `e2e/README.md` |
-| Copy mods into dev home | `HERDR_APP_HOME=~/.config/herdr-dev just sync` |
-| Watch + hot reload | `HERDR_APP_HOME=~/.config/herdr-dev just dev` |
-| Runtime parser check | `just check` |
-| Mod errors | `just status` (with dev home exported) |
-| Screenshot | `just shot` or `herdr-app shot <new-file.png>` |
-| Show mIDE layout | `just switch` |
-| Full manual matrix | `docs/TESTING.md` |
+| Copy mods into dev home  | `just sync` (never production)                                   |
+| Watch + hot reload       | `just dev`                                                       |
+| Runtime parser check     | `just check`                                                     |
+| Mod errors               | `just status` (with dev home exported)                           |
+| Screenshot               | `just shot` or `herdr-app shot <new-file.png>`                   |
+| Show mIDE layout         | `just switch`                                                    |
+| Full manual matrix       | `docs/TESTING.md`                                                |

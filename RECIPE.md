@@ -150,7 +150,10 @@ files, commit and make small edits without changing Herdr's theme.
 ## Watch out
 
 - **Automation testing** and **E2E** in this project mean [`e2e/`](./e2e/) on
-  `herdr-dev` ([`e2e/README.md`](./e2e/README.md)), not `just test` alone.
+  the isolated `herdr-dev` profile ([`e2e/README.md`](./e2e/README.md),
+  [`scripts/herdr-dev-profile.sh`](./scripts/herdr-dev-profile.sh): app home
+  plus `HC_SESSION=herdr-mide-dev`), not `just test` alone. Never reuse the
+  production core — `HERDR_APP_HOME` alone is insufficient.
 - This is one layout with four dependent mods, not four independent gallery
   mods. The repository root is the complete, copyable package — its mods carry
   the generated `_shared` copies in-tree. Its Git UI also

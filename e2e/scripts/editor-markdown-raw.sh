@@ -61,7 +61,7 @@ e2e_start_dev_window || fail "could not start herdr-dev"
 DEV_PID="$(e2e_herdr_dev_pid)" || fail "no dev Herdr PID (HERDR_APP_HOME must be herdr-dev)"
 echo "e2e: dev Herdr PID=$DEV_PID"
 
-herdr-app do space.new --name "mIDE markdown raw e2e" --folder "$REPO"
+herdr-app do space.new --name "mIDE markdown raw e2e" --folder "$REPO" --focus false
 herdr-app do layout.switch --name herdr-mide
 sleep 0.8
 

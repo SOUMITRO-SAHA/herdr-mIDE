@@ -2,7 +2,8 @@
 
 This is a maintainer checklist, not an automated publisher. Nothing here
 publishes, tags, changes GitHub topics or installs into a user's Herdr home.
-The first planned bundle version is `0.0.1`; it is not released yet.
+**v0.0.1** shipped to the Herdr Gallery on 2026-11-12. Prepare the next bump in
+`VERSION`, `CHANGELOG.md`, and the platform matrix before tagging again.
 
 ## What is versioned
 
@@ -32,7 +33,10 @@ one or assume a tag alone updates a gallery listing.
    app or core.
 3. `preview.png` is preview artwork containing a screenshot; feature
    screenshots live in `public/examples/` and the demo video lives in
-   `public/`. Verify that the preview meets Herdr's screenshot requirements
+   `public/`. Capture or refresh those images only on the **`herdr-dev`**
+   profile — never production `~/.config/herdr-app` — following
+   [TESTING.md](./TESTING.md) (“Documentation screenshots”). Verify that the
+   preview meets Herdr's screenshot requirements
    before publication. Confirm that the media still represents the released
    code and review it for names, paths, credentials, terminal output and other
    private content. Check the video's audio and visual material for third-party

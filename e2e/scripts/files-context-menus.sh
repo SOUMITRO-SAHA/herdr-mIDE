@@ -90,7 +90,7 @@ echo "e2e: dev Herdr PID=$DEV_PID HERDR_APP_HOME=$HERDR_APP_HOME"
 if [[ -n "$SPACE_ID" ]]; then
   herdr-app do space.select --id "$SPACE_ID"
 else
-  herdr-app do space.new --name "mIDE e2e" --folder "$REPO" 2>/dev/null || true
+  herdr-app do space.new --name "mIDE e2e" --folder "$REPO" --focus false 2>/dev/null || true
 fi
 herdr-app do layout.switch --name herdr-mide
 herdr-app do layout.toggle --id panel

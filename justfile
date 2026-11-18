@@ -46,12 +46,16 @@ help:
     @echo "  just smoke-capture  capture a scene from a user-started test window"
     @echo "  just e2e-files-context  dev-only Files context-menu automation; see e2e/"
     @echo "  just e2e-editor-markdown  dev-only Editor Markdown Raw automation; see e2e/"
+    @echo "  just setup-herdr-dev   prepare isolated app home + core session; see docs/TESTING.md"
 
 dev interval=INTERVAL:
-    @INTERVAL="{{interval}}" ./scripts/dev.sh
+    @MIDE_HERDR_DEV=1 INTERVAL="{{interval}}" ./scripts/dev.sh
 
 sync:
-    @./scripts/sync.sh
+    @MIDE_HERDR_DEV=1 ./scripts/sync.sh
+
+setup-herdr-dev:
+    @sh ./scripts/setup-herdr-dev.sh
 
 shared:
     @sh ./scripts/materialize-shared.sh
@@ -80,6 +84,7 @@ test:
     @sh ./tests/test-bundle.sh
     @sh ./tests/test-install.sh
     @sh ./tests/test-uninstall.sh
+    @sh ./tests/test-herdr-dev-profile.sh
 
 fmt:
     @bun run --silent fmt
@@ -97,13 +102,13 @@ uninstall:
     @./scripts/uninstall.sh
 
 status:
-    @herdr-app status
+    @sh ./scripts/herdr-dev-exec.sh herdr-app status
 
 shot:
-    @herdr-app shot && echo "saved: {{justfile_directory()}}/herdr-shot.png"
+    @sh ./scripts/herdr-dev-exec.sh herdr-app shot && echo "saved: {{justfile_directory()}}/herdr-shot.png"
 
 switch:
-    @herdr-app do layout.switch --name herdr-mide
+    @sh ./scripts/herdr-dev-exec.sh herdr-app do layout.switch --name herdr-mide
 
 bundle bundle_dir="dist/herdr-mide":
     @sh ./scripts/bundle.sh "{{bundle_dir}}"
@@ -118,13 +123,11 @@ smoke-capture smoke_root scene:
 e2e-files-context run="local":
     #!/usr/bin/env bash
     set -euo pipefail
-    export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
     export E2E_RUN="{{run}}"
     exec ./e2e/scripts/files-context-menus.sh
 
 e2e-editor-markdown run="local":
     #!/usr/bin/env bash
     set -euo pipefail
-    export HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-dev}"
     export E2E_RUN="{{run}}"
     exec ./e2e/scripts/editor-markdown-raw.sh

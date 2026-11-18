@@ -25,14 +25,17 @@ for private information before sharing them outside this repo.
 - **Git status baked into the tree** — the whole file name is colored: 🟡 modified or conflicted, 🟢 new/untracked, 🔴 deleted, plus a bold status letter.
 - Lazy folders, `.git` and `.DS_Store` hidden, live refresh from the folder watch.
 - **Click a file to edit it** — it opens in the editor pane beside your terminal.
+- **Context menus on every row** — Open, Reveal (local), copy path/name, Open in New Tab for folders; the tree root adds **New File** and **New Folder** with inline naming, validation and duplicate checks. Optional Zed-style shortcuts appear in the menu when their `mod:mide-files` bindings are merged.
 
 ![Files tree with file icons and Git status coloring](public/examples/files-git-status.png)
+
+![Files context menu with create and copy actions](public/examples/files-context-menu.png)
 
 ### 🌿 Changes — a git panel for the review-and-commit loop
 
 - **Tracked and Untracked groups** — each file has a tri-state staging checkbox; partially staged files stay visible as partially staged.
 - **Stage All / Unstage All** — one split action stages every change or clears the index, with per-group selection too.
-- **Detailed diff view** — line-numbered, tinted additions/deletions, smooth on big diffs.
+- **Detailed diff view** — line-numbered, tinted additions/deletions, smooth on big diffs. **Markdown** diffs add Ayu-style inline coloring (headings, fences, emphasis, links, and inline code) via the shared tokenizer in `shared/syntax.js`.
 - **Commit flow** — submit a message to commit staged files; if none are staged, tracked edits are staged and committed without including untracked files.
 - **Branch switcher** — switch, create, and delete branches without leaving the panel.
 
@@ -40,7 +43,7 @@ for private information before sharing them outside this repo.
 
 ### ⌨️ Editor — a minimal editor pane
 
-- Syntax highlighting, a Save button, optional ⌘S shortcut, and an unsaved indicator.
+- Syntax highlighting for common languages; **Markdown Raw / Preview** tabs (Raw stays in Herdr's editable host editor; Preview renders the file). Save button, platform save shortcuts, and an unsaved indicator; word wrap and Preview-by-default live in the Settings menu.
 - Editor syntax uses Ayu Dark; Git status colors use Zed One Dark values, and diff colors use the bundled palette. Other UI colors—including focus, controls and backgrounds—follow Herdr's theme without changing the app or terminal theme.
 - **Vim mode is on the roadmap** — Herdr's built-in editor exposes no cursor API, so modal editing arrives as a custom editor core (see [ROADMAP](./docs/ROADMAP.md)).
 
@@ -48,7 +51,7 @@ for private information before sharing them outside this repo.
 
 ### More screenshots
 
-- [Markdown in the Raw editor](public/examples/editor-markdown-raw.png) · [Syntax-highlighted JavaScript](public/examples/editor-syntax-highlighting.png)
+- [Files context menu](public/examples/files-context-menu.png) · [Markdown in the Raw editor](public/examples/editor-markdown-raw.png) · [Syntax-highlighted JavaScript](public/examples/editor-syntax-highlighting.png)
 - [Staging files and writing a commit message](public/examples/changes-staging-commit.png) · [Commit history](public/examples/changes-history.png)
 - [Branch switcher](public/examples/changes-branch-switcher.png) · [Branch delete control](public/examples/changes-branch-delete.png) · [Remote actions menu](public/examples/changes-remote-actions.png)
 
@@ -120,7 +123,8 @@ Every command lives in the root `justfile`:
 
 ```sh
 just dev        # live loop: sync on every save, Herdr hot-reloads in place
-just sync       # one-shot copy into ~/.config/herdr-app
+just setup-herdr-dev  # isolated app home + core (run once; see docs/TESTING.md)
+just sync       # one-shot copy into herdr-dev only (never production)
 just test       # source tests for shared helpers and palette boundaries
 just check      # herdr-app check every mod (the runtime's own parser)
 just fmt        # format the tree (Prettier via Bun; bun install once)
@@ -133,15 +137,19 @@ just switch     # show the herdr-mide layout (ctrl-shift-l cycles back)
 just bundle     # build a copyable layout bundle; needs a reviewed preview.png
 just smoke-prepare  # prepare a disposable app home and Git fixture
 just smoke-capture  # check and capture a user-started test window; see docs/TESTING.md
-just e2e-files-context <run-id>  # automation testing: Files context menus on herdr-dev; see e2e/
+just e2e-files-context <run-id>   # automation testing: Files context menus on herdr-dev; see e2e/
+just e2e-editor-markdown <run-id> # automation testing: Editor Markdown Raw on herdr-dev
 ```
 
-**Automation testing** / **E2E** = [`e2e/`](./e2e/) on `HERDR_APP_HOME=~/.config/herdr-dev`
-(not `just test` alone). Details and vocabulary: [e2e/README.md](./e2e/README.md).
+**Automation testing** / **E2E** = [`e2e/`](./e2e/) on the **isolated**
+`herdr-dev` profile — `HERDR_APP_HOME` **and** `HC_SESSION` ([docs/TESTING.md](./docs/TESTING.md)).
+`just dev` / `just sync` never touch production. Details: [e2e/README.md](./e2e/README.md).
 
 `preview.png` is the project's preview artwork. `just bundle` packages it for
 Herdr's gallery; it only checks that the file exists, so review the image,
 other screenshots and demo video for private information before publishing.
+Committed example images in `public/examples/` are captured from **`herdr-dev`
+only** (see [docs/TESTING.md](./docs/TESTING.md) — “Documentation screenshots”).
 
 The typical loop: `just dev` in one terminal, edit in your editor — each save lands in the app home within a second and Herdr reloads the mod in place. A broken save keeps the last good version running and reports in `just status`; `just shot` is the fastest visual check. Both respect `HERDR_APP_HOME`, and `just dev interval=0.3` polls faster. If a bad layout or keys edit ever wedges the window, `ctrl-alt-shift-escape` is Herdr's built-in escape hatch back to the default `main` layout.
 
@@ -164,7 +172,10 @@ problems are reported privately as described in [SECURITY.md](./SECURITY.md)
 
 ## Status
 
-**v0.0.1 (2026-11-12).** Automated checks are green and the interactive workflows were verified live on macOS; Linux and Windows coverage is partial and tracked, with known gaps, in [docs/TESTING.md](./docs/TESTING.md). `herdr-app check` covers initial mod rendering, not the complete interaction matrix. Vim mode, hunk-level staging and the agent-review flow are future work. See the [roadmap](./docs/ROADMAP.md).
+**v0.0.1 (2026-11-12)** is on the [Herdr Gallery](https://herdr.dev/layouts). **`main`
+ahead of that release** adds Files context menus and create actions ([#32](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/32) / [#44](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/44)), Markdown-aware Diff coloring ([#33](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/33), first language), an uninstaller, the complete root Gallery package, and macOS **automation testing** under [`e2e/`](./e2e/) — see [CHANGELOG.md](./CHANGELOG.md) (Unreleased).
+
+Automated checks stay green; live coverage is tracked per platform in [docs/TESTING.md](./docs/TESTING.md). `herdr-app check` covers initial mod render only. Vim mode, hunk-level staging and the agent-review flow remain on the [roadmap](./docs/ROADMAP.md).
 
 ## License
 

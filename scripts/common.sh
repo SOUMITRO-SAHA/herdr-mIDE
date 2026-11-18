@@ -1,11 +1,19 @@
 # Shared configuration for herdr-mIDE scripts: paths and sync rules.
 # Sourced by the scripts in this folder; the justfile is the entry point.
 
-# The Herdr app home (override with HERDR_APP_HOME).
-HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
-
 # Repo root (this file lives in <root>/scripts).
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+
+# The Herdr app home. Recipes that touch a live window set MIDE_HERDR_DEV=1 and
+# load the isolated profile (app home + HC_SESSION + XDG roots) so spaces and
+# agents never share production herdr-core state.
+if [ "${MIDE_HERDR_DEV:-}" = "1" ]; then
+  # shellcheck source=herdr-dev-profile.sh
+  . "$REPO_DIR/scripts/herdr-dev-profile.sh"
+  mide_export_herdr_dev_isolated_env
+else
+  HERDR_APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
+fi
 
 # Artifacts herdr-app check writes beside mods — never sync them.
 EXCLUDES="--exclude=.DS_Store --exclude=jsconfig.json --exclude=gpui-kit.d.ts --exclude=_shared/"

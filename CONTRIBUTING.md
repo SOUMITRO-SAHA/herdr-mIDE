@@ -74,8 +74,9 @@ Examples: `fix/12-editor-save-windows`, `docs/7-issue-first-contribution-flow`.
 - Tests first: every behavior change gets a focused failing test, then the
   implementation (see AGENTS.md). `just test` must be green before a PR.
 - Mods changed → `just check` too (the Herdr runtime's own parser).
-- Any live Herdr verification runs in the `herdr-dev` profile, never the
-  production app home (AGENTS.md, “Local testing”).
+- Any live Herdr verification runs in the **isolated** `herdr-dev` profile
+  (`scripts/herdr-dev-profile.sh`: app home + `HC_SESSION`), never production
+  (AGENTS.md, “Local testing”). Run `just setup-herdr-dev` once per machine.
 - **Automation testing** / **E2E testing** for a feature means the [`e2e/`](./e2e/)
   scripts and/or the manual scenes in [`docs/TESTING.md`](./docs/TESTING.md) on
   `herdr-dev` — see [`e2e/README.md`](./e2e/README.md). `just test` and
