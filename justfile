@@ -81,6 +81,7 @@ test:
     @bun ./tests/test-editor-shortcut.mjs
     @bun ./tests/test-editor-raw.mjs
     @bun ./tests/test-editor-image.mjs
+    @bun ./tests/test-editor-svg.mjs
     @bun ./tests/test-keys.mjs
     @bun ./tests/test-smoke.mjs
     @bun ./tests/test-portable-temp.mjs
@@ -144,3 +145,9 @@ e2e-editor-image run="local":
     set -euo pipefail
     export E2E_RUN="{{run}}"
     exec ./e2e/scripts/editor-image-preview.sh
+
+e2e-editor-svg run="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export E2E_RUN="{{run}}"
+    exec ./e2e/scripts/editor-svg-raw-preview.sh
