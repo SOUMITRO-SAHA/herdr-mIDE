@@ -13,7 +13,6 @@ import { handleCommitShortcut } from "./commit-shortcut.js";
 import { footerNameWidths } from "./footer-sizing.js";
 import {
   extractPullRequestLink,
-  openUrlCommand,
   primaryRemoteAction,
   primaryRemoteLabel,
   publishPushArgs,
@@ -435,21 +434,14 @@ export default class MideChanges extends View {
       cx.notify();
       return;
     }
-    const context = this.context,
-      { program, args } = openUrlCommand(window().platform, url),
-      { on } = this;
-    cx.spawn(async cx => {
-      try {
-        const result = await exec(program, args, { cwd: this.root, on });
-        if (result.code !== 0)
-          throw new Error((result.stderr || result.stdout).trim() || "Could not open pull request URL");
-        if (this.currentKey() === context) this.note = "Opened pull request page in your browser";
-      } catch (e) {
-        this.fail(context, [program, ...args], e);
-      } finally {
-        cx.notify();
-      }
-    });
+    // Shell `open` via exec does not run on the person's machine when `on` targets
+    // a remote workspace, and is unnecessary when the host exposes this API.
+    try {
+      cx.open_url(url);
+      this.note = null;
+    } catch (e) {
+      this.fail(this.context, ["open_url"], e);
+    }
     cx.notify();
   }
 

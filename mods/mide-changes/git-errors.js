@@ -75,6 +75,7 @@ const ACTION_LABELS = {
   branch: "Branch delete",
   commit: "Commit",
   fetch: "Fetch",
+  open_url: "Open URL",
   pull: "Pull",
   push: "Push",
   reset: "Unstage",

@@ -30,9 +30,8 @@ files, commit and make small edits without changing Herdr's theme.
 <branch>:<branch>`. On published GitHub feature branches, **Create Pull
   Request** sits centered in its own row above the branch/Fetch bar with no rule
   between it and the file list; a rule separates that row from the repo/branch
-  row. A click opens
-  `…/pull/new/{branch}` (or the URL git prints after push) in the system
-  browser. Names that fit
+  row. A click calls the host `open_url` API to open `…/pull/new/{branch}` or the URL git printed after
+  push in the system browser. Names that fit
   are shown in full; a short name leaves its unused space for the other. The
   branch icon, repository, slash and branch use 1px gaps, with 1px horizontal
   padding on the branch control.
