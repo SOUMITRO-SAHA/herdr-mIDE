@@ -43,13 +43,15 @@ try {
     return `toast-${toasts.length}`;
   };
   const { friendlyGitError, gitActionLabel } = await import("../mods/mide-changes/git-errors.js");
+  const { extractPullRequestLink } = await import("../mods/mide-changes/remote-sync.js");
   const methods = new Function(
     "friendlyGitError",
     "gitActionLabel",
+    "extractPullRequestLink",
     "exec",
     "notify",
-    `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`,
-  )(friendlyGitError, gitActionLabel, exec, notify);
+    `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "publish")}, ${method("publish", "republish")}, ${method("republish", "openPullRequest")}, ${method("openPullRequest", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`,
+  )(friendlyGitError, gitActionLabel, extractPullRequestLink, exec, notify);
   const tasks = [];
   const cx = {
     notify() {},

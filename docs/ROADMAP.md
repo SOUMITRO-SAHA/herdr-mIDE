@@ -33,12 +33,12 @@ nothing in a wave depends on a capability nobody has verified yet. The big
 rock (Phase 1, the editor core) stays deliberately unscheduled until these
 waves land.
 
-| Milestone                                  | Theme                                       | Issues                                                                                                                                                        |
-| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Milestone                                  | Theme                                       | Issues                                                                                                                                                              |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **v0.0.2** — a file manager you can act on | The tree stops being read-only              | ~~#32 context menu~~ ✅ · ~~#44 new file/folder~~ ✅ (PR #50) · ~~#27 listing housekeeping~~ ✅ (PR #48) · #45 restore file · #41 hide git-ignored · #40 go-to-file |
-| **v0.0.3** — see every file                | The editor pane learns what files look like | ~~#33 Markdown~~ ✅ (PR #49, #51) · #33 Rust · ~~#35 image preview~~ ✅ (PR #52) · ~~#53 SVG test/e2e~~ ✅ (PR #54) · #43 SVG Raw/Preview · #34 Markdown images       |
-| **v0.0.4** — history you can act on        | The Changes panel acts on the past          | #36 commit preview · #38 revert with pre-filled message · #42 word-level diff                                                                                 |
-| **v0.0.5** — beyond the pane               | Reaching outside herdr-mIDE                 | #39 open in an installed editor · #37 drag-and-drop (Finder → folder)                                                                                         |
+| **v0.0.3** — see every file                | The editor pane learns what files look like | ~~#33 Markdown~~ ✅ (PR #49, #51) · #33 Rust · ~~#35 image preview~~ ✅ (PR #52) · ~~#53 SVG test/e2e~~ ✅ (PR #54) · #43 SVG Raw/Preview · #34 Markdown images     |
+| **v0.0.4** — history you can act on        | The Changes panel acts on the past          | #36 commit preview · #38 revert with pre-filled message · #42 word-level diff                                                                                       |
+| **v0.0.5** — beyond the pane               | Reaching outside herdr-mIDE                 | #39 open in an installed editor · #37 drag-and-drop (Finder → folder)                                                                                               |
 
 **v0.0.2** (milestone [1](https://github.com/SOUMITRO-SAHA/herdr-mIDE/milestone/1)):
 #32, #44, and #27 are closed on `main`; **#45, #41, and #40** remain (no open
@@ -95,7 +95,7 @@ Rust highlighting is still the next #33 slice.
 - [ ] Word-level diff highlighting within changed lines — [#42](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/42) (v0.0.4)
 - [ ] Side-by-side diff mode (no issue yet)
 - [ ] Commit history with per-commit file changes (`git log --stat`) — [#36](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/36) (v0.0.4), acting on it: revert [#38](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/38)
-- [ ] Ahead/behind indicators and `pull`/`push`/`fetch` actions (no issue yet)
+- [x] Ahead/behind indicators, `pull`/`push`/`fetch`, **Publish** and **Create Pull Request** (Zed-style) — [#55](https://github.com/SOUMITRO-SAHA/herdr-mIDE/issues/55)
 - [ ] Draft commit message from the staged diff (no issue yet)
 
 ## Phase 4 — The agent workflow (unscheduled)

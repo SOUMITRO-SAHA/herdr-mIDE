@@ -24,7 +24,15 @@ files, commit and make small edits without changing Herdr's theme.
   Its footer shows the repository, branch and remote action; the Changes tab
   also has a commit message area. History lists recent commits. The footer's
   repository and branch names use an end ellipsis when their available space
-  runs out, keeping the remote action visible at the right edge. Names that fit
+  runs out, keeping the remote action visible at the right edge. When the
+  branch has no upstream, the primary remote action reads **Publish** (or
+  **Republish** when upstream is gone) and runs `git push -u <remote>
+<branch>:<branch>`. On published GitHub feature branches, **Create Pull
+  Request** sits centered in its own row above the branch/Fetch bar with no rule
+  between it and the file list; a rule separates that row from the repo/branch
+  row. A click opens
+  `…/pull/new/{branch}` (or the URL git prints after push) in the system
+  browser. Names that fit
   are shown in full; a short name leaves its unused space for the other. The
   branch icon, repository, slash and branch use 1px gaps, with 1px horizontal
   padding on the branch control.

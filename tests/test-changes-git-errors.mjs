@@ -66,6 +66,8 @@ assert.equal(gitActionLabel(["branch", "-d", "old"]), "Branch delete");
 assert.equal(gitActionLabel(["fetch", "--prune"]), "Fetch");
 assert.equal(gitActionLabel(["pull"]), "Pull");
 assert.equal(gitActionLabel(["push"]), "Push");
+assert.equal(gitActionLabel(["push", "-u", "origin", "main"]), "Publish");
+assert.match(friendlyGitError("fatal: Could not read from remote repository."), /Could not reach the remote/);
 assert.equal(gitActionLabel(["commit", "-m", "msg"]), "Commit");
 assert.equal(gitActionLabel(["mystery"]), "Git");
 console.log("Changes friendly git error tests passed");

@@ -118,7 +118,8 @@ query files, theme files, or icons are included in this repository.
 Parts of `mods/mide-files/main.js` (folder listing) and
 `mods/mide-changes/main.js` (diff rendering) adapt Herdr's shipped `files`
 and `changes` mods, and the tree chevron glyphs
-(`mods/mide-files/icons/chevron-down.svg`, `chevron-right.svg`) are taken
+(`mods/mide-files/icons/chevron-down.svg`, `chevron-right.svg`,
+`arrow-up.svg`) are taken
 from Herdr's shipped `files` mod (`defaults/mods/files/` in the app
 repo, name-bearing class attributes stripped). All Apache-2.0 licensed.
 See https://github.com/herdrdev/herdr-app.

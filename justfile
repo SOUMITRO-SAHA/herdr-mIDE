@@ -72,6 +72,7 @@ test:
     @bun ./tests/test-changes-commit-shortcut.mjs
     @bun ./tests/test-changes-footer-sizing.mjs
     @bun ./tests/test-changes-branch-footer.mjs
+    @bun ./tests/test-changes-remote-sync.mjs
     @bun ./tests/test-file-icons.mjs
     @bun ./tests/test-file-actions.mjs
     @bun ./tests/test-file-context-menu.mjs

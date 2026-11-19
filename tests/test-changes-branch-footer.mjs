@@ -5,7 +5,7 @@ import { footerNameWidths } from "../mods/mide-changes/footer-sizing.js";
 const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
 const start = source.indexOf("  branchFooter(");
 assert.notEqual(start, -1, "the branch footer builds its own row");
-const end = source.indexOf("  historyRow(", start);
+const end = source.indexOf("  commitStack(", start);
 assert.ok(end > start);
 const footer = source.slice(start, end);
 
@@ -55,7 +55,7 @@ const view = {
   branch,
   branchMenuOpen: false,
   branchQuery: { set_value: () => {}, focus: () => {} },
-  remoteActions: () => tracked(),
+  remoteToolbar: () => tracked(),
   branchPicker: () => tracked(),
 };
 branchFooter.call(view, {}, { text: n => n });
@@ -87,7 +87,7 @@ const measureBranch = elements.find(element =>
 const separator = elements.find(element => element.calls.some(([n, v]) => n === "id" && v === "mide-footer-separator"));
 assert.ok(measureRepo && measureBranch && separator, "intrinsic text widths and separator are measured");
 const remote = childElements(row).at(-1);
-assert.ok(remote, "the remote action remains a direct child of the footer");
+assert.ok(remote, "the remote toolbar remains a direct child of the footer");
 
 // Keep the repository visible without allowing a long name to take the row.
 const repoLabel = elements.find(
