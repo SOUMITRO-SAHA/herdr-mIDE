@@ -12,11 +12,19 @@ import { friendlyGitError, gitActionLabel } from "./git-errors.js";
 import { handleCommitShortcut } from "./commit-shortcut.js";
 import { footerNameWidths } from "./footer-sizing.js";
 import {
+  dismissPullRequestOffer,
+  markPullRequestOffer,
+  pullRequestDismissed,
+  pullRequestPending,
+  storedPullRequestPushUrl,
+} from "./pr-offer-storage.js";
+import {
   extractPullRequestLink,
   primaryRemoteAction,
   primaryRemoteLabel,
   publishPushArgs,
   resolvePullRequestUrl,
+  shouldArmPullRequestOffer,
   shouldOfferPullRequest,
 } from "./remote-sync.js";
 
@@ -362,9 +370,17 @@ export default class MideChanges extends View {
       try {
         const r = await exec("git", args, { cwd: root, on });
         if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim());
-        if (args[0] === "push") {
+        if (args[0] === "push" && this.currentKey() === context) {
           const link = extractPullRequestLink(r.stderr);
-          if (link && this.currentKey() === context) this.pushPrUrl = link;
+          if (link) this.pushPrUrl = link;
+          if (shouldArmPullRequestOffer(args, r.stderr)) {
+            markPullRequestOffer(this.root, this.branch, {
+              pushPrUrl: link,
+              remoteUrl: this.remoteUrl,
+              defaultBranch: this.defaultBranch,
+              hasUpstream: this.hasUpstream || args.includes("-u"),
+            });
+          }
         }
         if (this.currentKey() === context && then) then();
       } catch (e) {
@@ -421,8 +437,9 @@ export default class MideChanges extends View {
     this.publish(cx);
   }
   openPullRequest(cx) {
+    const pushPrUrl = this.pushPrUrl ?? storedPullRequestPushUrl(this.root, this.branch);
     const url = resolvePullRequestUrl({
-      pushPrUrl: this.pushPrUrl,
+      pushPrUrl,
       remoteUrl: this.remoteUrl,
       branch: this.branch,
       defaultBranch: this.defaultBranch,
@@ -439,6 +456,8 @@ export default class MideChanges extends View {
     try {
       cx.open_url(url);
       this.note = null;
+      dismissPullRequestOffer(this.root, this.branch);
+      this.pushPrUrl = null;
     } catch (e) {
       this.fail(this.context, ["open_url"], e);
     }
@@ -824,12 +843,15 @@ export default class MideChanges extends View {
   }
 
   pullRequestVisible() {
+    const pushPrUrl = this.pushPrUrl ?? storedPullRequestPushUrl(this.root, this.branch);
     return shouldOfferPullRequest({
       hasUpstream: this.hasUpstream,
       branch: this.branch,
       defaultBranch: this.defaultBranch,
       remoteUrl: this.remoteUrl,
-      pushPrUrl: this.pushPrUrl,
+      pushPrUrl,
+      pending: pullRequestPending(this.root, this.branch),
+      dismissed: pullRequestDismissed(this.root, this.branch),
     });
   }
 

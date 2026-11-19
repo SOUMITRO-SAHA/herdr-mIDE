@@ -54,9 +54,41 @@ export function resolvePullRequestUrl({ pushPrUrl, remoteUrl, branch, defaultBra
   return githubCreatePullRequestUrl(remoteUrl, branch);
 }
 
-export function shouldOfferPullRequest({ hasUpstream, branch, defaultBranch, remoteUrl, pushPrUrl }) {
+/** Stable id for per-branch PR-offer state (persisted via Herdr `shared`). */
+export function pullRequestBranchKey(cwd, branch) {
+  const root = String(cwd ?? "").trim();
+  const name = String(branch ?? "").trim();
+  if (!root || !name) return null;
+  return `${root}\0${name}`;
+}
+
+export function pullRequestEligible({ hasUpstream, branch, defaultBranch, remoteUrl, pushPrUrl }) {
   if (!hasUpstream || !branch) return false;
   return Boolean(resolvePullRequestUrl({ pushPrUrl, remoteUrl, branch, defaultBranch }));
+}
+
+/**
+ * Offer only while `pending` (set after publish / push hint) until the
+ * person opens the URL once (`dismissed`).
+ */
+export function shouldOfferPullRequest({
+  hasUpstream,
+  branch,
+  defaultBranch,
+  remoteUrl,
+  pushPrUrl,
+  pending = false,
+  dismissed = false,
+}) {
+  if (dismissed || (!pending && !pushPrUrl)) return false;
+  return pullRequestEligible({ hasUpstream, branch, defaultBranch, remoteUrl, pushPrUrl });
+}
+
+/** True when git push output should arm a one-time PR offer (publish `-u` or host PR hint). */
+export function shouldArmPullRequestOffer(gitArgs, stderr) {
+  if (gitArgs[0] !== "push") return false;
+  if (gitArgs.includes("-u")) return true;
+  return Boolean(extractPullRequestLink(stderr));
 }
 
 const PR_HINTS = ["create a pull request", "create pull request", "create a merge request", "view merge request"];

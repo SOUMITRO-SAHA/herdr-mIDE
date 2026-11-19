@@ -7,7 +7,9 @@ import {
   primaryRemoteAction,
   primaryRemoteLabel,
   publishPushArgs,
+  pullRequestBranchKey,
   resolvePullRequestUrl,
+  shouldArmPullRequestOffer,
   shouldOfferPullRequest,
 } from "../mods/mide-changes/remote-sync.js";
 
@@ -63,33 +65,33 @@ assert.equal(
   "https://github.com/o/r/pull/42",
 );
 
+const offerBase = {
+  hasUpstream: true,
+  branch: "feature/x",
+  defaultBranch: "main",
+  remoteUrl: "https://github.com/a/b",
+};
+
+assert.equal(shouldOfferPullRequest({ ...offerBase, pending: true }), true);
+assert.equal(shouldOfferPullRequest({ ...offerBase, pending: true, dismissed: true }), false);
+assert.equal(shouldOfferPullRequest({ ...offerBase, pending: false }), false);
 assert.equal(
   shouldOfferPullRequest({
-    hasUpstream: true,
-    branch: "feature/x",
-    defaultBranch: "main",
-    remoteUrl: "https://github.com/a/b",
+    ...offerBase,
+    pushPrUrl: "https://github.com/a/b/pull/1",
+    pending: false,
   }),
   true,
 );
+assert.equal(shouldOfferPullRequest({ ...offerBase, pending: true, hasUpstream: false }), false);
+
+assert.equal(pullRequestBranchKey("/repo", "feature/x"), "/repo\0feature/x");
+assert.equal(shouldArmPullRequestOffer(["push", "-u", "origin", "a:a"], ""), true);
 assert.equal(
-  shouldOfferPullRequest({
-    hasUpstream: true,
-    branch: "feature/x",
-    defaultBranch: null,
-    remoteUrl: "https://github.com/a/b",
-  }),
+  shouldArmPullRequestOffer(["push"], "remote: Create a pull request\nremote: https://github.com/a/b/pull/new/x\n"),
   true,
 );
-assert.equal(
-  shouldOfferPullRequest({
-    hasUpstream: false,
-    branch: "feature/x",
-    defaultBranch: "main",
-    remoteUrl: "https://github.com/a/b",
-  }),
-  false,
-);
+assert.equal(shouldArmPullRequestOffer(["push"], "Everything up-to-date\n"), false);
 
 assert.deepEqual(openUrlCommand("macos", "https://example.com"), { program: "open", args: ["https://example.com"] });
 assert.equal(openUrlCommand("linux", "https://example.com").program, "xdg-open");
