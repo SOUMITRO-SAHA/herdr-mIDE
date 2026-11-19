@@ -35,16 +35,18 @@ waves land.
 
 | Milestone                                  | Theme                                       | Issues                                                                                                                                                        |
 | ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **v0.0.2** — a file manager you can act on | The tree stops being read-only              | ~~#32 context menu~~ ✅ · ~~#44 new file/folder (shipped with #32)~~ ✅ · #45 restore file · #41 hide git-ignored · #40 go-to-file · #27 listing housekeeping |
-| **v0.0.3** — see every file                | The editor pane learns what files look like | ~~#33 Markdown highlighting~~ ✅ · #33 Rust · #35 image preview · #43 SVG Raw/Preview · #34 Markdown images                                                   |
+| **v0.0.2** — a file manager you can act on | The tree stops being read-only              | ~~#32 context menu~~ ✅ · ~~#44 new file/folder~~ ✅ (PR #50) · ~~#27 listing housekeeping~~ ✅ (PR #48) · #45 restore file · #41 hide git-ignored · #40 go-to-file |
+| **v0.0.3** — see every file                | The editor pane learns what files look like | ~~#33 Markdown~~ ✅ (PR #49, #51) · #33 Rust · ~~#35 image preview~~ ✅ (PR #52) · ~~#53 SVG test/e2e~~ ✅ (PR #54) · #43 SVG Raw/Preview · #34 Markdown images       |
 | **v0.0.4** — history you can act on        | The Changes panel acts on the past          | #36 commit preview · #38 revert with pre-filled message · #42 word-level diff                                                                                 |
 | **v0.0.5** — beyond the pane               | Reaching outside herdr-mIDE                 | #39 open in an installed editor · #37 drag-and-drop (Finder → folder)                                                                                         |
 
-#32 and in-tree **New File** / **New Folder** (#44) merged on `main` (PR #50);
-#45 restore and the rest of v0.0.2 remain open. **Markdown** syntax in Editor
-and Diff (#33, partial) merged (PR #51); Rust and further languages are next.
-Within v0.0.3, #35 verifies how `image()` resolves paths; #43 and #34 build on
-that conclusion.
+**v0.0.2** (milestone [1](https://github.com/SOUMITRO-SAHA/herdr-mIDE/milestone/1)):
+#32, #44, and #27 are closed on `main`; **#45, #41, and #40** remain (no open
+PRs). **v0.0.3**
+([milestone 4](https://github.com/SOUMITRO-SAHA/herdr-mIDE/milestone/4)): #33,
+#35, and follow-up #53 are closed; #43 and #34 remain (#52/#54 shipped raster
+and SVG preview plumbing on `main`; close #43 when you accept the Raw/Preview UX).
+Rust highlighting is still the next #33 slice.
 
 ---
 
