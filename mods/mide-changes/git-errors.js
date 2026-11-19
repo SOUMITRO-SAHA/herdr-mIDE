@@ -45,6 +45,18 @@ export function friendlyGitError(raw) {
     return "Local and upstream branches have diverged — pull with a merge or rebase strategy set.";
   }
 
+  if (/could not read from remote repository/i.test(text)) {
+    return "Could not reach the remote — check network, VPN, and SSH access to the repository host.";
+  }
+
+  if (/permission denied/i.test(text) && /publickey|ssh/i.test(text)) {
+    return "SSH authentication failed — confirm your key is loaded and can access this repository.";
+  }
+
+  if (/no remote configured|does not appear to be a git repository/i.test(text) && /push/i.test(text)) {
+    return "No remote configured — add a remote before publishing.";
+  }
+
   const lines = text
     .split("\n")
     .map(line => ({
@@ -63,6 +75,7 @@ const ACTION_LABELS = {
   branch: "Branch delete",
   commit: "Commit",
   fetch: "Fetch",
+  open_url: "Open URL",
   pull: "Pull",
   push: "Push",
   reset: "Unstage",
@@ -71,5 +84,6 @@ const ACTION_LABELS = {
 
 export function gitActionLabel(args) {
   if (args?.[0] === "switch") return args[1] === "-c" ? "Branch create" : "Branch switch";
+  if (args?.[0] === "push" && args?.includes("-u")) return "Publish";
   return ACTION_LABELS[args?.[0]] ?? "Git";
 }

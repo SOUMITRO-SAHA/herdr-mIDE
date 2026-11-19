@@ -11,6 +11,22 @@ import { groupChanges } from "./change-groups.js";
 import { friendlyGitError, gitActionLabel } from "./git-errors.js";
 import { handleCommitShortcut } from "./commit-shortcut.js";
 import { footerNameWidths } from "./footer-sizing.js";
+import {
+  dismissPullRequestOffer,
+  markPullRequestOffer,
+  pullRequestDismissed,
+  pullRequestPending,
+  storedPullRequestPushUrl,
+} from "./pr-offer-storage.js";
+import {
+  extractPullRequestLink,
+  primaryRemoteAction,
+  primaryRemoteLabel,
+  publishPushArgs,
+  resolvePullRequestUrl,
+  shouldArmPullRequestOffer,
+  shouldOfferPullRequest,
+} from "./remote-sync.js";
 
 function location(previous) {
   const f = focused(),
@@ -75,6 +91,11 @@ export default class MideChanges extends View {
     this.ahead = 0;
     this.behind = 0;
     this.hasUpstream = false;
+    this.defaultBranch = null;
+    this.remoteUrl = null;
+    this.pushRemote = null;
+    this.upstreamGone = false;
+    this.pushPrUrl = null;
     this.input = TextareaState.new({ placeholder: "Enter commit message", rows: 3 });
     this.input.set_auto_grow(2, 4);
     this.input.on("change", (_e, cx) => {
@@ -137,6 +158,11 @@ export default class MideChanges extends View {
       this.ahead = 0;
       this.behind = 0;
       this.hasUpstream = false;
+      this.defaultBranch = null;
+      this.remoteUrl = null;
+      this.pushRemote = null;
+      this.upstreamGone = false;
+      this.pushPrUrl = null;
       this.branchMenuOpen = false;
       this.branches = [];
       this.branchLoading = false;
@@ -169,16 +195,53 @@ export default class MideChanges extends View {
         if (status.code !== 0) throw new Error(status.stderr);
         let ahead = 0,
           behind = 0,
-          hasUpstream = false;
+          hasUpstream = false,
+          upstreamGone = false,
+          defaultBranch = null,
+          remoteUrl = null,
+          pushRemote = null;
+        const branchName = branch.code === 0 ? branch.stdout.trim() : null;
+        const statusHeader = await git(["status", "-sb"]);
+        if (statusHeader.code === 0) upstreamGone = /\[gone\]/i.test(statusHeader.stdout.split("\n")[0] ?? "");
         const upstream = await git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
-        if (upstream.code === 0) {
+        if (upstream.code === 0 && !upstreamGone) {
           const tracking = await git(["rev-list", "--left-right", "--count", "HEAD...@{upstream}"]);
-          if (tracking.code !== 0) throw new Error(tracking.stderr);
-          const counts = tracking.stdout.trim().split(/\s+/).map(Number);
-          if (counts.length !== 2 || counts.some(count => !Number.isFinite(count)))
-            throw new Error("Could not read upstream commit counts");
-          [ahead, behind] = counts;
-          hasUpstream = true;
+          if (tracking.code === 0) {
+            const counts = tracking.stdout.trim().split(/\s+/).map(Number);
+            if (counts.length === 2 && counts.every(count => Number.isFinite(count))) {
+              [ahead, behind] = counts;
+              hasUpstream = true;
+            }
+          }
+        }
+        if (branchName) {
+          const upstreamRemote = await git(["config", `branch.${branchName}.remote`]);
+          if (upstreamRemote.code === 0 && upstreamRemote.stdout.trim()) pushRemote = upstreamRemote.stdout.trim();
+        }
+        if (!pushRemote) {
+          const remotes = await git(["remote"]);
+          if (remotes.code === 0) {
+            const names = remotes.stdout
+              .split("\n")
+              .map(name => name.trim())
+              .filter(Boolean);
+            pushRemote = names.includes("origin") ? "origin" : (names[0] ?? null);
+          }
+        }
+        let trackingRemote = pushRemote;
+        if (upstream.code === 0) {
+          const ref = upstream.stdout.trim();
+          const slash = ref.indexOf("/");
+          if (slash > 0) trackingRemote = ref.slice(0, slash);
+        }
+        if (trackingRemote) {
+          const url = await git(["remote", "get-url", trackingRemote]);
+          if (url.code === 0) remoteUrl = url.stdout.trim() || null;
+        }
+        const originHead = await git(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD", "--short"]);
+        if (originHead.code === 0) {
+          const short = originHead.stdout.trim();
+          defaultBranch = short.startsWith("origin/") ? short.slice("origin/".length) : short.replace(/^origin\//, "");
         }
         // Keep staged and unstaged line counts separate, as files can appear
         // in both groups when only part of a change is staged.
@@ -223,10 +286,17 @@ export default class MideChanges extends View {
         if (this.currentKey() !== context) return;
         this.root = root;
         this.on = on;
-        this.branch = branch.code === 0 ? branch.stdout.trim() : null;
+        // A pushed PR URL belongs to the branch git printed it for; retire it
+        // when the checked-out branch changed, so it cannot leak to another.
+        if (this.branch !== branchName) this.pushPrUrl = null;
+        this.branch = branchName;
         this.ahead = ahead;
         this.behind = behind;
         this.hasUpstream = hasUpstream;
+        this.upstreamGone = upstreamGone;
+        this.defaultBranch = defaultBranch;
+        this.remoteUrl = remoteUrl;
+        this.pushRemote = pushRemote;
         this.files = files;
         this.staged = files.filter(f => f.staged).length;
         this.limited = entries.length > 1000;
@@ -303,6 +373,20 @@ export default class MideChanges extends View {
       try {
         const r = await exec("git", args, { cwd: root, on });
         if (r.code !== 0) throw new Error((r.stderr || r.stdout).trim());
+        if (args[0] === "push" && this.currentKey() === context) {
+          const link = extractPullRequestLink(r.stderr);
+          if (link) this.pushPrUrl = link;
+          if (shouldArmPullRequestOffer(args, r.stderr)) {
+            markPullRequestOffer(this.root, this.branch, {
+              pushPrUrl: link,
+              remoteUrl: this.remoteUrl,
+              defaultBranch: this.defaultBranch,
+              hasUpstream: this.hasUpstream || args.includes("-u"),
+              // A publish is a fresh cycle: it may re-offer a used branch.
+              rearm: args.includes("-u"),
+            });
+          }
+        }
         if (this.currentKey() === context && then) then();
       } catch (e) {
         this.fail(context, args, e);
@@ -344,6 +428,45 @@ export default class MideChanges extends View {
   }
   push(cx) {
     this.git(cx, ["push"]);
+  }
+  publish(cx) {
+    const args = publishPushArgs(this.pushRemote, this.branch);
+    if (!args) {
+      this.note = "No remote configured — add a remote to publish this branch.";
+      cx.notify();
+      return;
+    }
+    this.git(cx, args);
+  }
+  republish(cx) {
+    this.publish(cx);
+  }
+  openPullRequest(cx) {
+    const pushPrUrl = this.pushPrUrl ?? storedPullRequestPushUrl(this.root, this.branch);
+    const url = resolvePullRequestUrl({
+      pushPrUrl,
+      remoteUrl: this.remoteUrl,
+      branch: this.branch,
+      defaultBranch: this.defaultBranch,
+    });
+    if (!url || !this.root) {
+      this.note = this.hasUpstream
+        ? "Could not build a pull request URL for this remote."
+        : "Publish the branch first, then create a pull request.";
+      cx.notify();
+      return;
+    }
+    // Shell `open` via exec does not run on the person's machine when `on` targets
+    // a remote workspace, and is unnecessary when the host exposes this API.
+    try {
+      cx.open_url(url);
+      this.note = null;
+      dismissPullRequestOffer(this.root, this.branch);
+      this.pushPrUrl = null;
+    } catch (e) {
+      this.fail(this.context, ["open_url"], e);
+    }
+    cx.notify();
   }
 
   selectTab(view, cx) {
@@ -724,10 +847,74 @@ export default class MideChanges extends View {
       .flex_none();
   }
 
-  remoteActions(t, typography) {
+  pullRequestVisible() {
+    const pushPrUrl = this.pushPrUrl ?? storedPullRequestPushUrl(this.root, this.branch);
+    return shouldOfferPullRequest({
+      hasUpstream: this.hasUpstream,
+      branch: this.branch,
+      defaultBranch: this.defaultBranch,
+      remoteUrl: this.remoteUrl,
+      pushPrUrl,
+      pending: pullRequestPending(this.root, this.branch),
+      dismissed: pullRequestDismissed(this.root, this.branch),
+    });
+  }
+
+  pullRequestButton(t, typography) {
     const enabled = Boolean(this.root && !this.busy && !this.loading);
-    const action = this.behind ? "pull" : this.ahead ? "push" : "fetch";
-    const label = this.busy ? "Working…" : action === "pull" ? "Pull" : action === "push" ? "Push" : "Fetch";
+    const labelColor = enabled ? t.foreground : t.dim;
+    return h_flex()
+      .id("mide-create-pr")
+      .h(28)
+      .px(12)
+      .py(0)
+      .gap(5)
+      .flex_none()
+      .items_center()
+      .justify_center()
+      .rounded(7)
+      .border_1()
+      .border_color(t.border)
+      .bg(t.chrome)
+      .text_size(typography.text(11))
+      .font_medium()
+      .text_color(labelColor)
+      .when(enabled, e => e.cursor_pointer().hover(s => s.bg(t.hover)))
+      .accessibility_label("Create pull request on GitHub")
+      .on_click((_e, cx) => {
+        if (enabled) this.openPullRequest(cx);
+      })
+      .child(svg("mods/mide-files/icons/arrow-up.svg").size(12).flex_none().text_color(labelColor))
+      .child("Create Pull Request");
+  }
+
+  pullRequestBar(t, typography) {
+    if (!this.pullRequestVisible()) return null;
+    return h_flex()
+      .id("mide-pull-request-bar")
+      .w_full()
+      .h(36)
+      .flex_none()
+      .px(10)
+      .items_center()
+      .justify_center()
+      .child(this.pullRequestButton(t, typography));
+  }
+
+  remoteToolbar(t, typography) {
+    return h_flex().id("mide-remote-toolbar").flex_shrink(0).child(this.remoteSplitControl(t, typography));
+  }
+
+  remoteSplitControl(t, typography) {
+    const enabled = Boolean(this.root && !this.busy && !this.loading);
+    const action = primaryRemoteAction({
+      hasUpstream: this.hasUpstream,
+      upstreamGone: this.upstreamGone,
+      ahead: this.ahead,
+      behind: this.behind,
+    });
+    const label = primaryRemoteLabel(action, this.busy);
+    const showPullRequest = this.pullRequestVisible();
     return h_flex()
       .h(23)
       .flex_none()
@@ -809,10 +996,30 @@ export default class MideChanges extends View {
                 this.menuItem("mide-menu-push", "Push", enabled && this.hasUpstream, t, typography, cx =>
                   this.push(cx),
                 ),
+              )
+              .child(
+                this.menuItem(
+                  "mide-menu-publish",
+                  this.upstreamGone ? "Republish" : "Publish",
+                  enabled && !this.hasUpstream,
+                  t,
+                  typography,
+                  cx => (this.upstreamGone ? this.republish(cx) : this.publish(cx)),
+                ),
+              )
+              .when(showPullRequest, menu =>
+                menu.child(
+                  this.menuItem("mide-menu-create-pr", "Create Pull Request", enabled, t, typography, cx =>
+                    this.openPullRequest(cx),
+                  ),
+                ),
               ),
           ),
-      )
-      .flex_none();
+      );
+  }
+
+  remoteActions(t, typography) {
+    return this.remoteToolbar(t, typography);
   }
 
   stageCheckbox(id, label, checked, indeterminate, t, typography, onChange) {
@@ -948,7 +1155,7 @@ export default class MideChanges extends View {
       .children(files.map(f => this.fileRow(f, t, typography)));
   }
 
-  branchFooter(t, typography) {
+  branchFooter(t, typography, { borderTop = true } = {}) {
     const repository = this.root?.split(/[\\/]/).pop() ?? "Repository";
     const branch = this.branch ?? (this.root ? "Detached HEAD" : "—");
     const iconSize = 12;
@@ -969,6 +1176,7 @@ export default class MideChanges extends View {
     // Invisible natural-width samples let short names give their unused
     // space to the other label, without guessing from character counts.
     return h_flex()
+      .id("mide-branch-footer")
       .h(30)
       .flex_none()
       .relative()
@@ -976,8 +1184,7 @@ export default class MideChanges extends View {
       .gap(6)
       .items_center()
       .justify_between()
-      .border_t(1)
-      .border_color(t.border)
+      .when(borderTop, e => e.border_t(1).border_color(t.border))
       .child(
         h_flex()
           .absolute()
@@ -1087,7 +1294,58 @@ export default class MideChanges extends View {
               ),
           ),
       )
-      .child(this.remoteActions(t, typography));
+      .child(this.remoteToolbar(t, typography));
+  }
+
+  commitStack(t, typography, host, hasTrackedChanges, tracked) {
+    const prBar = this.pullRequestBar(t, typography);
+    return v_flex()
+      .id("mide-commit-stack")
+      .flex_none()
+      .when(!prBar, stack => stack.border_t(1).border_color(t.border))
+      .when(Boolean(prBar), stack => stack.child(prBar))
+      .child(this.branchFooter(t, typography, { borderTop: Boolean(prBar) }))
+      .child(
+        v_flex()
+          .flex_none()
+          .px(8)
+          .pt(5)
+          .pb(8)
+          .gap(7)
+          .child(
+            div()
+              .id("mide-commit-message")
+              .h(92)
+              .px(8)
+              .py(5)
+              .rounded(7)
+              .bg(host.background)
+              .border_1()
+              .border_color(this.typing ? t.accent : t.border)
+              .cursor_text()
+              .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+              .child(Textarea.new(this.input).size_full().text_size(typography.uiSize).text_color(t.muted)),
+          )
+          .child(
+            h_flex()
+              .h(20)
+              .flex_none()
+              .items_center()
+              .child(
+                div()
+                  .flex_1()
+                  .text_size(typography.text(10))
+                  .text_color(t.dim)
+                  .child(
+                    this.staged
+                      ? `${this.staged} staged`
+                      : hasTrackedChanges
+                        ? `${tracked.length} tracked changes`
+                        : "No changes to commit",
+                  ),
+              ),
+          ),
+      );
   }
 
   historyRow(commit, t, typography) {
@@ -1270,8 +1528,7 @@ export default class MideChanges extends View {
               .flex_1()
               .min_h(0)
               .relative()
-              .border_b(1)
-              .border_color(t.border)
+              .when(!this.pullRequestVisible(), box => box.border_b(1).border_color(t.border))
               .child(
                 v_flex()
                   .id("mide-changes-list")
@@ -1338,48 +1595,8 @@ export default class MideChanges extends View {
             .child(Scrollbar.vertical("mide-history-list").absolute().inset_0()),
         ),
       )
-      .child(this.branchFooter(t, typography))
-      .when(this.view === "changes", el =>
-        el.child(
-          v_flex()
-            .flex_none()
-            .p(8)
-            .gap(7)
-            .child(
-              div()
-                .id("mide-commit-message")
-                .h(92)
-                .px(8)
-                .py(5)
-                .rounded(7)
-                .bg(host.background)
-                .border_1()
-                .border_color(this.typing ? t.accent : t.border)
-                .cursor_text()
-                .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
-                .child(Textarea.new(this.input).size_full().text_size(typography.uiSize).text_color(t.muted)),
-            )
-            .child(
-              h_flex()
-                .h(20)
-                .flex_none()
-                .items_center()
-                .child(
-                  div()
-                    .flex_1()
-                    .text_size(typography.text(10))
-                    .text_color(t.dim)
-                    .child(
-                      this.staged
-                        ? `${this.staged} staged`
-                        : hasTrackedChanges
-                          ? `${tracked.length} tracked changes`
-                          : "No changes to commit",
-                    ),
-                ),
-            ),
-        ),
-      )
+      .when(this.view === "changes", el => el.child(this.commitStack(t, typography, host, hasTrackedChanges, tracked)))
+      .when(this.view === "history", el => el.child(this.branchFooter(t, typography)))
       .when(this.view === "history" && Boolean(this.note) && !this.branchMenuOpen, el =>
         el.child(this.noteRow(t, typography)),
       );
