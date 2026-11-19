@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import {
   extractPullRequestLink,
   githubCreatePullRequestUrl,
-  openUrlCommand,
   parseGithubRepo,
   primaryRemoteAction,
   primaryRemoteLabel,
@@ -92,8 +91,5 @@ assert.equal(
   true,
 );
 assert.equal(shouldArmPullRequestOffer(["push"], "Everything up-to-date\n"), false);
-
-assert.deepEqual(openUrlCommand("macos", "https://example.com"), { program: "open", args: ["https://example.com"] });
-assert.equal(openUrlCommand("linux", "https://example.com").program, "xdg-open");
 
 console.log("Changes remote sync tests passed");

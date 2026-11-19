@@ -286,7 +286,10 @@ export default class MideChanges extends View {
         if (this.currentKey() !== context) return;
         this.root = root;
         this.on = on;
-        this.branch = branch.code === 0 ? branch.stdout.trim() : null;
+        // A pushed PR URL belongs to the branch git printed it for; retire it
+        // when the checked-out branch changed, so it cannot leak to another.
+        if (this.branch !== branchName) this.pushPrUrl = null;
+        this.branch = branchName;
         this.ahead = ahead;
         this.behind = behind;
         this.hasUpstream = hasUpstream;
@@ -379,6 +382,8 @@ export default class MideChanges extends View {
               remoteUrl: this.remoteUrl,
               defaultBranch: this.defaultBranch,
               hasUpstream: this.hasUpstream || args.includes("-u"),
+              // A publish is a fresh cycle: it may re-offer a used branch.
+              rearm: args.includes("-u"),
             });
           }
         }

@@ -1,62 +1,56 @@
-// Persisted per-repo-branch PR offer state (a row kept until used).
-
+// Persisted per-repo-branch PR offer state (a row kept until used). One
+// `shared` key holds the whole map: every setShared re-renders all mods, so
+// one write per action keeps that to a single render.
 import { shared, setShared } from "herdr";
 import { pullRequestBranchKey, pullRequestEligible } from "./remote-sync.js";
 
-const DISMISSED = "mide.changes.prDismissed";
-const PENDING = "mide.changes.prPending";
-const PUSH_URL = "mide.changes.prPushUrl";
+const STATE = "mide.changes.prOffer";
 
-function readMap(key) {
-  const value = shared(key);
-  return value && typeof value === "object" && !Array.isArray(value) ? { ...value } : {};
+function readState() {
+  const value = shared(STATE);
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function writeMap(key, map) {
-  setShared(key, map);
+function record(state, id) {
+  const value = state[id];
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 export function pullRequestDismissed(cwd, branch) {
   const id = pullRequestBranchKey(cwd, branch);
-  return id ? Boolean(readMap(DISMISSED)[id]) : false;
+  return id ? Boolean(record(readState(), id).dismissed) : false;
 }
 
 export function pullRequestPending(cwd, branch) {
   const id = pullRequestBranchKey(cwd, branch);
-  return id ? Boolean(readMap(PENDING)[id]) : false;
+  return id ? Boolean(record(readState(), id).pending) : false;
 }
 
 export function storedPullRequestPushUrl(cwd, branch) {
   const id = pullRequestBranchKey(cwd, branch);
   if (!id) return null;
-  const url = readMap(PUSH_URL)[id];
+  const url = record(readState(), id).url;
   return typeof url === "string" && url ? url : null;
 }
 
-export function markPullRequestOffer(cwd, branch, { pushPrUrl, remoteUrl, defaultBranch, hasUpstream }) {
+/**
+ * Arms the one-time offer. A plain hint-bearing push respects an already-used
+ * branch; `rearm` (a fresh `push -u` publish) starts a new cycle and re-offers.
+ */
+export function markPullRequestOffer(cwd, branch, { pushPrUrl, remoteUrl, defaultBranch, hasUpstream, rearm = false }) {
   const id = pullRequestBranchKey(cwd, branch);
-  if (!id || pullRequestDismissed(cwd, branch)) return;
+  if (!id) return;
+  if (record(readState(), id).dismissed && !rearm) return;
   if (!pullRequestEligible({ hasUpstream, branch, defaultBranch, remoteUrl, pushPrUrl })) return;
-  const pending = readMap(PENDING);
-  pending[id] = true;
-  writeMap(PENDING, pending);
-  if (pushPrUrl) {
-    const urls = readMap(PUSH_URL);
-    urls[id] = pushPrUrl;
-    writeMap(PUSH_URL, urls);
-  }
+  const state = readState();
+  setShared(STATE, {
+    ...state,
+    [id]: { pending: true, dismissed: false, url: pushPrUrl ?? record(state, id).url ?? null },
+  });
 }
 
 export function dismissPullRequestOffer(cwd, branch) {
   const id = pullRequestBranchKey(cwd, branch);
   if (!id) return;
-  const pending = readMap(PENDING);
-  delete pending[id];
-  writeMap(PENDING, pending);
-  const dismissed = readMap(DISMISSED);
-  dismissed[id] = true;
-  writeMap(DISMISSED, dismissed);
-  const urls = readMap(PUSH_URL);
-  delete urls[id];
-  writeMap(PUSH_URL, urls);
+  setShared(STATE, { ...readState(), [id]: { pending: false, dismissed: true, url: null } });
 }

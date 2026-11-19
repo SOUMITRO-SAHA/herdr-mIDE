@@ -1,4 +1,5 @@
 // Primary remote action labels and hosting URLs for mIDE Changes.
+import { URL } from "url";
 
 export function primaryRemoteAction({ hasUpstream, upstreamGone, ahead, behind }) {
   if (!hasUpstream) return upstreamGone ? "republish" : "publish";
@@ -120,16 +121,4 @@ export function publishPushArgs(remote, branch) {
   const target = String(remote ?? "").trim();
   if (!name || !target) return null;
   return ["push", "-u", target, `${name}:${name}`];
-}
-
-export function openUrlCommand(platform, url) {
-  if (platform === "macos") return { program: "open", args: [url] };
-  if (platform === "windows") {
-    const escaped = String(url).replace(/'/g, "''");
-    return {
-      program: "powershell",
-      args: ["-NoProfile", "-Command", `Start-Process '${escaped}'`],
-    };
-  }
-  return { program: "xdg-open", args: [url] };
 }

@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Changes footer acts on unpublished branches: its primary remote action
+  reads **Publish** (or **Republish** when the upstream is gone) and pushes
+  with `git push -u`. After a publish — or any push whose output carries a
+  hosting PR hint — a centered **Create Pull Request** row appears above the
+  branch bar and opens `…/pull/new/{branch}` or the URL git printed in the
+  system browser through the host's `open_url`. The offer is remembered per
+  repo branch (Herdr `shared` keys), used once, and re-offered only by a
+  fresh publish. Remote failures gained short friendly lines for unreachable
+  remotes, SSH permission problems, and missing remotes.
+
 - The editor previews image files (PNG, JPEG, WebP, SVG, and other types from
   the Material icon map) in the pane: workspace files stage under
   `mide-editor-preview/` in the app home (outside `mods/` so staging does not

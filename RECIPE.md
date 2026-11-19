@@ -31,8 +31,9 @@ files, commit and make small edits without changing Herdr's theme.
   hosting PR hint), **Create Pull
   Request** appears centered in its own row above the branch/Fetch bar until
   the person uses it once; that choice is remembered per repo branch across
-  layout switches (Herdr `shared` keys). A click calls `open_url` to open
-  `…/pull/new/{branch}` or the URL git printed after push. Names that fit
+  layout switches (Herdr `shared` keys), and a fresh publish re-offers the
+  branch. A click calls `open_url` to open `…/pull/new/{branch}` or the URL
+  git printed after push. Names that fit
   are shown in full; a short name leaves its unused space for the other. The
   branch icon, repository, slash and branch use 1px gaps, with 1px horizontal
   padding on the branch control.

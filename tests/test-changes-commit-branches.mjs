@@ -53,7 +53,10 @@ try {
     "markPullRequestOffer",
     "exec",
     "notify",
-    `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "publish")}, ${method("publish", "republish")}, ${method("republish", "openPullRequest")}, ${method("openPullRequest", "selectTab")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`,
+    "location",
+    "key",
+    "READ",
+    `return ({${method("fail", "git")}, ${method("git", "stage")}, ${method("fetch", "pull")}, ${method("pull", "push")}, ${method("push", "publish")}, ${method("publish", "republish")}, ${method("republish", "openPullRequest")}, ${method("openPullRequest", "selectTab")}, ${method("refresh", "openDiff")}, ${method("commit", "loadBranches")}, ${method("switchBranch", "createBranch")}, ${method("createBranch", "deleteBranch")}, ${method("deleteBranch", "menuItem")}})`,
   )(
     friendlyGitError,
     gitActionLabel,
@@ -62,6 +65,9 @@ try {
     markPullRequestOffer,
     exec,
     notify,
+    () => ({ cwd: root, on: null, space: "test" }),
+    loc => JSON.stringify({ cwd: loc.cwd, on: loc.on, space: loc.space }),
+    [],
   );
   const tasks = [];
   const cx = {
@@ -185,6 +191,30 @@ try {
   assert.equal(view.note, "No branch named “deleted-elsewhere”.");
   assert.equal(toasts.length, 1);
   assert.equal(toasts[0].body, view.note);
+
+  // A pushed PR URL belongs to the branch git printed it for: refresh retires
+  // it once the checked-out branch changed, and keeps it while it does not.
+  git("switch", "-q", "-c", "pr-offer-fresh");
+  const contextKey = JSON.stringify({ cwd: root, on: null, space: "test" });
+  Object.assign(view, {
+    context: contextKey,
+    currentKey: () => contextKey,
+    location: { cwd: root, on: null, space: "test" },
+    loading: false,
+    busy: false,
+    refreshPending: false,
+    pushPrUrl: "https://github.com/a/b/pull/new/stale",
+    watch() {},
+  });
+  view.refresh = methods.refresh;
+  view.refresh(cx);
+  await drain();
+  assert.equal(view.branch, "pr-offer-fresh");
+  assert.equal(view.pushPrUrl, null, "a branch change retires the pushed PR URL");
+  view.pushPrUrl = "https://github.com/a/b/pull/new/pr-offer-fresh";
+  view.refresh(cx);
+  await drain();
+  assert.equal(view.pushPrUrl, "https://github.com/a/b/pull/new/pr-offer-fresh", "same branch keeps the pushed URL");
   console.log("Changes commit, branch and local-remote integration tests passed");
 } finally {
   rmSync(root, { recursive: true, force: true });
