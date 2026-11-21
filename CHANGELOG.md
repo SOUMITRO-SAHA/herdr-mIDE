@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The commit message box now really submits with **Cmd+Enter on macOS**
+  alongside Ctrl+Enter everywhere; the platform key stays with the system on
+  Windows and Linux. Earlier notes claimed plain Enter submitted — it never
+  did (Enter inserts a newline for multi-line messages); RECIPE and this
+  changelog now describe the real chords.
+
 - E2E and dev recipes no longer pollute production Herdr: the full
   **`herdr-dev`** profile (`HERDR_APP_HOME`, `HC_SESSION=herdr-mide-dev`, XDG
   roots via `scripts/herdr-dev-profile.sh`) isolates spaces and agents.
@@ -22,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PowerShell `-EncodedCommand` now encodes non-BMP path characters as UTF-16 surrogate pairs, preserving emoji and other supplementary Unicode in Windows file paths.
 
 ### Added
+
+- The composer gains a round **`>` submit control** beside the staged count,
+  reusing the credited chevron-right glyph; it commits exactly what the
+  Ctrl+Enter chord commits and renders disabled without a message.
 
 - The Changes footer acts on unpublished branches: its primary remote action
   reads **Publish** (or **Republish** when the upstream is gone) and pushes

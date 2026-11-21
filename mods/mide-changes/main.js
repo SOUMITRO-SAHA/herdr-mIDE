@@ -4,7 +4,7 @@
 // Clicking a file opens its diff in a full-size pane beside the editor.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea, Checkbox, Scrollbar, Popover } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, notify } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, setShared, run, notify, window } from "herdr";
 import { gitColors } from "./palette.js";
 import { toggleStage } from "./stage-action.js";
 import { groupChanges } from "./change-groups.js";
@@ -1297,6 +1297,33 @@ export default class MideChanges extends View {
       .child(this.remoteToolbar(t, typography));
   }
 
+  // The visible way to submit the composer: a round chevron beside the
+  // staged count, for when the chord is not muscle memory.
+  commitSubmitButton(t, typography) {
+    const enabled = Boolean(this.root && this.message.trim() && !this.busy && !this.loading);
+    return h_flex()
+      .id("mide-commit-submit")
+      .size(20)
+      .flex_none()
+      .items_center()
+      .justify_center()
+      .rounded(10)
+      .border_1()
+      .border_color(enabled ? t.accent : t.border)
+      .bg(t.background)
+      .when(enabled, e => e.cursor_pointer().hover(s => s.bg(t.hover)))
+      .accessibility_label("Commit")
+      .on_click((_e, cx) => {
+        if (enabled) this.commit(cx);
+      })
+      .child(
+        svg("mods/mide-files/icons/chevron-right.svg")
+          .size(12)
+          .flex_none()
+          .text_color(enabled ? t.accent : t.dim),
+      );
+  }
+
   commitStack(t, typography, host, hasTrackedChanges, tracked) {
     const prBar = this.pullRequestBar(t, typography);
     return v_flex()
@@ -1331,6 +1358,7 @@ export default class MideChanges extends View {
               .h(20)
               .flex_none()
               .items_center()
+              .gap(6)
               .child(
                 div()
                   .flex_1()
@@ -1343,7 +1371,8 @@ export default class MideChanges extends View {
                         ? `${tracked.length} tracked changes`
                         : "No changes to commit",
                   ),
-              ),
+              )
+              .child(this.commitSubmitButton(t, typography)),
           ),
       );
   }
@@ -1422,7 +1451,7 @@ export default class MideChanges extends View {
       .text_size(typography.uiSize)
       .track_focus(this.handle)
       .on_key_down((e, cx) => {
-        if (handleCommitShortcut(e, cx, this)) return;
+        if (handleCommitShortcut(e, cx, this, window().platform)) return;
         if (e.key === "escape" && this.typing) {
           this.typing = false;
           this.handle.focus();

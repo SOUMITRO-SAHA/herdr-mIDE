@@ -78,8 +78,9 @@ files, commit and make small edits without changing Herdr's theme.
 - In Changes, clicking a file opens its diff; its checkbox stages or unstages
   it without opening Diff. Group checkboxes and Stage All/Unstage All act on
   their respective files. History displays up to 100 recent commits.
-- Enter a commit message and submit it with Enter or Ctrl+Enter; Cmd+Enter
-  also submits on macOS. The default commits staged changes;
+- Enter a commit message; Ctrl+Enter submits it — Cmd+Enter also submits on
+  macOS — and the round `>` control beside the staged count submits too.
+  Enter itself inserts a newline for multi-line messages. The default commits staged changes;
   if nothing is staged, it stages tracked changes and commits them, excluding
   untracked files. The footer offers Fetch, Pull and Push; its primary action
   follows the upstream ahead/behind state. The branch popover switches,
