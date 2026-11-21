@@ -29,11 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The composer gains an accent-filled round **`>` submit control** beside the
-  staged count (background-colored glyph when enabled, muted with a border
-  ring when not), reusing the credited chevron-right glyph; it commits
-  exactly what the Ctrl+Enter chord commits and renders disabled without a
-  message.
+- The composer gains a **`>` submit chip** beside the staged count, styled
+  after the reference IDE's ghost icon buttons: the surface fill is always
+  drawn so the chip reads against the footer, the glyph brightens from muted
+  to foreground and the hover state lights up when a commit can run, and the
+  disabled state keeps the fill behind a border ring. It commits exactly what
+  the Ctrl+Enter chord commits.
 
 - The Changes footer acts on unpublished branches: its primary remote action
   reads **Publish** (or **Republish** when the upstream is gone) and pushes

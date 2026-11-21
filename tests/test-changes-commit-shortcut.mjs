@@ -92,34 +92,41 @@ const buttonFor = state => {
   const before = elements.length;
   const button = commitSubmitButton.call(
     buttonView(state),
-    { accent: 1, border: 2, background: 3, hover: 4, dim: 5, muted: 6 },
+    { foreground: 1, border: 2, background: 3, hover: 4, muted: 5, surface: 6 },
     { text: n => n },
   );
   return elements.slice(before);
 };
 
-// With a message and a repository, the button commits on click and shows an
-// accent-filled circle with a background-colored glyph — the contrast pair
-// the checked stage checkbox uses, so the control reads at a glance.
+// With a message and a repository, the button commits on click. Following the
+// reference IDE's ghost icon buttons, the chip is always drawn in the
+// surface fill so it reads against the footer: the glyph brightens to the
+// foreground when a commit can run, and the disabled state keeps the fill
+// with a border ring rather than fading out.
 let built = buttonFor({ root: "/repo", message: "fix: something", busy: false, loading: false });
 let button = built.find(({ calls }) => calls.some(([m, v]) => m === "id" && v === "mide-commit-submit"));
 assert.ok(button, "the submit control renders");
 assert.ok(
-  button.calls.some(([m, v]) => m === "bg" && v === 1),
-  "an enabled button is filled with the accent color",
+  button.calls.some(([m, v]) => m === "bg" && v === 6),
+  "an enabled button is filled with the surface color",
 );
-assert.ok(
-  button.calls.some(([m, v]) => m === "border_color" && v === 1),
-  "an enabled button carries the accent border",
-);
+assert.ok(!button.calls.some(([m]) => m === "border_color"), "an enabled button keeps the ghost fill borderless");
 assert.ok(button.calls.some(([m, v]) => m === "accessibility_label" && v === "Commit"));
 assert.ok(
   svgPaths.includes("mods/mide-files/icons/chevron-right.svg"),
   "the control shows the credited chevron-right glyph",
 );
 assert.ok(
-  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 3)),
-  "the glyph contrasts against the accent fill",
+  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 1)),
+  "an enabled glyph brightens to the foreground color",
+);
+assert.ok(
+  button.calls.some(([m]) => m === "cursor_pointer"),
+  "an enabled button is pointer-styled",
+);
+assert.ok(
+  button.calls.some(([m]) => m === "hover"),
+  "an enabled button registers hover feedback",
 );
 button.calls.find(([m]) => m === "on_click")[1](undefined, cx);
 assert.deepEqual(submitted, [true], "clicking an enabled button commits");
@@ -129,15 +136,15 @@ submitted.length = 0;
 built = buttonFor({ root: "/repo", message: "   ", busy: false, loading: false });
 button = built.find(({ calls }) => calls.some(([m, v]) => m === "id" && v === "mide-commit-submit"));
 assert.ok(
-  button.calls.some(([m, v]) => m === "bg" && v !== 1),
-  "a disabled button is not accent-filled",
+  button.calls.some(([m, v]) => m === "bg" && v === 6),
+  "a disabled button keeps the visible surface fill",
 );
 assert.ok(
   button.calls.some(([m, v]) => m === "border_color" && v === 2),
-  "a disabled button keeps its border ring",
+  "a disabled button carries a border ring",
 );
 assert.ok(
-  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 6)),
+  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 5)),
   "a disabled glyph reads as muted, not invisible",
 );
 button.calls.find(([m]) => m === "on_click")[1](undefined, cx);
