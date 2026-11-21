@@ -5,7 +5,7 @@ import { footerNameWidths } from "../mods/mide-changes/footer-sizing.js";
 const source = readFileSync(new URL("../mods/mide-changes/main.js", import.meta.url), "utf8");
 const start = source.indexOf("  branchFooter(");
 assert.notEqual(start, -1, "the branch footer builds its own row");
-const end = source.indexOf("  commitStack(", start);
+const end = source.indexOf("  commitSubmitButton(", start);
 assert.ok(end > start);
 const footer = source.slice(start, end);
 
