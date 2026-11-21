@@ -92,20 +92,34 @@ const buttonFor = state => {
   const before = elements.length;
   const button = commitSubmitButton.call(
     buttonView(state),
-    { accent: 1, border: 2, background: 3, hover: 4, dim: 5 },
+    { accent: 1, border: 2, background: 3, hover: 4, dim: 5, muted: 6 },
     { text: n => n },
   );
   return elements.slice(before);
 };
 
-// With a message and a repository, the button commits on click.
+// With a message and a repository, the button commits on click and shows an
+// accent-filled circle with a background-colored glyph — the contrast pair
+// the checked stage checkbox uses, so the control reads at a glance.
 let built = buttonFor({ root: "/repo", message: "fix: something", busy: false, loading: false });
 let button = built.find(({ calls }) => calls.some(([m, v]) => m === "id" && v === "mide-commit-submit"));
 assert.ok(button, "the submit control renders");
+assert.ok(
+  button.calls.some(([m, v]) => m === "bg" && v === 1),
+  "an enabled button is filled with the accent color",
+);
+assert.ok(
+  button.calls.some(([m, v]) => m === "border_color" && v === 1),
+  "an enabled button carries the accent border",
+);
 assert.ok(button.calls.some(([m, v]) => m === "accessibility_label" && v === "Commit"));
 assert.ok(
   svgPaths.includes("mods/mide-files/icons/chevron-right.svg"),
   "the control shows the credited chevron-right glyph",
+);
+assert.ok(
+  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 3)),
+  "the glyph contrasts against the accent fill",
 );
 button.calls.find(([m]) => m === "on_click")[1](undefined, cx);
 assert.deepEqual(submitted, [true], "clicking an enabled button commits");
@@ -114,6 +128,18 @@ assert.deepEqual(submitted, [true], "clicking an enabled button commits");
 submitted.length = 0;
 built = buttonFor({ root: "/repo", message: "   ", busy: false, loading: false });
 button = built.find(({ calls }) => calls.some(([m, v]) => m === "id" && v === "mide-commit-submit"));
+assert.ok(
+  button.calls.some(([m, v]) => m === "bg" && v !== 1),
+  "a disabled button is not accent-filled",
+);
+assert.ok(
+  button.calls.some(([m, v]) => m === "border_color" && v === 2),
+  "a disabled button keeps its border ring",
+);
+assert.ok(
+  built.some(({ calls }) => calls.some(([m, v]) => m === "text_color" && v === 6)),
+  "a disabled glyph reads as muted, not invisible",
+);
 button.calls.find(([m]) => m === "on_click")[1](undefined, cx);
 assert.deepEqual(submitted, [], "a disabled button does not commit");
 assert.ok(!button.calls.some(([m]) => m === "cursor_pointer"), "a disabled button is not pointer-styled");

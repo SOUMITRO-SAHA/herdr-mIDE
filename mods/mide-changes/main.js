@@ -1297,8 +1297,9 @@ export default class MideChanges extends View {
       .child(this.remoteToolbar(t, typography));
   }
 
-  // The visible way to submit the composer: a round chevron beside the
-  // staged count, for when the chord is not muscle memory.
+  // The visible way to submit the composer: an accent-filled circle beside
+  // the staged count — the same contrast pair as the checked stage checkbox —
+  // for when the chord is not muscle memory.
   commitSubmitButton(t, typography) {
     const enabled = Boolean(this.root && this.message.trim() && !this.busy && !this.loading);
     return h_flex()
@@ -1310,8 +1311,8 @@ export default class MideChanges extends View {
       .rounded(10)
       .border_1()
       .border_color(enabled ? t.accent : t.border)
-      .bg(t.background)
-      .when(enabled, e => e.cursor_pointer().hover(s => s.bg(t.hover)))
+      .bg(enabled ? t.accent : t.background)
+      .when(enabled, e => e.cursor_pointer().hover(s => s.opacity(0.85)))
       .accessibility_label("Commit")
       .on_click((_e, cx) => {
         if (enabled) this.commit(cx);
@@ -1320,7 +1321,7 @@ export default class MideChanges extends View {
         svg("mods/mide-files/icons/chevron-right.svg")
           .size(12)
           .flex_none()
-          .text_color(enabled ? t.accent : t.dim),
+          .text_color(enabled ? t.background : t.muted),
       );
   }
 
